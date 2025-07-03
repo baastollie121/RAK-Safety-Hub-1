@@ -119,6 +119,7 @@ export default function DocumentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+  const [activeTab, setActiveTab] = useState('safety');
 
   useEffect(() => {
     setIsMounted(true);
@@ -273,10 +274,17 @@ export default function DocumentsPage() {
          </Card>
       )}
 
-      <Tabs defaultValue="safety" className="w-full">
+      <Tabs defaultValue="safety" onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
           <TabsTrigger value="safety">Safety ({safetyCount})</TabsTrigger>
-          <TabsTrigger value="environmental">Environmental ({envCount})</TabsTrigger>
+          <TabsTrigger
+            value="environmental"
+            className={cn(
+              activeTab === 'environmental' && 'neon-glow-green-animated'
+            )}
+          >
+            Environmental ({envCount})
+          </TabsTrigger>
           <TabsTrigger value="quality">Quality ({qualityCount})</TabsTrigger>
           <TabsTrigger value="hr">HR ({hrCount})</TabsTrigger>
         </TabsList>
