@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useMemo, useRef, useEffect } from 'react';
@@ -162,6 +163,10 @@ const ChatView = ({ conversation, onSendMessage, adminName }: { conversation: Co
         setInput('');
     };
 
+    const getInitials = (name: string) => {
+        return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+    }
+
     return (
         <div className="flex flex-col h-full bg-background">
             <div className="p-4 border-b flex items-center gap-4">
@@ -188,7 +193,7 @@ const ChatView = ({ conversation, onSendMessage, adminName }: { conversation: Co
                                     {format(new Date(message.timestamp), 'p')}
                                 </p>
                             </div>
-                             {message.role === 'admin' && <Avatar className="size-8"><AvatarFallback>{adminName.charAt(0)}</AvatarFallback></Avatar>}
+                             {message.role === 'admin' && <Avatar className="size-8"><AvatarFallback>{getInitials(adminName)}</AvatarFallback></Avatar>}
                         </div>
                     ))}
                 </div>
@@ -313,7 +318,7 @@ export default function ClientMessagesPage() {
         return conversations.find(c => c.id === selectedConvoId);
     }, [conversations, selectedConvoId]);
     
-    const adminName = user?.email || "Admin";
+    const adminName = "Ruan K";
 
     return (
         <div className="h-full flex flex-col p-4">
