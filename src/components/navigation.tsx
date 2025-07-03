@@ -29,12 +29,18 @@ import {
   UserCog,
   UserPlus,
   Users,
+  ChevronRight,
 } from 'lucide-react';
+import React from 'react';
 
 import { useAuth } from '@/context/AuthContext';
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@/components/ui/collapsible';
+import {
   SidebarGroup,
-  SidebarGroupLabel,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
@@ -82,6 +88,53 @@ const supportNav = [
     { href: '/support', icon: <LifeBuoy />, label: 'Support & Billing' },
 ]
 
+const NavGroup = ({
+  title,
+  icon,
+  items,
+  pathname,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  items: typeof mainNav;
+  pathname: string;
+}) => {
+  const isAnyItemActive = items.some((item) => pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/'));
+
+  return (
+    <Collapsible defaultOpen={isAnyItemActive} className="w-full">
+      <CollapsibleTrigger className="flex w-full items-center justify-between rounded-md p-2 text-sidebar-foreground/80 hover:bg-sidebar-accent hover:text-sidebar-accent-foreground [&[data-state=open]>svg]:rotate-90">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          {icon}
+          <span>{title}</span>
+        </div>
+        <ChevronRight className="h-4 w-4 shrink-0 transition-transform duration-200" />
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <SidebarMenu className="ml-4 mt-1 flex flex-col items-stretch border-l border-sidebar-border pl-4">
+          {items.map((item) => (
+            <SidebarMenuItem key={item.href}>
+              <SidebarMenuButton
+                asChild
+                size="sm"
+                isActive={pathname === item.href}
+                tooltip={{
+                  children: item.label,
+                }}
+              >
+                <Link href={item.href}>
+                  {item.icon}
+                  <span>{item.label}</span>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          ))}
+        </SidebarMenu>
+      </CollapsibleContent>
+    </Collapsible>
+  );
+};
+
 export function Navigation() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
@@ -113,44 +166,28 @@ export function Navigation() {
       {user?.role === 'admin' && (
         <>
           <SidebarSeparator />
-          <SidebarGroup className="p-2">
-            <SidebarGroupLabel className="flex items-center gap-2 px-2 text-sidebar-foreground/70">
-              <UserCog className="size-4" />
-              <span>Admin</span>
-            </SidebarGroupLabel>
-            <SidebarMenu>{renderNavItems(adminNav)}</SidebarMenu>
+          <SidebarGroup className="p-0">
+             <NavGroup title="Admin" icon={<UserCog className="size-4" />} items={adminNav} pathname={pathname} />
           </SidebarGroup>
         </>
       )}
 
       <SidebarSeparator />
 
-      <SidebarGroup className="p-2">
-        <SidebarGroupLabel className="flex items-center gap-2 px-2 text-sidebar-foreground/70">
-            <Sparkles className="size-4" />
-            <span>AI Tools</span>
-        </SidebarGroupLabel>
-        <SidebarMenu>{renderNavItems(aiToolsNav)}</SidebarMenu>
+      <SidebarGroup className="p-0">
+         <NavGroup title="AI Tools" icon={<Sparkles className="size-4" />} items={aiToolsNav} pathname={pathname} />
       </SidebarGroup>
 
       <SidebarSeparator />
 
-      <SidebarGroup className="p-2">
-        <SidebarGroupLabel className="flex items-center gap-2 px-2 text-sidebar-foreground/70">
-            <Activity className="size-4" />
-            <span>Trackers & Management</span>
-        </SidebarGroupLabel>
-        <SidebarMenu>{renderNavItems(trackersNav)}</SidebarMenu>
+      <SidebarGroup className="p-0">
+         <NavGroup title="Trackers & Management" icon={<Activity className="size-4" />} items={trackersNav} pathname={pathname} />
       </SidebarGroup>
 
       <SidebarSeparator />
 
-      <SidebarGroup className="p-2">
-        <SidebarGroupLabel className="flex items-center gap-2 px-2 text-sidebar-foreground/70">
-            <FileArchive className="size-4" />
-            <span>AI Generated Docs</span>
-        </SidebarGroupLabel>
-        <SidebarMenu>{renderNavItems(aiDocsNav)}</SidebarMenu>
+      <SidebarGroup className="p-0">
+         <NavGroup title="AI Generated Docs" icon={<FileArchive className="size-4" />} items={aiDocsNav} pathname={pathname} />
       </SidebarGroup>
 
       <SidebarSeparator />
