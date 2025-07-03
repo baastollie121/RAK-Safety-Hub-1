@@ -77,7 +77,7 @@ export default function DashboardPage() {
           Welcome to RAK-Safety Management System
         </h1>
         <p className="text-muted-foreground">
-          Your all-in-one platform for workplace safety management.
+          Your all-in-one platform for workplace management hub to ensure legal compliance 24/7
         </p>
       </header>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
