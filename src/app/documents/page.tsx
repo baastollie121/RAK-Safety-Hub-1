@@ -285,7 +285,14 @@ export default function DocumentsPage() {
           >
             Environmental ({envCount})
           </TabsTrigger>
-          <TabsTrigger value="quality">Quality ({qualityCount})</TabsTrigger>
+          <TabsTrigger
+            value="quality"
+            className={cn(
+              activeTab === 'quality' && 'neon-glow-blue-animated'
+            )}
+          >
+            Quality ({qualityCount})
+          </TabsTrigger>
           <TabsTrigger value="hr">HR ({hrCount})</TabsTrigger>
         </TabsList>
         <TabsContent value="safety">

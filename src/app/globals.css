@@ -88,16 +88,34 @@
     color: var(--neon-green) !important;
     border: 1px solid var(--neon-green) !important;
     background-color: #000 !important;
-    animation: neon-pulse 1.5s infinite alternate;
+    animation: neon-pulse-green 1.5s infinite alternate;
     text-shadow: 0 0 2px var(--neon-green), 0 0 5px #fff;
   }
 
-  @keyframes neon-pulse {
+  @keyframes neon-pulse-green {
     from {
       box-shadow: 0 0 5px var(--neon-green), 0 0 10px #fff, 0 0 15px var(--neon-green);
     }
     to {
       box-shadow: 0 0 10px var(--neon-green), 0 0 20px #fff, 0 0 30px var(--neon-green);
+    }
+  }
+
+  .neon-glow-blue-animated {
+    --neon-blue: #00BFFF;
+    color: var(--neon-blue) !important;
+    border: 1px solid var(--neon-blue) !important;
+    background-color: #000 !important;
+    animation: neon-pulse-blue 1.5s infinite alternate;
+    text-shadow: 0 0 2px var(--neon-blue), 0 0 5px #fff;
+  }
+
+  @keyframes neon-pulse-blue {
+    from {
+      box-shadow: 0 0 5px var(--neon-blue), 0 0 10px #fff, 0 0 15px var(--neon-blue);
+    }
+    to {
+      box-shadow: 0 0 10px var(--neon-blue), 0 0 20px #fff, 0 0 30px var(--neon-blue);
     }
   }
 }
