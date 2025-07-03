@@ -1,3 +1,4 @@
+
 'use client';
 
 import Link from "next/link";
@@ -86,14 +87,16 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">
-          Welcome to RAK-Safety Management System
-        </h1>
-        <p className="text-muted-foreground">
-          Your all-in-one platform for workplace management hub to ensure legal compliance 24/7
-        </p>
-      </header>
+      <Card className="mb-8">
+        <CardContent className="p-6">
+            <h1 className="text-3xl font-bold font-headline tracking-tight">
+              Welcome to RAK-Safety Management System
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Your all-in-one platform for workplace management hub to ensure legal compliance 24/7
+            </p>
+        </CardContent>
+      </Card>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {filteredFeatures.map((feature) => (
           <Link href={feature.href} key={feature.title} className="group">
