@@ -31,7 +31,7 @@ import {
   ChevronRight,
   BookOpenCheck,
 } from 'lucide-react';
-import React from 'react';
+import React, { useState } from 'react';
 
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -52,12 +52,6 @@ const mainNav = [
   { href: '/documents', icon: <Folder />, label: 'Document Library' },
   { href: '/safety-consultant', icon: <Bot />, label: 'AI Safety Consultant' },
   { href: '/safety-news', icon: <Newspaper />, label: 'Safety News' },
-];
-
-const adminNav = [
-  { href: '/admin/onboard-client', icon: <UserPlus />, label: 'Onboard Client' },
-  { href: '/admin/manage-documents', icon: <FileCog />, label: 'Manage Documents' },
-  { href: '/admin/client-messages', icon: <MessageSquare />, label: 'Client Messages' },
 ];
 
 const aiToolsNav = [
@@ -96,7 +90,7 @@ const NavGroup = ({
 }: {
   title: string;
   icon: React.ReactNode;
-  items: typeof mainNav;
+  items: Array<{ href: string; icon: React.ReactNode; label: string; notification?: boolean }>;
   pathname: string;
 }) => {
   const isAnyItemActive = items.some((item) => pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/'));
@@ -125,6 +119,9 @@ const NavGroup = ({
                 <Link href={item.href}>
                   {item.icon}
                   <span>{item.label}</span>
+                   {item.notification && (
+                      <span className="absolute right-3 top-1/2 -translate-y-1/2 size-2 rounded-full bg-red-500" />
+                    )}
                 </Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
@@ -138,6 +135,13 @@ const NavGroup = ({
 export function Navigation() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
+  const [hasNewMessages, setHasNewMessages] = useState(true);
+
+  const adminNav = [
+    { href: '/admin/onboard-client', icon: <UserPlus />, label: 'Onboard Client' },
+    { href: '/admin/manage-documents', icon: <FileCog />, label: 'Manage Documents' },
+    { href: '/admin/client-messages', icon: <MessageSquare />, label: 'Client Messages', notification: hasNewMessages },
+  ];
 
   const renderNavItems = (items: typeof mainNav) =>
     items.map((item) => (

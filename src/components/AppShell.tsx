@@ -15,6 +15,7 @@ import {
 import { Logo } from "@/components/logo";
 import { Navigation } from "@/components/navigation";
 import { Skeleton } from './ui/skeleton';
+import { ChatWidget } from '@/components/support/ChatWidget';
 
 function AppSkeleton() {
     return (
@@ -50,7 +51,7 @@ function AppSkeleton() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading } = useAuth();
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated && pathname !== '/login') {
@@ -90,6 +91,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </Sidebar>
       <SidebarInset>
         <main>{children}</main>
+        {user?.role === 'client' && <ChatWidget />}
       </SidebarInset>
     </SidebarProvider>
   );
