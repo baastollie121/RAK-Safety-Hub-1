@@ -214,12 +214,14 @@ export default function MethodStatementPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Method Statement Generator</h1>
-        <p className="text-muted-foreground">
-          Create comprehensive, OSHA-compliant Method Statements for safe work planning.
-        </p>
-      </header>
+      <Card className="mb-8">
+        <CardContent className="p-6">
+          <h1 className="text-3xl font-bold font-headline tracking-tight">Method Statement Generator</h1>
+          <p className="text-muted-foreground mt-2">
+            Create comprehensive, OSHA-compliant Method Statements for safe work planning.
+          </p>
+        </CardContent>
+      </Card>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
