@@ -16,7 +16,6 @@ import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
-  arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
@@ -40,7 +39,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Users, Package, GripVertical, Plus, List, Building, HardHat } from 'lucide-react';
+import { Users, Package, GripVertical, Plus, List, Building, HardHat, Search } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
@@ -73,6 +72,7 @@ const mockEmployees: Employee[] = [
   { id: 'emp-2', name: 'Jane Smith', jobTitle: 'Operator', assignedTo: 'pool' },
   { id: 'emp-3', name: 'Peter Jones', jobTitle: 'Driver', assignedTo: 'pool' },
   { id: 'emp-4', name: 'Sam Wilson', jobTitle: 'Electrician', assignedTo: 'pool' },
+  { id: 'emp-5', name: 'Mary Johnson', jobTitle: 'Rigger', assignedTo: 'pool' },
 ];
 
 const mockAssets: Asset[] = [
@@ -80,6 +80,7 @@ const mockAssets: Asset[] = [
   { id: 'asset-2', name: 'Angle Grinder', category: 'Grinders', assignedTo: 'pool' },
   { id: 'asset-3', name: 'Step Ladder 6ft', category: 'Ladders', assignedTo: 'pool' },
   { id: 'asset-4', name: 'Forklift', category: 'Moving Machinery', assignedTo: 'pool' },
+  { id: 'asset-5', name: 'Welding Machine', category: 'Welding', assignedTo: 'pool' },
 ];
 
 
@@ -104,7 +105,7 @@ const PlannerItem = ({ item }: { item: DraggableItem }) => {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="mb-2">
-      <Card className="p-3 bg-background/50 hover:bg-muted/80 cursor-grab active:cursor-grabbing">
+      <Card className="p-2 bg-background hover:bg-muted/80 cursor-grab active:cursor-grabbing shadow-sm">
         <div className="flex items-center gap-2">
             <GripVertical className="size-5 text-muted-foreground" />
             <div className="flex-grow">
@@ -121,42 +122,44 @@ const PlannerItem = ({ item }: { item: DraggableItem }) => {
 // --- SITE CARD COMPONENT (Droppable) ---
 const SiteCard = ({ site, employees, assets }: { site: Site, employees: Employee[], assets: Asset[]}) => {
     const { setNodeRef } = useSortable({ id: site.id, data: { type: 'site-column' } });
-    
     const assignedIds = useMemo(() => [...employees.map(e => e.id), ...assets.map(a => a.id)], [employees, assets]);
 
     return (
-        <Card ref={setNodeRef} className="flex flex-col bg-card/50">
+        <Card ref={setNodeRef} className="flex flex-col bg-card/50 min-h-[300px]">
             <CardHeader className="pb-2">
                 <CardTitle className="font-headline text-base flex items-center gap-2">
                     <Building className="size-4"/> {site.name}
                 </CardTitle>
             </CardHeader>
-            <CardContent className="flex-grow min-h-[150px] p-2 space-y-2">
-                <SortableContext items={assignedIds} strategy={verticalListSortingStrategy}>
-                    {employees.length > 0 && (
-                        <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground mb-1 px-2 flex items-center gap-1.5"><HardHat className="size-3"/>Personnel</h4>
-                            <div className="pl-1">
-                                {employees.map(emp => <PlannerItem key={emp.id} item={emp} />)}
-                            </div>
-                        </div>
-                    )}
-                     {assets.length > 0 && (
-                         <div>
-                            <h4 className="font-semibold text-xs text-muted-foreground mb-1 px-2 flex items-center gap-1.5"><Package className="size-3"/>Equipment</h4>
-                            <div className="pl-1">
-                                {assets.map(asset => <PlannerItem key={asset.id} item={asset} />)}
-                            </div>
-                        </div>
-                    )}
-                    {employees.length === 0 && assets.length === 0 && (
+            <CardContent className="flex-grow p-2 space-y-2">
+                 <SortableContext items={assignedIds} strategy={verticalListSortingStrategy}>
+                    {employees.length === 0 && assets.length === 0 ? (
                         <div className="flex items-center justify-center h-full min-h-[100px] border-2 border-dashed rounded-md">
                             <p className="text-sm text-muted-foreground">Drop resources here</p>
                         </div>
+                    ) : (
+                        <div className="space-y-4">
+                             {employees.length > 0 && (
+                                <div>
+                                    <h4 className="font-semibold text-xs text-muted-foreground mb-1 px-2 flex items-center gap-1.5"><HardHat className="size-3"/>Personnel</h4>
+                                    <div className="pl-1 space-y-1">
+                                        {employees.map(emp => <PlannerItem key={emp.id} item={emp} />)}
+                                    </div>
+                                </div>
+                            )}
+                             {assets.length > 0 && (
+                                 <div>
+                                    <h4 className="font-semibold text-xs text-muted-foreground mb-1 px-2 flex items-center gap-1.5"><Package className="size-3"/>Equipment</h4>
+                                    <div className="pl-1 space-y-1">
+                                        {assets.map(asset => <PlannerItem key={asset.id} item={asset} />)}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
                     )}
-                </SortableContext>
+                 </SortableContext>
             </CardContent>
-             <CardFooter className="p-2 border-t mt-2">
+             <CardFooter className="p-2 border-t mt-auto">
                 <Badge variant="secondary" className="mr-2">Personnel: {employees.length}</Badge>
                 <Badge variant="secondary">Equipment: {assets.length}</Badge>
             </CardFooter>
@@ -165,24 +168,32 @@ const SiteCard = ({ site, employees, assets }: { site: Site, employees: Employee
 }
 
 // --- RESOURCE POOL COLUMN (Droppable) ---
-const ResourceColumn = ({ id, title, icon, items }: { id: string, title: string, icon: React.ReactNode, items: DraggableItem[] }) => {
+const ResourceColumn = ({ id, title, icon, items, searchTerm, setSearchTerm }: { id: string, title: string, icon: React.ReactNode, items: DraggableItem[], searchTerm: string, setSearchTerm: (term: string) => void }) => {
     const { setNodeRef } = useSortable({ id, data: { type: 'resource-column' } });
 
     return (
-        <Card ref={setNodeRef} className="flex flex-col h-full max-h-[calc(100vh-12rem)] bg-muted/20">
-            <CardHeader>
+        <Card ref={setNodeRef} className="flex flex-col h-full max-h-[calc(100vh-14rem)] bg-muted/20">
+            <CardHeader className='pb-2'>
                 <CardTitle className="font-headline text-lg flex items-center gap-2">
-                    {icon} {title}
+                    {icon} {title} ({items.length})
                 </CardTitle>
-                <CardDescription>Available for assignment</CardDescription>
+                 <div className="relative mt-2">
+                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        placeholder="Search resources..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-8"
+                    />
+                </div>
             </CardHeader>
             <ScrollArea className="flex-grow">
-                 <CardContent>
+                 <CardContent className='p-2'>
                     <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
                         {items.length > 0 ? (
                             items.map(item => <PlannerItem key={item.id} item={item} />)
                         ) : (
-                            <p className="text-sm text-muted-foreground p-4 text-center h-40 flex items-center justify-center">All resources have been assigned.</p>
+                            <p className="text-sm text-muted-foreground p-4 text-center h-40 flex items-center justify-center">No available resources match your search.</p>
                         )}
                     </SortableContext>
                 </CardContent>
@@ -199,6 +210,8 @@ export default function SiteResourcePlannerPage() {
     { id: 'site-1', name: 'Project Alpha (JHB)' },
     { id: 'site-2', name: 'Warehouse Expansion (CPT)' },
   ]);
+  const [personnelSearchTerm, setPersonnelSearchTerm] = useState('');
+  const [assetSearchTerm, setAssetSearchTerm] = useState('');
   const [activeItem, setActiveItem] = useState<DraggableItem | null>(null);
   const [isSiteDialogOpen, setIsSiteDialogOpen] = useState(false);
   const [newSiteName, setNewSiteName] = useState('');
@@ -208,16 +221,22 @@ export default function SiteResourcePlannerPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   // --- DERIVED STATE ---
-  const unassignedEmployees = useMemo(() => employees.filter(e => e.assignedTo === 'pool'), [employees]);
-  const unassignedAssets = useMemo(() => assets.filter(a => a.assignedTo === 'pool'), [assets]);
+  const unassignedEmployees = useMemo(() => 
+    employees.filter(e => e.assignedTo === 'pool' && e.name.toLowerCase().includes(personnelSearchTerm.toLowerCase())), 
+    [employees, personnelSearchTerm]
+  );
+  const unassignedAssets = useMemo(() => 
+    assets.filter(a => a.assignedTo === 'pool' && (a.name.toLowerCase().includes(assetSearchTerm.toLowerCase()) || a.category.toLowerCase().includes(assetSearchTerm.toLowerCase()))),
+    [assets, assetSearchTerm]
+  );
   
   const getEmployeesForSite = (siteId: string) => employees.filter(e => e.assignedTo === siteId);
   const getAssetsForSite = (siteId: string) => assets.filter(a => a.assignedTo === siteId);
 
   const findContainer = (id: string) => {
-    if (id === 'personnel-pool' || unassignedEmployees.find(e => e.id === id)) return 'personnel-pool';
-    if (id === 'equipment-pool' || unassignedAssets.find(a => a.id === id)) return 'equipment-pool';
-    if (sites.find(s => s.id === id)) return id;
+    if (id === 'personnel-pool' || employees.some(e => e.id === id && e.assignedTo === 'pool')) return 'personnel-pool';
+    if (id === 'equipment-pool' || assets.some(a => a.id === id && a.assignedTo === 'pool')) return 'equipment-pool';
+    if (sites.some(s => s.id === id)) return id;
 
     for (const site of sites) {
         if (getEmployeesForSite(site.id).some(e => e.id === id) || getAssetsForSite(site.id).some(a => a.id === id)) {
@@ -238,14 +257,18 @@ export default function SiteResourcePlannerPage() {
     const { active, over } = event;
     setActiveItem(null);
 
-    if (!over || active.id === over.id) return;
+    if (!over) return;
     
     const originalContainer = findContainer(active.id as string);
     const overContainer = findContainer(over.id as string);
-
-    if (!originalContainer || !overContainer) return;
     
-    const isEmployee = 'jobTitle' in active.data.current!;
+    if (!originalContainer || !overContainer || originalContainer === overContainer) return;
+
+    // Check if the item being dragged is an employee
+    const item = employees.find(e => e.id === active.id) || assets.find(a => a.id === active.id);
+    if (!item) return;
+
+    const isEmployee = 'jobTitle' in item;
 
     // Prevent dropping employees in equipment pool and vice versa
     if ((isEmployee && overContainer === 'equipment-pool') || (!isEmployee && overContainer === 'personnel-pool')) {
@@ -294,7 +317,7 @@ export default function SiteResourcePlannerPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-start">
           {/* Personnel Pool */}
           <div className="lg:col-span-1 xl:col-span-1">
-             <ResourceColumn id="personnel-pool" title="Personnel Pool" icon={<Users />} items={unassignedEmployees} />
+             <ResourceColumn id="personnel-pool" title="Personnel Pool" icon={<Users />} items={unassignedEmployees} searchTerm={personnelSearchTerm} setSearchTerm={setPersonnelSearchTerm} />
           </div>
 
           {/* Site Columns */}
@@ -327,7 +350,7 @@ export default function SiteResourcePlannerPage() {
                     <Button onClick={() => setIsReportOpen(true)}><List className="mr-2" />Generate Report</Button>
                 </div>
             </div>
-             <ScrollArea className="h-[calc(100vh-12rem)]">
+             <ScrollArea className="h-[calc(100vh-14rem)]">
                 <div className="space-y-4 pr-4">
                 {sites.map(site => (
                     <SiteCard
@@ -343,7 +366,7 @@ export default function SiteResourcePlannerPage() {
           
            {/* Equipment Pool */}
           <div className="lg:col-span-1 xl:col-span-1">
-             <ResourceColumn id="equipment-pool" title="Equipment Pool" icon={<Package />} items={unassignedAssets} />
+             <ResourceColumn id="equipment-pool" title="Equipment Pool" icon={<Package />} items={unassignedAssets} searchTerm={assetSearchTerm} setSearchTerm={setAssetSearchTerm} />
           </div>
 
         </div>
@@ -355,7 +378,7 @@ export default function SiteResourcePlannerPage() {
         <Dialog open={isReportOpen} onOpenChange={setIsReportOpen}>
             <DialogContent className="max-w-2xl">
                  <DialogHeader>
-                    <DialogTitle>Resource Assignment Report</DialogTitle>
+                    <DialogTitle className="font-headline">Resource Assignment Report</DialogTitle>
                     <DialogDescription>A summary of where all resources are currently assigned.</DialogDescription>
                 </DialogHeader>
                 <ScrollArea className="max-h-[60vh]">
@@ -384,18 +407,18 @@ export default function SiteResourcePlannerPage() {
                         <Separator className="my-4" />
                         <div>
                             <h3 className="font-bold text-lg pb-1 mb-2">Unassigned Resources</h3>
-                             <h4 className="font-semibold mt-2">Personnel ({unassignedEmployees.length})</h4>
-                             {unassignedEmployees.length > 0 ? (
+                             <h4 className="font-semibold mt-2">Personnel ({unassignedEmployees.filter(e => e.assignedTo === 'pool').length})</h4>
+                             {unassignedEmployees.filter(e => e.assignedTo === 'pool').length > 0 ? (
                                 <ul className="list-disc pl-5 text-sm">
-                                    {unassignedEmployees.map(e => <li key={e.id}>{e.name} ({e.jobTitle})</li>)}
+                                    {unassignedEmployees.filter(e => e.assignedTo === 'pool').map(e => <li key={e.id}>{e.name} ({e.jobTitle})</li>)}
                                 </ul>
-                            ) : <p className="text-sm text-muted-foreground">None.</p>}
-                             <h4 className="font-semibold mt-2">Equipment ({unassignedAssets.length})</h4>
-                             {unassignedAssets.length > 0 ? (
+                            ) : <p className="text-sm text-muted-foreground">All personnel are assigned.</p>}
+                             <h4 className="font-semibold mt-2">Equipment ({unassignedAssets.filter(a => a.assignedTo === 'pool').length})</h4>
+                             {unassignedAssets.filter(a => a.assignedTo === 'pool').length > 0 ? (
                                 <ul className="list-disc pl-5 text-sm">
-                                    {unassignedAssets.map(a => <li key={a.id}>{a.name} ({a.category})</li>)}
+                                    {unassignedAssets.filter(a => a.assignedTo === 'pool').map(a => <li key={a.id}>{a.name} ({a.category})</li>)}
                                 </ul>
-                            ) : <p className="text-sm text-muted-foreground">None.</p>}
+                            ) : <p className="text-sm text-muted-foreground">All equipment is assigned.</p>}
                         </div>
                     </div>
                 </ScrollArea>
