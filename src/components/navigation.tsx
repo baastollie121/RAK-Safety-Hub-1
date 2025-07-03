@@ -20,7 +20,6 @@ import {
   MessageSquare,
   Newspaper,
   Package,
-  Rss,
   ScanSearch,
   Shield,
   ShieldCheck,
@@ -58,7 +57,6 @@ const mainNav = [
 const adminNav = [
   { href: '/admin/onboard-client', icon: <UserPlus />, label: 'Onboard Client' },
   { href: '/admin/manage-documents', icon: <FileCog />, label: 'Manage Documents' },
-  { href: '/admin/news-scraper', icon: <Rss />, label: 'News Scraper' },
   { href: '/admin/client-messages', icon: <MessageSquare />, label: 'Client Messages' },
 ];
 
