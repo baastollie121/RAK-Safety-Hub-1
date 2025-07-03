@@ -22,12 +22,18 @@ const GenerateShePlanInputSchema = z.object({
   trainingRequirements: z.string().describe('A summary of mandatory training and competency requirements for the site.'),
   environmentalControls: z.string().describe('A description of controls for environmental hazards like waste, dust, and water.'),
 });
-type GenerateShePlanInput = z.infer<typeof GenerateShePlanInputSchema>;
+export type GenerateShePlanInput = z.infer<typeof GenerateShePlanInputSchema>;
+
+const GenerateShePlanPromptInputSchema = GenerateShePlanInputSchema.extend({
+    preparationDate: z.string(),
+});
+export type GenerateShePlanPromptInput = z.infer<typeof GenerateShePlanPromptInputSchema>;
+
 
 const GenerateShePlanOutputSchema = z.object({
   shePlanDocument: z.string().describe('A professionally formatted, comprehensive SHE Site Plan document in Markdown format.'),
 });
-type GenerateShePlanOutput = z.infer<typeof GenerateShePlanOutputSchema>;
+export type GenerateShePlanOutput = z.infer<typeof GenerateShePlanOutputSchema>;
 
 export async function generateShePlan(input: GenerateShePlanInput): Promise<GenerateShePlanOutput> {
   return generateShePlanFlow(input);
@@ -35,7 +41,7 @@ export async function generateShePlan(input: GenerateShePlanInput): Promise<Gene
 
 const prompt = ai.definePrompt({
   name: 'generateShePlanPrompt',
-  input: {schema: GenerateShePlanInputSchema},
+  input: {schema: GenerateShePlanPromptInputSchema},
   output: {schema: GenerateShePlanOutputSchema},
   prompt: `You are an expert safety manager creating a Site Safety, Health, and Environment (SHE) Plan. Your task is to generate a professional SHE plan in Markdown format based on the provided data.
 
@@ -54,7 +60,7 @@ The document must follow a clear, professional structure. Use the provided infor
 *   **Project Location:** {{{projectLocation}}}
 *   **Document Title:** Site Safety Plan
 *   **Prepared By:** {{{preparedBy}}}
-*   **Preparation Date:** ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+*   **Preparation Date:** {{{preparationDate}}}
 *   **Next Review Date:** {{{reviewDate}}}
 
 | Approval Role         | Name       | Signature | Date |
@@ -150,7 +156,9 @@ const generateShePlanFlow = ai.defineFlow(
     outputSchema: GenerateShePlanOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
+    const preparationDate = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
+    const promptInput = { ...input, preparationDate };
+    const {output} = await prompt(promptInput);
     return output!;
   }
 );

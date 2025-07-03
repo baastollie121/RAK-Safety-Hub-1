@@ -43,7 +43,7 @@ interface SavedShePlan {
   shePlanDocument: string;
 }
 
-const ReportContent = ({ report }: { report: SavedShePlan }) => {
+const ReportContent = ({ report, onDelete }: { report: SavedShePlan, onDelete: (id: string, title: string) => void }) => {
     const reportRef = useRef<HTMLDivElement>(null);
     const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
     const { toast } = useToast();
@@ -93,10 +93,37 @@ const ReportContent = ({ report }: { report: SavedShePlan }) => {
             <div ref={reportRef} className="prose prose-sm dark:prose-invert max-w-none rounded-lg border bg-background p-6">
                 <ReactMarkdown>{report.shePlanDocument}</ReactMarkdown>
             </div>
-            <div className="mt-4 flex justify-end">
-                <Button onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
+            <div className="mt-4 flex justify-end gap-2">
+                <Button onClick={handleDownloadPdf} disabled={isDownloadingPdf} variant="outline">
                     {isDownloadingPdf ? <><Loader2 className="animate-spin mr-2" /> Downloading...</> : <><Download className="mr-2" /> Download as PDF</>}
                 </Button>
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="destructive">
+                      <Trash2 className="mr-2 size-4" />
+                      Delete Plan
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Are you absolutely sure?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        This action cannot be undone. This will permanently
+                        delete this SHE plan for &quot;{report.title}&quot;.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancel</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => onDelete(report.id, report.title)}
+                      >
+                        Continue
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
             </div>
         </>
     );
@@ -198,36 +225,7 @@ export default function SavedShePlansPage() {
                   </div>
                 </AccordionTrigger>
                 <AccordionContent className="px-6 pb-6">
-                  <ReportContent report={plan} />
-                  <div className="mt-4 flex justify-end">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                        <Button variant="destructive">
-                          <Trash2 className="mr-2 size-4" />
-                          Delete Plan
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>
-                            Are you absolutely sure?
-                          </AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This action cannot be undone. This will permanently
-                            delete this SHE plan for &quot;{plan.title}&quot;.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction
-                            onClick={() => handleDelete(plan.id, plan.title)}
-                          >
-                            Continue
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
+                  <ReportContent report={plan} onDelete={handleDelete} />
                 </AccordionContent>
               </AccordionItem>
             </Card>

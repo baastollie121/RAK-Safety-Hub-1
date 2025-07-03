@@ -21,18 +21,20 @@ const GenerateSafeWorkProcedureInputSchema = z.object({
   procedure: z.array(z.string()).describe('An array of strings, where each string is a single step in the safe work procedure.'),
   emergencyProcedures: z.string().describe('A detailed description of actions to take in case of various emergencies.'),
 });
-type GenerateSafeWorkProcedureInput = z.infer<typeof GenerateSafeWorkProcedureInputSchema>;
+export type GenerateSafeWorkProcedureInput = z.infer<typeof GenerateSafeWorkProcedureInputSchema>;
 
 // This schema includes the values we'll calculate in the flow.
 const GenerateSafeWorkProcedurePromptInputSchema = GenerateSafeWorkProcedureInputSchema.extend({
     documentNumber: z.string(),
     effectiveDate: z.string(),
 });
+export type GenerateSafeWorkProcedurePromptInput = z.infer<typeof GenerateSafeWorkProcedurePromptInputSchema>;
+
 
 const GenerateSafeWorkProcedureOutputSchema = z.object({
   swpDocument: z.string().describe('The complete, OSHA-compliant Safe Work Procedure document in Markdown format.'),
 });
-type GenerateSafeWorkProcedureOutput = z.infer<typeof GenerateSafeWorkProcedureOutputSchema>;
+export type GenerateSafeWorkProcedureOutput = z.infer<typeof GenerateSafeWorkProcedureOutputSchema>;
 
 export async function generateSafeWorkProcedure(input: GenerateSafeWorkProcedureInput): Promise<GenerateSafeWorkProcedureOutput> {
   return generateSafeWorkProcedureFlow(input);
@@ -93,7 +95,7 @@ The following Personal Protective Equipment is mandatory for all personnel perfo
 The following steps must be followed in sequence to ensure the task is completed safely. Any deviation from this procedure requires authorization from a supervisor.
 
 {{#each procedure}}
-{{add @index 1}}. {{{this}}}
+1. {{{this}}}
 {{/each}}
 
 ---
@@ -144,6 +146,6 @@ const generateSafeWorkProcedureFlow = ai.defineFlow(
     
     const {output} = await prompt(promptInput);
 
-    return { swpDocument: output!.swpDocument };
+    return output!;
   }
 );

@@ -24,18 +24,22 @@ const GenerateMethodStatementInputSchema = z.object({
   monitoring: z.string().describe('A description of how the work will be monitored for safety and compliance.'),
   emergencyProcedures: z.string().describe('A detailed description of actions to take in case of various emergencies relevant to the task.'),
 });
+export type GenerateMethodStatementInput = z.infer<typeof GenerateMethodStatementInputSchema>;
 
 // This schema includes the values we'll calculate in the flow.
 const GenerateMethodStatementPromptInputSchema = GenerateMethodStatementInputSchema.extend({
     documentNumber: z.string(),
     effectiveDate: z.string(),
 });
+export type GenerateMethodStatementPromptInput = z.infer<typeof GenerateMethodStatementPromptInputSchema>;
+
 
 const GenerateMethodStatementOutputSchema = z.object({
   methodStatementDocument: z.string().describe('The complete, OSHA-compliant Method Statement document in Markdown format.'),
 });
+export type GenerateMethodStatementOutput = z.infer<typeof GenerateMethodStatementOutputSchema>;
 
-export async function generateMethodStatement(input: z.infer<typeof GenerateMethodStatementInputSchema>): Promise<z.infer<typeof GenerateMethodStatementOutputSchema>> {
+export async function generateMethodStatement(input: GenerateMethodStatementInput): Promise<GenerateMethodStatementOutput> {
   return generateMethodStatementFlow(input);
 }
 
@@ -108,7 +112,7 @@ Only authorized and inspected equipment shall be used for this task. All equipme
 The following steps must be followed in sequence to ensure the task is completed safely, efficiently, and to the required quality standard. Any deviation from this procedure requires a Stop Work Authority review and formal authorization from a supervisor.
 
 {{#each procedure}}
-{{add @index 1}}. {{{this}}}
+1. {{{this}}}
 {{/each}}
 
 ---
@@ -177,6 +181,6 @@ const generateMethodStatementFlow = ai.defineFlow(
     
     const {output} = await prompt(promptInput);
 
-    return { methodStatementDocument: output!.methodStatementDocument };
+    return output!;
   }
 );

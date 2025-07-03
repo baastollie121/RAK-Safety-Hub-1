@@ -78,7 +78,7 @@ The document must follow this exact structure:
 
 **Contents/Hazards:**
 {{#each hazards}}
-{{add @index 1}}. {{{this.hazard}}}
+1. {{{this.hazard}}}
 {{/each}}
 
 ---
