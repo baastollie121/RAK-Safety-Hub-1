@@ -221,32 +221,35 @@ export default function SiteResourcePlannerPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
   // --- DERIVED STATE ---
-  const unassignedEmployees = useMemo(() => 
+  const personnelPool = useMemo(() => 
     employees.filter(e => e.assignedTo === 'pool' && e.name.toLowerCase().includes(personnelSearchTerm.toLowerCase())), 
     [employees, personnelSearchTerm]
   );
-  const unassignedAssets = useMemo(() => 
+  const equipmentPool = useMemo(() => 
     assets.filter(a => a.assignedTo === 'pool' && (a.name.toLowerCase().includes(assetSearchTerm.toLowerCase()) || a.category.toLowerCase().includes(assetSearchTerm.toLowerCase()))),
     [assets, assetSearchTerm]
   );
   
-  const getEmployeesForSite = (siteId: string) => employees.filter(e => e.assignedTo === siteId);
-  const getAssetsForSite = (siteId: string) => assets.filter(a => a.assignedTo === siteId);
-
+  // --- DND HANDLERS ---
   const findContainer = (id: string) => {
-    if (id === 'personnel-pool' || employees.some(e => e.id === id && e.assignedTo === 'pool')) return 'personnel-pool';
-    if (id === 'equipment-pool' || assets.some(a => a.id === id && a.assignedTo === 'pool')) return 'equipment-pool';
+    // Check if the id is one of the pool containers themselves
+    if (id === 'personnel-pool') return 'personnel-pool';
+    if (id === 'equipment-pool') return 'equipment-pool';
+    // Check if the id is one of the site containers themselves
     if (sites.some(s => s.id === id)) return id;
 
-    for (const site of sites) {
-        if (getEmployeesForSite(site.id).some(e => e.id === id) || getAssetsForSite(site.id).some(a => a.id === id)) {
-            return site.id;
-        }
+    // Check if the id belongs to an item (employee or asset) and find its container
+    const employee = employees.find(e => e.id === id);
+    if (employee) {
+        return employee.assignedTo === 'pool' ? 'personnel-pool' : employee.assignedTo;
+    }
+    const asset = assets.find(a => a.id === id);
+    if (asset) {
+        return asset.assignedTo === 'pool' ? 'equipment-pool' : asset.assignedTo;
     }
     return null;
-  }
+  };
   
-  // --- DND HANDLERS ---
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
     const item = employees.find(e => e.id === active.id) || assets.find(a => a.id === active.id);
@@ -262,22 +265,20 @@ export default function SiteResourcePlannerPage() {
     const originalContainer = findContainer(active.id as string);
     const overContainer = findContainer(over.id as string);
     
-    if (!originalContainer || !overContainer || originalContainer === overContainer) return;
+    if (!originalContainer || !overContainer || originalContainer === overContainer) {
+      return;
+    }
 
-    // Check if the item being dragged is an employee
-    const item = employees.find(e => e.id === active.id) || assets.find(a => a.id === active.id);
-    if (!item) return;
-
-    const isEmployee = 'jobTitle' in item;
+    const itemIsEmployee = employees.some(e => e.id === active.id);
 
     // Prevent dropping employees in equipment pool and vice versa
-    if ((isEmployee && overContainer === 'equipment-pool') || (!isEmployee && overContainer === 'personnel-pool')) {
+    if ((itemIsEmployee && overContainer === 'equipment-pool') || (!itemIsEmployee && overContainer === 'personnel-pool')) {
         return;
     }
 
-    const newAssignedTo = overContainer.includes('pool') ? 'pool' : overContainer;
+    const newAssignedTo = overContainer.includes('-pool') ? 'pool' : overContainer;
 
-    if (isEmployee) {
+    if (itemIsEmployee) {
         setEmployees(emps => emps.map(e => e.id === active.id ? {...e, assignedTo: newAssignedTo } : e));
     } else {
         setAssets(asts => asts.map(a => a.id === active.id ? {...a, assignedTo: newAssignedTo } : a));
@@ -317,7 +318,7 @@ export default function SiteResourcePlannerPage() {
         <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-start">
           {/* Personnel Pool */}
           <div className="lg:col-span-1 xl:col-span-1">
-             <ResourceColumn id="personnel-pool" title="Personnel Pool" icon={<Users />} items={unassignedEmployees} searchTerm={personnelSearchTerm} setSearchTerm={setPersonnelSearchTerm} />
+             <ResourceColumn id="personnel-pool" title="Personnel Pool" icon={<Users />} items={personnelPool} searchTerm={personnelSearchTerm} setSearchTerm={setPersonnelSearchTerm} />
           </div>
 
           {/* Site Columns */}
@@ -356,8 +357,8 @@ export default function SiteResourcePlannerPage() {
                     <SiteCard
                         key={site.id}
                         site={site}
-                        employees={getEmployeesForSite(site.id)}
-                        assets={getAssetsForSite(site.id)}
+                        employees={employees.filter(e => e.assignedTo === site.id)}
+                        assets={assets.filter(a => a.assignedTo === site.id)}
                     />
                 ))}
                 </div>
@@ -366,7 +367,7 @@ export default function SiteResourcePlannerPage() {
           
            {/* Equipment Pool */}
           <div className="lg:col-span-1 xl:col-span-1">
-             <ResourceColumn id="equipment-pool" title="Equipment Pool" icon={<Package />} items={unassignedAssets} searchTerm={assetSearchTerm} setSearchTerm={setAssetSearchTerm} />
+             <ResourceColumn id="equipment-pool" title="Equipment Pool" icon={<Package />} items={equipmentPool} searchTerm={assetSearchTerm} setSearchTerm={setAssetSearchTerm} />
           </div>
 
         </div>
@@ -384,8 +385,8 @@ export default function SiteResourcePlannerPage() {
                 <ScrollArea className="max-h-[60vh]">
                     <div className="space-y-6 pr-4 py-4">
                         {sites.map(site => {
-                            const siteEmployees = getEmployeesForSite(site.id);
-                            const siteAssets = getAssetsForSite(site.id);
+                            const siteEmployees = employees.filter(e => e.assignedTo === site.id);
+                            const siteAssets = assets.filter(a => a.assignedTo === site.id);
                             return (
                                 <div key={site.id}>
                                     <h3 className="font-bold text-lg border-b pb-1 mb-2">{site.name}</h3>
@@ -407,16 +408,16 @@ export default function SiteResourcePlannerPage() {
                         <Separator className="my-4" />
                         <div>
                             <h3 className="font-bold text-lg pb-1 mb-2">Unassigned Resources</h3>
-                             <h4 className="font-semibold mt-2">Personnel ({unassignedEmployees.filter(e => e.assignedTo === 'pool').length})</h4>
-                             {unassignedEmployees.filter(e => e.assignedTo === 'pool').length > 0 ? (
+                             <h4 className="font-semibold mt-2">Personnel ({employees.filter(e => e.assignedTo === 'pool').length})</h4>
+                             {employees.filter(e => e.assignedTo === 'pool').length > 0 ? (
                                 <ul className="list-disc pl-5 text-sm">
-                                    {unassignedEmployees.filter(e => e.assignedTo === 'pool').map(e => <li key={e.id}>{e.name} ({e.jobTitle})</li>)}
+                                    {employees.filter(e => e.assignedTo === 'pool').map(e => <li key={e.id}>{e.name} ({e.jobTitle})</li>)}
                                 </ul>
                             ) : <p className="text-sm text-muted-foreground">All personnel are assigned.</p>}
-                             <h4 className="font-semibold mt-2">Equipment ({unassignedAssets.filter(a => a.assignedTo === 'pool').length})</h4>
-                             {unassignedAssets.filter(a => a.assignedTo === 'pool').length > 0 ? (
+                             <h4 className="font-semibold mt-2">Equipment ({assets.filter(a => a.assignedTo === 'pool').length})</h4>
+                             {assets.filter(a => a.assignedTo === 'pool').length > 0 ? (
                                 <ul className="list-disc pl-5 text-sm">
-                                    {unassignedAssets.filter(a => a.assignedTo === 'pool').map(a => <li key={a.id}>{a.name} ({a.category})</li>)}
+                                    {assets.filter(a => a.assignedTo === 'pool').map(a => <li key={a.id}>{a.name} ({a.category})</li>)}
                                 </ul>
                             ) : <p className="text-sm text-muted-foreground">All equipment is assigned.</p>}
                         </div>
