@@ -4,8 +4,6 @@ import { useState, RefObject } from 'react';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Download } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 
 interface UseDownloadPdfProps {
   reportRef: RefObject<HTMLDivElement>;
@@ -56,19 +54,5 @@ export function useDownloadPdf({ reportRef, fileName }: UseDownloadPdfProps) {
     }
   };
 
-  const DownloadButton = () => (
-    <Button onClick={handleDownload} disabled={isDownloading} variant="outline">
-      {isDownloading ? (
-        <>
-          <Loader2 className="animate-spin mr-2 size-4" /> Downloading...
-        </>
-      ) : (
-        <>
-          <Download className="mr-2 size-4" /> Download PDF
-        </>
-      )}
-    </Button>
-  );
-
-  return { isDownloading, handleDownload, DownloadButton };
+  return { isDownloading, handleDownload };
 }

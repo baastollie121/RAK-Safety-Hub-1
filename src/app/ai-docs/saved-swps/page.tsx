@@ -28,7 +28,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 import { useDownloadPdf } from '@/hooks/use-download-pdf';
-import { Trash2, FileArchive } from 'lucide-react';
+import { Trash2, FileArchive, Loader2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -43,7 +43,7 @@ interface SavedSwp {
 
 const ReportContent = ({ report, onDelete }: { report: SavedSwp, onDelete: (id: string, title: string) => void }) => {
     const reportRef = useRef<HTMLDivElement>(null);
-    const { DownloadButton } = useDownloadPdf({
+    const { isDownloading, handleDownload } = useDownloadPdf({
       reportRef,
       fileName: `SWP-${report.title.replace(/\s+/g, '_')}`
     });
@@ -54,7 +54,17 @@ const ReportContent = ({ report, onDelete }: { report: SavedSwp, onDelete: (id: 
                 <ReactMarkdown>{report.swpDocument}</ReactMarkdown>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-                <DownloadButton />
+                <Button onClick={handleDownload} disabled={isDownloading} variant="outline">
+                    {isDownloading ? (
+                        <>
+                            <Loader2 className="animate-spin mr-2 size-4" /> Downloading...
+                        </>
+                    ) : (
+                        <>
+                            <Download className="mr-2 size-4" /> Download PDF
+                        </>
+                    )}
+                </Button>
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive">
