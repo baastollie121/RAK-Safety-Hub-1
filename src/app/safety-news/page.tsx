@@ -54,14 +54,16 @@ export default function SafetyNewsPage() {
   if (isLoading) {
     return (
       <div className="p-4 sm:p-6 md:p-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-bold font-headline tracking-tight">
-            Safety News
-          </h1>
-          <p className="text-muted-foreground">
-            Latest news and updates from our team.
-          </p>
-        </header>
+        <Card className="mb-8">
+          <CardContent className="p-6">
+            <h1 className="text-3xl font-bold font-headline tracking-tight">
+              Safety News
+            </h1>
+            <p className="text-muted-foreground mt-2">
+              Latest news and updates from our team.
+            </p>
+          </CardContent>
+        </Card>
         <div className="space-y-4">
           <Skeleton className="h-40 w-full" />
           <Skeleton className="h-40 w-full" />
@@ -117,14 +119,16 @@ export default function SafetyNewsPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">
-          Safety News
-        </h1>
-        <p className="text-muted-foreground">
-          Latest news and updates from our team.
-        </p>
-      </header>
+      <Card className="mb-8">
+        <CardContent className="p-6">
+          <h1 className="text-3xl font-bold font-headline tracking-tight">
+            Safety News
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Latest news and updates from our team.
+          </p>
+        </CardContent>
+      </Card>
 
       <div className="mb-6 flex flex-wrap gap-2">
         {articleFilterCategories.map((category) => (
