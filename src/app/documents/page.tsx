@@ -232,14 +232,16 @@ export default function DocumentsPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">
-          Document Library
-        </h1>
-        <p className="text-muted-foreground">
-          Access all your company documents in one place.
-        </p>
-      </header>
+      <Card className="mb-8">
+        <CardContent className="p-6">
+          <h1 className="text-3xl font-bold font-headline tracking-tight">
+            Document Library
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Access all your company documents in one place.
+          </p>
+        </CardContent>
+      </Card>
 
       <Card className="mb-6">
           <CardContent className="p-4">
