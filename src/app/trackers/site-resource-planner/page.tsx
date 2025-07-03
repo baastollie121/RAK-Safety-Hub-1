@@ -16,6 +16,7 @@ import {
   SortableContext,
   useSortable,
   verticalListSortingStrategy,
+  arrayMove,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
@@ -39,9 +40,10 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Users, Package, GripVertical, Plus, List, Building } from 'lucide-react';
+import { Users, Package, GripVertical, Plus, List, Building, HardHat } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
 
 // --- TYPE DEFINITIONS ---
 interface Employee {
@@ -102,7 +104,7 @@ const PlannerItem = ({ item }: { item: DraggableItem }) => {
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners} className="mb-2">
-      <Card className="p-3 bg-card/50 hover:bg-card/70 cursor-grab active:cursor-grabbing">
+      <Card className="p-3 bg-background/50 hover:bg-muted/80 cursor-grab active:cursor-grabbing">
         <div className="flex items-center gap-2">
             <GripVertical className="size-5 text-muted-foreground" />
             <div className="flex-grow">
@@ -123,36 +125,38 @@ const SiteCard = ({ site, employees, assets }: { site: Site, employees: Employee
     const assignedIds = useMemo(() => [...employees.map(e => e.id), ...assets.map(a => a.id)], [employees, assets]);
 
     return (
-        <Card ref={setNodeRef} className="flex flex-col">
+        <Card ref={setNodeRef} className="flex flex-col bg-card/50">
             <CardHeader className="pb-2">
-                <CardTitle className="font-headline text-lg flex items-center gap-2">
-                    <Building className="size-5"/> {site.name}
+                <CardTitle className="font-headline text-base flex items-center gap-2">
+                    <Building className="size-4"/> {site.name}
                 </CardTitle>
-                <CardDescription>Drag & drop resources here.</CardDescription>
             </CardHeader>
-            <CardContent className="flex-grow min-h-[200px] p-2">
+            <CardContent className="flex-grow min-h-[150px] p-2 space-y-2">
                 <SortableContext items={assignedIds} strategy={verticalListSortingStrategy}>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    {employees.length > 0 && (
                         <div>
-                            <h4 className="font-semibold text-sm mb-2 px-2">Personnel</h4>
-                             {employees.length > 0 ? (
-                                employees.map(emp => <PlannerItem key={emp.id} item={emp} />)
-                            ) : (
-                                <p className="text-xs text-muted-foreground p-2">No personnel assigned.</p>
-                            )}
+                            <h4 className="font-semibold text-xs text-muted-foreground mb-1 px-2 flex items-center gap-1.5"><HardHat className="size-3"/>Personnel</h4>
+                            <div className="pl-1">
+                                {employees.map(emp => <PlannerItem key={emp.id} item={emp} />)}
+                            </div>
                         </div>
+                    )}
+                     {assets.length > 0 && (
                          <div>
-                            <h4 className="font-semibold text-sm mb-2 px-2">Equipment</h4>
-                             {assets.length > 0 ? (
-                                assets.map(asset => <PlannerItem key={asset.id} item={asset} />)
-                            ) : (
-                                <p className="text-xs text-muted-foreground p-2">No equipment assigned.</p>
-                            )}
+                            <h4 className="font-semibold text-xs text-muted-foreground mb-1 px-2 flex items-center gap-1.5"><Package className="size-3"/>Equipment</h4>
+                            <div className="pl-1">
+                                {assets.map(asset => <PlannerItem key={asset.id} item={asset} />)}
+                            </div>
                         </div>
-                    </div>
+                    )}
+                    {employees.length === 0 && assets.length === 0 && (
+                        <div className="flex items-center justify-center h-full min-h-[100px] border-2 border-dashed rounded-md">
+                            <p className="text-sm text-muted-foreground">Drop resources here</p>
+                        </div>
+                    )}
                 </SortableContext>
             </CardContent>
-             <CardFooter className="p-2">
+             <CardFooter className="p-2 border-t mt-2">
                 <Badge variant="secondary" className="mr-2">Personnel: {employees.length}</Badge>
                 <Badge variant="secondary">Equipment: {assets.length}</Badge>
             </CardFooter>
@@ -165,12 +169,12 @@ const ResourceColumn = ({ id, title, icon, items }: { id: string, title: string,
     const { setNodeRef } = useSortable({ id, data: { type: 'resource-column' } });
 
     return (
-        <Card ref={setNodeRef} className="flex flex-col h-full max-h-[80vh]">
+        <Card ref={setNodeRef} className="flex flex-col h-full max-h-[calc(100vh-12rem)] bg-muted/20">
             <CardHeader>
                 <CardTitle className="font-headline text-lg flex items-center gap-2">
                     {icon} {title}
                 </CardTitle>
-                <CardDescription>Available resources</CardDescription>
+                <CardDescription>Available for assignment</CardDescription>
             </CardHeader>
             <ScrollArea className="flex-grow">
                  <CardContent>
@@ -178,7 +182,7 @@ const ResourceColumn = ({ id, title, icon, items }: { id: string, title: string,
                         {items.length > 0 ? (
                             items.map(item => <PlannerItem key={item.id} item={item} />)
                         ) : (
-                            <p className="text-sm text-muted-foreground p-4 text-center">All resources assigned.</p>
+                            <p className="text-sm text-muted-foreground p-4 text-center h-40 flex items-center justify-center">All resources have been assigned.</p>
                         )}
                     </SortableContext>
                 </CardContent>
@@ -210,6 +214,19 @@ export default function SiteResourcePlannerPage() {
   const getEmployeesForSite = (siteId: string) => employees.filter(e => e.assignedTo === siteId);
   const getAssetsForSite = (siteId: string) => assets.filter(a => a.assignedTo === siteId);
 
+  const findContainer = (id: string) => {
+    if (id === 'personnel-pool' || unassignedEmployees.find(e => e.id === id)) return 'personnel-pool';
+    if (id === 'equipment-pool' || unassignedAssets.find(a => a.id === id)) return 'equipment-pool';
+    if (sites.find(s => s.id === id)) return id;
+
+    for (const site of sites) {
+        if (getEmployeesForSite(site.id).some(e => e.id === id) || getAssetsForSite(site.id).some(a => a.id === id)) {
+            return site.id;
+        }
+    }
+    return null;
+  }
+  
   // --- DND HANDLERS ---
   const handleDragStart = (event: DragStartEvent) => {
     const { active } = event;
@@ -221,47 +238,29 @@ export default function SiteResourcePlannerPage() {
     const { active, over } = event;
     setActiveItem(null);
 
-    if (!over) return;
-
-    const activeId = active.id.toString();
-    const overId = over.id.toString();
+    if (!over || active.id === over.id) return;
     
-    // Determine target container ID
-    const overIsSite = sites.some(s => s.id === overId);
-    const overIsPool = ['personnel-pool', 'equipment-pool'].includes(overId);
-    let targetContainerId = overId;
-    if (over.data.current?.type === 'item') {
-        const parentId = findParentContainer(overId);
-        if (parentId) targetContainerId = parentId;
-    }
+    const originalContainer = findContainer(active.id as string);
+    const overContainer = findContainer(over.id as string);
 
-    const isEmployee = employees.some(e => e.id === activeId);
+    if (!originalContainer || !overContainer) return;
+    
+    const isEmployee = 'jobTitle' in active.data.current!;
 
-    // Prevent dropping into wrong pool
-    if ((isEmployee && targetContainerId === 'equipment-pool') || (!isEmployee && targetContainerId === 'personnel-pool')) {
+    // Prevent dropping employees in equipment pool and vice versa
+    if ((isEmployee && overContainer === 'equipment-pool') || (!isEmployee && overContainer === 'personnel-pool')) {
         return;
     }
-    
-    // Update state
-    if(isEmployee) {
-        setEmployees(emps => emps.map(e => e.id === activeId ? {...e, assignedTo: targetContainerId.includes('pool') ? 'pool' : targetContainerId } : e));
+
+    const newAssignedTo = overContainer.includes('pool') ? 'pool' : overContainer;
+
+    if (isEmployee) {
+        setEmployees(emps => emps.map(e => e.id === active.id ? {...e, assignedTo: newAssignedTo } : e));
     } else {
-        setAssets(asts => asts.map(a => a.id === activeId ? {...a, assignedTo: targetContainerId.includes('pool') ? 'pool' : targetContainerId} : a));
+        setAssets(asts => asts.map(a => a.id === active.id ? {...a, assignedTo: newAssignedTo } : a));
     }
   };
   
-  const findParentContainer = (itemId: string): string | null => {
-      if (unassignedEmployees.some(e => e.id === itemId) || unassignedAssets.some(a => a.id === itemId)) {
-          return employees.some(e => e.id === itemId) ? 'personnel-pool' : 'equipment-pool';
-      }
-      for (const site of sites) {
-          if (getEmployeesForSite(site.id).some(e => e.id === itemId) || getAssetsForSite(site.id).some(a => a.id === itemId)) {
-              return site.id;
-          }
-      }
-      return null;
-  }
-
   // --- OTHER HANDLERS ---
   const handleAddSite = () => {
     if (newSiteName.trim().length < 2) {
@@ -275,12 +274,6 @@ export default function SiteResourcePlannerPage() {
     toast({ title: 'Success', description: `Site "${newSiteName}" created.` });
   };
   
-  const allDroppableIds = useMemo(() => [
-    'personnel-pool',
-    'equipment-pool',
-    ...sites.map(s => s.id)
-  ], [sites]);
-
   return (
     <DndContext
       sensors={sensors}
@@ -289,64 +282,70 @@ export default function SiteResourcePlannerPage() {
       onDragEnd={handleDragEnd}
     >
       <div className="p-4 sm:p-6 md:p-8">
-        <header className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-          <div>
+        <header className="mb-8">
             <h1 className="text-3xl font-bold font-headline tracking-tight">
               Site & Resource Planner
             </h1>
             <p className="text-muted-foreground">
-              Drag and drop resources to assign them to job sites.
+              Drag resources from the side pools and drop them onto a project site in the center.
             </p>
-          </div>
-          <div className="flex gap-2">
-            <Dialog open={isSiteDialogOpen} onOpenChange={setIsSiteDialogOpen}>
-                <DialogTrigger asChild>
-                    <Button variant="outline"><Plus className="mr-2"/>Add New Site</Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogHeader>
-                        <DialogTitle>Create a New Site</DialogTitle>
-                        <DialogDescription>Enter a name for the new job site or project.</DialogDescription>
-                    </DialogHeader>
-                    <div className="py-4">
-                        <Input
-                            placeholder="e.g., Downtown Tower Project"
-                            value={newSiteName}
-                            onChange={(e) => setNewSiteName(e.target.value)}
-                        />
-                    </div>
-                    <DialogFooter>
-                        <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
-                        <Button onClick={handleAddSite}>Create Site</Button>
-                    </DialogFooter>
-                </DialogContent>
-            </Dialog>
-            <Button onClick={() => setIsReportOpen(true)}><List className="mr-2" />Generate Report</Button>
-          </div>
         </header>
         
-        <div className="grid grid-cols-1 lg:grid-cols-3 xl:grid-cols-4 gap-6 items-start">
-          {/* Resource Pools */}
-          <div className="lg:col-span-1 xl:col-span-1 space-y-6">
-             <ResourceColumn id="personnel-pool" title="Available Personnel" icon={<Users />} items={unassignedEmployees} />
-             <ResourceColumn id="equipment-pool" title="Available Equipment" icon={<Package />} items={unassignedAssets} />
+        <div className="grid grid-cols-1 lg:grid-cols-4 xl:grid-cols-5 gap-6 items-start">
+          {/* Personnel Pool */}
+          <div className="lg:col-span-1 xl:col-span-1">
+             <ResourceColumn id="personnel-pool" title="Personnel Pool" icon={<Users />} items={unassignedEmployees} />
           </div>
 
           {/* Site Columns */}
           <div className="lg:col-span-2 xl:col-span-3">
-             <SortableContext items={allDroppableIds} strategy={verticalListSortingStrategy}>
-                 <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    {sites.map(site => (
-                        <SiteCard
-                            key={site.id}
-                            site={site}
-                            employees={getEmployeesForSite(site.id)}
-                            assets={getAssetsForSite(site.id)}
-                        />
-                    ))}
-                 </div>
-             </SortableContext>
+            <div className="flex items-center justify-between mb-4">
+                <h2 className="text-xl font-headline font-semibold">Project Sites</h2>
+                <div className="flex gap-2">
+                    <Dialog open={isSiteDialogOpen} onOpenChange={setIsSiteDialogOpen}>
+                        <DialogTrigger asChild>
+                            <Button variant="outline"><Plus className="mr-2"/>Add New Site</Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                            <DialogHeader>
+                                <DialogTitle>Create a New Site</DialogTitle>
+                                <DialogDescription>Enter a name for the new job site or project.</DialogDescription>
+                            </DialogHeader>
+                            <div className="py-4">
+                                <Input
+                                    placeholder="e.g., Downtown Tower Project"
+                                    value={newSiteName}
+                                    onChange={(e) => setNewSiteName(e.target.value)}
+                                />
+                            </div>
+                            <DialogFooter>
+                                <DialogClose asChild><Button variant="outline">Cancel</Button></DialogClose>
+                                <Button onClick={handleAddSite}>Create Site</Button>
+                            </DialogFooter>
+                        </DialogContent>
+                    </Dialog>
+                    <Button onClick={() => setIsReportOpen(true)}><List className="mr-2" />Generate Report</Button>
+                </div>
+            </div>
+             <ScrollArea className="h-[calc(100vh-12rem)]">
+                <div className="space-y-4 pr-4">
+                {sites.map(site => (
+                    <SiteCard
+                        key={site.id}
+                        site={site}
+                        employees={getEmployeesForSite(site.id)}
+                        assets={getAssetsForSite(site.id)}
+                    />
+                ))}
+                </div>
+             </ScrollArea>
           </div>
+          
+           {/* Equipment Pool */}
+          <div className="lg:col-span-1 xl:col-span-1">
+             <ResourceColumn id="equipment-pool" title="Equipment Pool" icon={<Package />} items={unassignedAssets} />
+          </div>
+
         </div>
       </div>
       <DragOverlay>
@@ -382,7 +381,8 @@ export default function SiteResourcePlannerPage() {
                                 </div>
                             )
                         })}
-                        <div className="border-t pt-4">
+                        <Separator className="my-4" />
+                        <div>
                             <h3 className="font-bold text-lg pb-1 mb-2">Unassigned Resources</h3>
                              <h4 className="font-semibold mt-2">Personnel ({unassignedEmployees.length})</h4>
                              {unassignedEmployees.length > 0 ? (
