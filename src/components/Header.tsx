@@ -11,10 +11,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Button } from '@/components/ui/button';
 import { Settings, LogOut } from 'lucide-react';
-import { SidebarTrigger } from './ui/sidebar';
+import { SidebarTrigger, useSidebar } from './ui/sidebar';
 
 export function Header() {
   const { user, logout } = useAuth();
+  const { state, isMobile } = useSidebar();
 
   if (!user) return null;
 
@@ -23,6 +24,11 @@ export function Header() {
         <div className="md:hidden">
             <SidebarTrigger />
         </div>
+        
+        {!isMobile && state === 'collapsed' && (
+            <SidebarTrigger />
+        )}
+
         <div className="ml-auto flex items-center gap-2">
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
