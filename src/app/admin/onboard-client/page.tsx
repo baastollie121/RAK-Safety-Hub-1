@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -59,9 +60,6 @@ export default function OnboardClientPage() {
     setIsLoading(true);
     console.log('Onboarding data:', data);
     
-    // NOTE: This is where the Firebase user creation logic will go.
-    // For now, it is a placeholder.
-    
     toast({
       title: "Feature In Development",
       description: "The client onboarding logic is not yet connected to the backend.",
@@ -88,7 +86,7 @@ export default function OnboardClientPage() {
           <CardTitle>Client Details</CardTitle>
           <CardDescription>
             Enter the new client's information below.
-          </Description>
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
