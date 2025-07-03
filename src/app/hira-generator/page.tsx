@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef } from 'react';
@@ -49,7 +50,8 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { PlusCircle, Trash2, Loader2, Wand2, Download, CalendarIcon, WandSparkles, FileArchive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { generateHira, type GenerateHiraOutput } from '@/ai/flows/hira-generator';
+import { generateHira } from '@/ai/flows/hira-generator';
+import type { GenerateHiraOutput } from '@/ai/flows/hira-generator';
 import { suggestHiraHazards } from '@/ai/flows/hira-suggester';
 import { Separator } from '@/components/ui/separator';
 import ReactMarkdown from 'react-markdown';
@@ -173,7 +175,6 @@ export default function HIRAGeneratorPage() {
     defaultValues: {
       companyName: '',
       taskTitle: '',
-      reviewDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // Default to one year from now
       hazards: [],
     },
   });
@@ -363,64 +364,58 @@ export default function HIRAGeneratorPage() {
                   <CardTitle>Project Details</CardTitle>
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                  <div className="md:col-span-1">
-                      <FormField
-                          control={form.control}
-                          name="companyName"
-                          render={({ field }) => (
-                              <FormItem>
-                                  <FormLabel>Company/Organization Name</FormLabel>
-                                  <FormControl>
-                                      <Input placeholder="e.g., RAK Safety" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                              </FormItem>
-                          )}
-                      />
-                  </div>
-                  <div className="md:col-span-1">
-                      <FormField
-                          control={form.control}
-                          name="taskTitle"
-                          render={({ field }) => (
-                              <FormItem>
-                                  <FormLabel>Task/Project Title</FormLabel>
-                                  <FormControl>
-                                      <Input placeholder="e.g., Office Electrical Maintenance" {...field} />
-                                  </FormControl>
-                                  <FormMessage />
-                              </FormItem>
-                          )}
-                      />
-                  </div>
-                   <div className="md:col-span-1">
-                      <FormField
-                          control={form.control}
-                          name="reviewDate"
-                          render={({ field }) => (
-                              <FormItem className="flex flex-col">
-                                  <FormLabel>Next Review Date</FormLabel>
-                                  <Popover>
-                                      <PopoverTrigger asChild>
-                                          <FormControl>
-                                              <Button
-                                                  variant={'outline'}
-                                                  className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                                              >
-                                                  {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                              </Button>
-                                          </FormControl>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-auto p-0" align="start">
-                                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                      </PopoverContent>
-                                  </Popover>
-                                  <FormMessage />
-                              </FormItem>
-                          )}
-                      />
-                  </div>
+                  <FormField
+                      control={form.control}
+                      name="companyName"
+                      render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Company/Organization Name</FormLabel>
+                              <FormControl>
+                                  <Input placeholder="e.g., RAK Safety" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="taskTitle"
+                      render={({ field }) => (
+                          <FormItem>
+                              <FormLabel>Task/Project Title</FormLabel>
+                              <FormControl>
+                                  <Input placeholder="e.g., Office Electrical Maintenance" {...field} />
+                              </FormControl>
+                              <FormMessage />
+                          </FormItem>
+                      )}
+                  />
+                  <FormField
+                      control={form.control}
+                      name="reviewDate"
+                      render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                              <FormLabel>Next Review Date</FormLabel>
+                              <Popover>
+                                  <PopoverTrigger asChild>
+                                      <FormControl>
+                                          <Button
+                                              variant={'outline'}
+                                              className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                                          >
+                                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                          </Button>
+                                      </FormControl>
+                                  </PopoverTrigger>
+                                  <PopoverContent className="w-auto p-0" align="start">
+                                      <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                  </PopoverContent>
+                              </Popover>
+                              <FormMessage />
+                          </FormItem>
+                      )}
+                  />
               </CardContent>
           </Card>
 
