@@ -30,6 +30,7 @@ import {
   UserPlus,
   Users,
   ChevronRight,
+  BookOpenCheck,
 } from 'lucide-react';
 import React from 'react';
 
@@ -71,7 +72,7 @@ const aiToolsNav = [
 
 const trackersNav = [
   { href: '/trackers/site-health-dashboard', icon: <LayoutDashboard />, label: 'Site Health Dashboard' },
-  { href: '/trackers/vehicle-equipment-tracker', icon: <Truck />, label: 'Fleet Vehicle Tracker' },
+  { href: '/trackers/vehicle-equipment-tracker', icon: <Truck />, label: 'Vehicle Fleet Tracker' },
   { href: '/trackers/asset-equipment-tracker', icon: <Package />, label: 'Tool & Equipment Tracker' },
   { href: '/trackers/employee-training-tracker', icon: <Users />, label: 'Employee Training' },
   { href: '/trackers/site-resource-planner', icon: <CalendarCog />, label: 'Site & Resource Planner' },
@@ -86,6 +87,7 @@ const aiDocsNav = [
 
 const supportNav = [
     { href: '/support', icon: <LifeBuoy />, label: 'Support & Billing' },
+    { href: '/how-to-guide', icon: <BookOpenCheck />, label: 'How-To Guide' },
 ]
 
 const NavGroup = ({
