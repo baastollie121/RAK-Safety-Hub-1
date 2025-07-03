@@ -6,9 +6,37 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Bot, FileCheck, FileText, Folder, ScanSearch, ShieldCheck, ArrowRight } from "lucide-react";
+import { 
+  ArrowRight,
+  Bot,
+  FileCheck, 
+  FileText, 
+  Folder, 
+  Newspaper, 
+  ScanSearch, 
+  ShieldCheck, 
+  UserCog 
+} from "lucide-react";
 
 const features = [
+  {
+    title: "Document Library",
+    description: "Browse and download safety, quality, and HR documents.",
+    icon: <Folder className="size-8 text-primary" />,
+    href: "/documents",
+  },
+  {
+    title: "AI Safety Consultant",
+    description: "Get expert safety advice from our AI consultant, Winston.",
+    icon: <Bot className="size-8 text-primary" />,
+    href: "/safety-consultant",
+  },
+  {
+    title: "Safety News",
+    description: "Stay up-to-date with the latest in safety news.",
+    icon: <Newspaper className="size-8 text-primary" />,
+    href: "/safety-news",
+  },
   {
     title: "AI Hazard Hunter",
     description: "Upload an image to identify potential safety risks instantly.",
@@ -34,16 +62,10 @@ const features = [
     href: "/safe-work-procedure",
   },
   {
-    title: "AI Safety Consultant",
-    description: "Get expert safety advice from our AI consultant, Winston.",
-    icon: <Bot className="size-8 text-primary" />,
-    href: "/safety-consultant",
-  },
-  {
-    title: "Document Library",
-    description: "Browse and download safety, quality, and HR documents.",
-    icon: <Folder className="size-8 text-primary" />,
-    href: "/documents",
+    title: "Admin",
+    description: "Manage clients, documents, and system settings.",
+    icon: <UserCog className="size-8 text-primary" />,
+    href: "/admin/onboard-client",
   },
 ];
 
@@ -73,7 +95,7 @@ export default function DashboardPage() {
                   {feature.description}
                 </p>
                 <div className="mt-4 flex items-center text-sm font-medium text-primary opacity-0 transition-opacity duration-200 group-hover:opacity-100">
-                  <span>Go to tool</span>
+                  <span>Go to page</span>
                   <ArrowRight className="ml-1 size-4" />
                 </div>
               </CardContent>
