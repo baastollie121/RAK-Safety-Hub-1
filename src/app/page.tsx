@@ -1,4 +1,8 @@
+'use client';
+
 import Link from "next/link";
+import { useMemo } from "react";
+import { useAuth } from "@/context/AuthContext";
 import {
   Card,
   CardContent,
@@ -70,6 +74,16 @@ const features = [
 ];
 
 export default function DashboardPage() {
+  const { user } = useAuth();
+
+  const filteredFeatures = useMemo(() => {
+    if (user?.role === 'admin') {
+      return features;
+    }
+    return features.filter(feature => feature.title !== 'Admin');
+  }, [user]);
+
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <header className="mb-8">
@@ -81,7 +95,7 @@ export default function DashboardPage() {
         </p>
       </header>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {features.map((feature) => (
+        {filteredFeatures.map((feature) => (
           <Link href={feature.href} key={feature.title} className="group">
             <Card className="h-full transition-all duration-200 ease-in-out group-hover:border-primary group-hover:shadow-lg group-hover:-translate-y-1">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
