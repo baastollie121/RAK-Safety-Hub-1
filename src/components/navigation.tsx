@@ -16,6 +16,7 @@ import {
   Home,
   LayoutDashboard,
   LifeBuoy,
+  LogOut,
   Map,
   MessageSquare,
   Newspaper,
@@ -31,6 +32,7 @@ import {
   Users,
 } from 'lucide-react';
 
+import { useAuth } from '@/context/AuthContext';
 import {
   SidebarGroup,
   SidebarGroupLabel,
@@ -85,6 +87,7 @@ const supportNav = [
 
 export function Navigation() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
 
   const renderNavItems = (items: typeof mainNav) =>
     items.map((item) => (
@@ -109,15 +112,18 @@ export function Navigation() {
         <SidebarMenu>{renderNavItems(mainNav)}</SidebarMenu>
       </SidebarGroup>
 
-      <SidebarSeparator />
-
-      <SidebarGroup className="p-2">
-        <SidebarGroupLabel className="flex items-center gap-2 px-2 text-sidebar-foreground/70">
-          <UserCog className="size-4" />
-          <span>Admin</span>
-        </SidebarGroupLabel>
-        <SidebarMenu>{renderNavItems(adminNav)}</SidebarMenu>
-      </SidebarGroup>
+      {user?.role === 'admin' && (
+        <>
+          <SidebarSeparator />
+          <SidebarGroup className="p-2">
+            <SidebarGroupLabel className="flex items-center gap-2 px-2 text-sidebar-foreground/70">
+              <UserCog className="size-4" />
+              <span>Admin</span>
+            </SidebarGroupLabel>
+            <SidebarMenu>{renderNavItems(adminNav)}</SidebarMenu>
+          </SidebarGroup>
+        </>
+      )}
 
       <SidebarSeparator />
 
@@ -151,8 +157,16 @@ export function Navigation() {
 
       <SidebarSeparator />
       
-      <SidebarGroup className="p-2">
-        <SidebarMenu>{renderNavItems(supportNav)}</SidebarMenu>
+      <SidebarGroup className="p-2 mt-auto">
+        <SidebarMenu>
+            {renderNavItems(supportNav)}
+            <SidebarMenuItem>
+                <SidebarMenuButton onClick={logout} tooltip={{children: 'Logout'}}>
+                    <LogOut />
+                    <span>Logout</span>
+                </SidebarMenuButton>
+            </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarGroup>
     </>
   );

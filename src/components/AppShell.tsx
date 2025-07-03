@@ -1,0 +1,96 @@
+'use client';
+
+import React, { useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
+import { useAuth } from '@/context/AuthContext';
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarProvider,
+  SidebarTrigger,
+} from "@/components/ui/sidebar";
+import { Logo } from "@/components/logo";
+import { Navigation } from "@/components/navigation";
+import { Skeleton } from './ui/skeleton';
+
+function AppSkeleton() {
+    return (
+        <div className="flex h-screen w-full bg-background">
+            <div className="hidden md:flex flex-col gap-4 border-r p-4 w-64">
+                <div className="flex items-center gap-2 p-2">
+                    <Skeleton className="size-8 rounded-full" />
+                    <Skeleton className="h-6 w-32" />
+                </div>
+                <div className="flex flex-col gap-2 p-2">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                </div>
+            </div>
+            <div className="flex-1 p-8">
+                <Skeleton className="h-10 w-1/3 mb-4" />
+                <Skeleton className="h-4 w-1/2 mb-8" />
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                    <Skeleton className="h-32 w-full" />
+                </div>
+            </div>
+        </div>
+    )
+}
+
+export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  useEffect(() => {
+    if (!isLoading && !isAuthenticated && pathname !== '/login') {
+      router.push('/login');
+    }
+  }, [isLoading, isAuthenticated, pathname, router]);
+
+  if (isLoading) {
+    return <AppSkeleton />;
+  }
+  
+  if (pathname === '/login') {
+    return <>{children}</>;
+  }
+
+  if (!isAuthenticated) {
+    return <AppSkeleton />;
+  }
+
+  return (
+    <SidebarProvider>
+      <Sidebar>
+        <SidebarHeader>
+          <div className="flex items-center gap-2 p-2">
+            <Logo />
+            <h1 className="text-xl font-headline font-semibold">RAK Safety Hub</h1>
+            <div className="ml-auto">
+              <SidebarTrigger />
+            </div>
+          </div>
+        </SidebarHeader>
+        <SidebarContent>
+          <SidebarMenu>
+            <Navigation />
+          </SidebarMenu>
+        </SidebarContent>
+      </Sidebar>
+      <SidebarInset>
+        <main>{children}</main>
+      </SidebarInset>
+    </SidebarProvider>
+  );
+}
