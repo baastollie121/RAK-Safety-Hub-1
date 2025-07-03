@@ -15,7 +15,6 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
@@ -34,11 +33,19 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Trash2, File } from 'lucide-react';
+import { Upload, Trash2, File, CalendarIcon } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
 
 interface Doc {
   id: string;
   name: string;
+  fileType: string;
+  fileSize: string;
+  lastModified: string;
 }
 
 interface DocCategory {
@@ -52,53 +59,78 @@ interface AllDocs {
   hr: DocCategory;
 }
 
+// Updated mock data with metadata
 const initialDocs: AllDocs = {
   safety: {
-    "Safety Manual": [{ id: 'sm1', name: 'Company Safety Manual v1.2' }],
-    "Safety Policies & Procedures": [{ id: 'spp1', name: 'General Safety Policy' }, { id: 'spp2', name: 'Working from Home Policy' }],
-    "Risk Assessments (HIRA)": [{ id: 'hira1', name: 'General Office Risk Assessment' }, { id: 'hira2', name: 'Construction Site HIRA Template' }],
-    "Safe Work Procedures (SWP)": [{ id: 'swp1', name: 'Manual Handling SWP' }, { id: 'swp2', name: 'Lockout/Tagout SWP' }],
-    "Method Statements": [{ id: 'ms1', name: 'Installation of HV Equipment' }],
-    "Incident Reports & Investigations": [{ id: 'ir1', name: 'Incident Report Form' }, { id: 'ir2', name: 'Investigation Template' }],
-    "Emergency Plans": [{ id: 'ep1', name: 'Fire Evacuation Plan' }, { id: 'ep2', name: 'Medical Emergency Response' }],
-    "Toolbox Talks & Meeting Minutes": [{ id: 'tt1', name: 'Weekly Safety Meeting Record' }],
-    "Legal & Other Appointments": [{ id: 'la1', name: 'CEO Appointment Letter' }],
-    "Registers & Checklists": [{ id: 'rc1', name: 'First Aid Box Register' }, { id: 'rc2', name: 'Fire Extinguisher Checklist' }],
-    "Fall Protection & Working at Heights": [{ id: 'fp1', name: 'Fall Protection Plan' }],
-    "Gap Assessments (ISO 45001, Client-specific)": [{ id: 'ga1', name: 'ISO 45001 Gap Assessment Checklist' }],
-    "Legal Compliance Audit Reports": [{ id: 'lcar1', name: 'OHS Act Compliance Audit Report 2023' }],
-    "Internal Audit Plan": [{ id: 'iap1', name: 'Internal Audit Schedule 2024' }],
-    "Internal Audit Reports": [{ id: 'iar1', name: 'Q1 Internal Audit Report' }],
+    "Safety Manual": [{ id: 'sm1', name: 'Company Safety Manual v1.2', fileType: 'PDF', fileSize: '2.4 MB', lastModified: '2024-05-15' }],
+    "Safety Policies & Procedures": [
+      { id: 'spp1', name: 'General Safety Policy', fileType: 'PDF', fileSize: '350 KB', lastModified: '2023-11-20' },
+      { id: 'spp2', name: 'Working from Home Policy', fileType: 'Word', fileSize: '120 KB', lastModified: '2024-01-30' },
+    ],
+    "Risk Assessments (HIRA)": [
+        { id: 'hira1', name: 'General Office Risk Assessment', fileType: 'Excel', fileSize: '88 KB', lastModified: '2024-06-01' },
+        { id: 'hira2', name: 'Construction Site HIRA Template', fileType: 'PDF', fileSize: '450 KB', lastModified: '2023-09-05' }
+    ],
+    "Safe Work Procedures (SWP)": [
+        { id: 'swp1', name: 'Manual Handling SWP', fileType: 'PDF', fileSize: '210 KB', lastModified: '2024-02-11' },
+        { id: 'swp2', name: 'Lockout/Tagout SWP', fileType: 'PDF', fileSize: '315 KB', lastModified: '2024-03-22' }
+    ],
+    "Method Statements": [{ id: 'ms1', name: 'Installation of HV Equipment', fileType: 'Word', fileSize: '680 KB', lastModified: '2024-04-18' }],
+    "Incident Reports & Investigations": [
+        { id: 'ir1', name: 'Incident Report Form', fileType: 'PDF', fileSize: '150 KB', lastModified: '2023-05-01' },
+        { id: 'ir2', name: 'Investigation Template', fileType: 'Word', fileSize: '95 KB', lastModified: '2023-05-02' }
+    ],
+    "Emergency Plans": [
+        { id: 'ep1', name: 'Fire Evacuation Plan', fileType: 'PDF', fileSize: '1.2 MB', lastModified: '2024-01-10' },
+        { id: 'ep2', name: 'Medical Emergency Response', fileType: 'PDF', fileSize: '850 KB', lastModified: '2024-01-12' }
+    ],
+    "Toolbox Talks & Meeting Minutes": [{ id: 'tt1', name: 'Weekly Safety Meeting Record', fileType: 'Excel', fileSize: '55 KB', lastModified: '2024-07-01' }],
+    "Legal & Other Appointments": [{ id: 'la1', name: 'CEO Appointment Letter', fileType: 'PDF', fileSize: '90 KB', lastModified: '2022-01-01' }],
+    "Registers & Checklists": [
+        { id: 'rc1', name: 'First Aid Box Register', fileType: 'Excel', fileSize: '45 KB', lastModified: '2024-07-01' },
+        { id: 'rc2', name: 'Fire Extinguisher Checklist', fileType: 'PDF', fileSize: '180 KB', lastModified: '2024-06-28' }
+    ],
+    "Fall Protection & Working at Heights": [{ id: 'fp1', name: 'Fall Protection Plan', fileType: 'PDF', fileSize: '950 KB', lastModified: '2024-03-01' }],
+    "Gap Assessments (ISO 45001, Client-specific)": [{ id: 'ga1', name: 'ISO 45001 Gap Assessment Checklist', fileType: 'Excel', fileSize: '250 KB', lastModified: '2023-10-15' }],
+    "Legal Compliance Audit Reports": [{ id: 'lcar1', name: 'OHS Act Compliance Audit Report 2023', fileType: 'PDF', fileSize: '3.1 MB', lastModified: '2023-12-01' }],
+    "Internal Audit Plan": [{ id: 'iap1', name: 'Internal Audit Schedule 2024', fileType: 'Word', fileSize: '75 KB', lastModified: '2024-02-01' }],
+    "Internal Audit Reports": [{ id: 'iar1', name: 'Q1 Internal Audit Report', fileType: 'PDF', fileSize: '450 KB', lastModified: '2024-04-05' }],
   },
   environmental: {
-    "Environmental Manual": [{ id: 'em1', name: 'Environmental Management Manual' }],
-    "Environmental Policy": [{ id: 'epolicy1', name: 'Company Environmental Policy' }],
-    "Impact Assessments": [{ id: 'ia1', name: 'New Development EIA Report' }],
-    "Waste Management Plans": [{ id: 'wmp1', name: 'Hazardous Waste Management Plan' }],
-    "Environmental Incident Reports": [{ id: 'eir1', name: 'Chemical Spill Report Form' }],
-    "Environmental Inspection Checklist": [{ id: 'eic1', name: 'Site Environmental Checklist' }],
+    "Environmental Manual": [{ id: 'em1', name: 'Environmental Management Manual', fileType: 'PDF', fileSize: '1.8 MB', lastModified: '2023-08-20' }],
+    "Environmental Policy": [{ id: 'epolicy1', name: 'Company Environmental Policy', fileType: 'PDF', fileSize: '200 KB', lastModified: '2023-01-15' }],
+    "Impact Assessments": [{ id: 'ia1', name: 'New Development EIA Report', fileType: 'PDF', fileSize: '5.5 MB', lastModified: '2022-11-30' }],
+    "Waste Management Plans": [{ id: 'wmp1', name: 'Hazardous Waste Management Plan', fileType: 'Word', fileSize: '400 KB', lastModified: '2024-02-28' }],
+    "Environmental Incident Reports": [{ id: 'eir1', name: 'Chemical Spill Report Form', fileType: 'PDF', fileSize: '130 KB', lastModified: '2023-04-10' }],
+    "Environmental Inspection Checklist": [{ id: 'eic1', name: 'Site Environmental Checklist', fileType: 'Excel', fileSize: '60 KB', lastModified: '2024-06-15' }],
   },
   quality: {
-    "Quality Manual": [{ id: 'qm1', name: 'ISO 9001 Quality Manual' }],
-    "Quality Policy": [{ id: 'qpolicy1', name: 'Company Quality Policy' }],
-    "Quality Procedures & Work Instructions": [{ id: 'qpwi1', name: 'Document Control Procedure' }],
-    "Audit Reports (Internal & External)": [{ id: 'qar1', name: 'External Audit Report 2023' }],
-    "Non-conformance & Corrective Actions": [{ id: 'ncr1', name: 'NCR Form' }],
-    "Management Reviews": [{ id: 'mr1', name: 'Management Review Meeting Minutes' }],
-    "Client & Supplier": [{ id: 'cs1', name: 'Supplier Evaluation Form' }],
-    "Quality Control Checklists": [{ id: 'qcc1', name: 'Final Product Inspection Checklist' }],
-    "Tool & Equipment Inspection Logs": [{ id: 'teil1', name: 'Crane Inspection Log' }],
+    "Quality Manual": [{ id: 'qm1', name: 'ISO 9001 Quality Manual', fileType: 'PDF', fileSize: '2.1 MB', lastModified: '2023-07-01' }],
+    "Quality Policy": [{ id: 'qpolicy1', name: 'Company Quality Policy', fileType: 'PDF', fileSize: '180 KB', lastModified: '2023-01-15' }],
+    "Quality Procedures & Work Instructions": [{ id: 'qpwi1', name: 'Document Control Procedure', fileType: 'Word', fileSize: '300 KB', lastModified: '2023-02-10' }],
+    "Audit Reports (Internal & External)": [{ id: 'qar1', name: 'External Audit Report 2023', fileType: 'PDF', fileSize: '1.5 MB', lastModified: '2023-11-05' }],
+    "Non-conformance & Corrective Actions": [{ id: 'ncr1', name: 'NCR Form', fileType: 'Excel', fileSize: '90 KB', lastModified: '2023-03-01' }],
+    "Management Reviews": [{ id: 'mr1', name: 'Management Review Meeting Minutes', fileType: 'PDF', fileSize: '600 KB', lastModified: '2024-05-20' }],
+    "Client & Supplier": [{ id: 'cs1', name: 'Supplier Evaluation Form', fileType: 'Word', fileSize: '150 KB', lastModified: '2024-01-10' }],
+    "Quality Control Checklists": [{ id: 'qcc1', name: 'Final Product Inspection Checklist', fileType: 'PDF', fileSize: '220 KB', lastModified: '2024-06-18' }],
+    "Tool & Equipment Inspection Logs": [{ id: 'teil1', name: 'Crane Inspection Log', fileType: 'Excel', fileSize: '120 KB', lastModified: '2024-07-01' }],
   },
   hr: {
-    "HR Policies & Procedures": [{ id: 'hrpp1', name: 'Employee Handbook' }],
-    "General Appointments": [{ id: 'hrga1', name: 'Appointment Letter Template' }],
-    "Hiring Policy": [{ id: 'hrhp1', name: 'Recruitment and Selection Policy' }],
-    "Company Property Policy": [{ id: 'hrcpp1', name: 'Asset Usage Policy' }],
-    "Performance Management": [{ id: 'hrpm1', name: 'Performance Review Form' }],
-    "Disciplinary & Grievance": [{ id: 'hrdg1', name: 'Disciplinary Code' }, { id: 'hrdg2', name: 'Grievance Form' }],
-    "Leave Request Forms": [{ id: 'hrlr1', name: 'Annual Leave Request Form' }],
-    "Employment Contracts & Agreements": [{ id: 'hrec1', name: 'Permanent Employment Contract Template' }],
-    "Warning Templates": [{ id: 'hrwt1', name: 'Verbal Warning Template' }, { id: 'hrwt2', name: 'Written Warning Template' }],
+    "HR Policies & Procedures": [{ id: 'hrpp1', name: 'Employee Handbook', fileType: 'PDF', fileSize: '1.1 MB', lastModified: '2024-01-01' }],
+    "General Appointments": [{ id: 'hrga1', name: 'Appointment Letter Template', fileType: 'Word', fileSize: '80 KB', lastModified: '2023-01-10' }],
+    "Hiring Policy": [{ id: 'hrhp1', name: 'Recruitment and Selection Policy', fileType: 'PDF', fileSize: '250 KB', lastModified: '2023-02-15' }],
+    "Company Property Policy": [{ id: 'hrcpp1', name: 'Asset Usage Policy', fileType: 'PDF', fileSize: '180 KB', lastModified: '2023-03-20' }],
+    "Performance Management": [{ id: 'hrpm1', name: 'Performance Review Form', fileType: 'Word', fileSize: '110 KB', lastModified: '2024-06-01' }],
+    "Disciplinary & Grievance": [
+        { id: 'hrdg1', name: 'Disciplinary Code', fileType: 'PDF', fileSize: '350 KB', lastModified: '2023-04-01' },
+        { id: 'hrdg2', name: 'Grievance Form', fileType: 'Word', fileSize: '70 KB', lastModified: '2023-04-01' }
+    ],
+    "Leave Request Forms": [{ id: 'hrlr1', name: 'Annual Leave Request Form', fileType: 'PDF', fileSize: '60 KB', lastModified: '2023-01-01' }],
+    "Employment Contracts & Agreements": [{ id: 'hrec1', name: 'Permanent Employment Contract Template', fileType: 'Word', fileSize: '150 KB', lastModified: '2023-01-10' }],
+    "Warning Templates": [
+        { id: 'hrwt1', name: 'Verbal Warning Template', fileType: 'Word', fileSize: '50 KB', lastModified: '2023-02-01' },
+        { id: 'hrwt2', name: 'Written Warning Template', fileType: 'Word', fileSize: '55 KB', lastModified: '2023-02-01' }
+    ],
   },
 };
 
@@ -108,12 +140,18 @@ export default function ManageDocumentsPage() {
   const [uploadTarget, setUploadTarget] = useState<{ category: keyof AllDocs; subSection: string } | null>(null);
   const [newDocName, setNewDocName] = useState('');
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
+  const [newFileType, setNewFileType] = useState('');
+  const [newFileSize, setNewFileSize] = useState('');
+  const [newLastModified, setNewLastModified] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
   const openUploadDialog = (category: keyof AllDocs, subSection: string) => {
     setUploadTarget({ category, subSection });
     setNewDocName('');
     setFileToUpload(null);
+    setNewFileType('');
+    setNewFileSize('');
+    setNewLastModified(new Date());
     setIsUploadDialogOpen(true);
   };
 
@@ -132,18 +170,20 @@ export default function ManageDocumentsPage() {
   };
 
   const handleUpload = () => {
-    if (!uploadTarget || !newDocName || !fileToUpload) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please provide a document name and select a file.' });
+    if (!uploadTarget || !newDocName || !fileToUpload || !newFileType || !newFileSize || !newLastModified) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields and select a file.' });
       return;
     }
     
     // This is where you would add logic to upload the file to your storage bucket.
-    // The path could be something like: `${uploadTarget.category}/${uploadTarget.subSection}/${fileToUpload.name}`
     console.log(`Uploading ${fileToUpload.name} as "${newDocName}" to ${uploadTarget.category}/${uploadTarget.subSection}`);
 
     const newDoc: Doc = {
       id: new Date().toISOString(), // Use a unique ID from your backend in a real app
       name: newDocName,
+      fileType: newFileType,
+      fileSize: newFileSize,
+      lastModified: format(newLastModified, 'yyyy-MM-dd'),
     };
 
     setDocs((prevDocs) => {
@@ -246,7 +286,7 @@ export default function ManageDocumentsPage() {
       </Tabs>
       
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent>
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Upload a new document</DialogTitle>
             <DialogDescription>
@@ -254,29 +294,74 @@ export default function ManageDocumentsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="doc-name" className="text-right">
-                Document Name
-              </Label>
+             <div className="space-y-2">
+              <Label htmlFor="doc-name">Document Name</Label>
               <Input
                 id="doc-name"
                 value={newDocName}
                 onChange={(e) => setNewDocName(e.target.value)}
-                className="col-span-3"
                 placeholder="e.g., Q2 Safety Report"
               />
             </div>
-            <div className="grid grid-cols-4 items-center gap-4">
-              <Label htmlFor="file-upload" className="text-right">
-                File
-              </Label>
+            <div className="space-y-2">
+              <Label htmlFor="file-upload">File</Label>
               <Input
                 id="file-upload"
                 type="file"
                 onChange={(e) => setFileToUpload(e.target.files ? e.target.files[0] : null)}
-                className="col-span-3"
               />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                    <Label htmlFor="file-type">File Type</Label>
+                    <Select onValueChange={setNewFileType} value={newFileType}>
+                        <SelectTrigger id="file-type">
+                            <SelectValue placeholder="Select type..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="PDF">PDF</SelectItem>
+                            <SelectItem value="Word">Word</SelectItem>
+                            <SelectItem value="Excel">Excel</SelectItem>
+                            <SelectItem value="Image">Image</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                    </Select>
+                </div>
+                 <div className="space-y-2">
+                    <Label htmlFor="file-size">File Size</Label>
+                    <Input
+                        id="file-size"
+                        value={newFileSize}
+                        onChange={(e) => setNewFileSize(e.target.value)}
+                        placeholder="e.g., 2.5 MB"
+                    />
+                </div>
+            </div>
+             <div className="space-y-2">
+                <Label htmlFor="last-modified">Last Modified Date</Label>
+                <Popover>
+                    <PopoverTrigger asChild>
+                        <Button
+                        variant={'outline'}
+                        className={cn(
+                            'w-full justify-start text-left font-normal',
+                            !newLastModified && 'text-muted-foreground'
+                        )}
+                        >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newLastModified ? format(newLastModified, 'PPP') : <span>Pick a date</span>}
+                        </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                        <Calendar
+                        mode="single"
+                        selected={newLastModified}
+                        onSelect={setNewLastModified}
+                        initialFocus
+                        />
+                    </PopoverContent>
+                </Popover>
+             </div>
           </div>
           <DialogFooter>
             <DialogClose asChild>
