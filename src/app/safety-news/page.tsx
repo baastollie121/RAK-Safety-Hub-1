@@ -17,14 +17,9 @@ import { Newspaper, ArrowRight } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import type { Article } from '@/lib/articles';
+import { articleCategories } from '@/lib/articles';
 
-const articleCategories = [
-  'All',
-  'Legislative & Legal Updates',
-  'Industry Partner News',
-  'Global Incidents & Case Studies',
-  'Professional Body News',
-];
+const articleFilterCategories = ['All', ...articleCategories];
 
 export default function SafetyNewsPage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -132,7 +127,7 @@ export default function SafetyNewsPage() {
       </header>
 
       <div className="mb-6 flex flex-wrap gap-2">
-        {articleCategories.map((category) => (
+        {articleFilterCategories.map((category) => (
           <Button
             key={category}
             variant={activeFilter === category ? 'default' : 'outline'}

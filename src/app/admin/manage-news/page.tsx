@@ -57,13 +57,7 @@ import {
 import { Plus, Edit, Trash2, Newspaper } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Article } from '@/lib/articles';
-
-const articleCategories = [
-    "Legislative & Legal Updates",
-    "Industry Partner News",
-    "Global Incidents & Case Studies",
-    "Professional Body News",
-];
+import { articleCategories } from '@/lib/articles';
 
 const articleSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters.'),

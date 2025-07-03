@@ -7,3 +7,12 @@ export interface Article {
   createdAt: string;
   category: string;
 }
+
+export const articleCategories = [
+    "Legislative & Legal Updates",
+    "Industry Partner News",
+    "Global Incidents & Case Studies",
+    "Professional Body News",
+] as const;
+
+export type ArticleCategory = (typeof articleCategories)[number];
