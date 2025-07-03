@@ -78,7 +78,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarHeader>
           <div className="flex items-center gap-2 p-2">
             <Logo />
-            <h1 className="text-xl font-headline font-semibold">RAK Safety Hub</h1>
+            <h1 className="text-xl font-headline font-semibold">RAK-SMS</h1>
             <div className="ml-auto">
               <SidebarTrigger />
             </div>
