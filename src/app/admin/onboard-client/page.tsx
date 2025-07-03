@@ -1,24 +1,225 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+'use client';
+
+import { useState } from 'react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { CalendarIcon } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { useToast } from '@/hooks/use-toast';
+
+const onboardClientSchema = z.object({
+  companyName: z.string().min(2, { message: 'Company name must be at least 2 characters.' }),
+  email: z.string().email({ message: 'Please enter a valid email address.' }),
+  password: z.string().min(8, { message: 'Password must be at least 8 characters long.' }),
+  joinDate: z.date({ required_error: 'Join date is required.' }),
+  paymentDate: z.date({ required_error: 'First payment date is required.' }),
+});
+
+type OnboardClientFormValues = z.infer<typeof onboardClientSchema>;
 
 export default function OnboardClientPage() {
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
+
+  const form = useForm<OnboardClientFormValues>({
+    resolver: zodResolver(onboardClientSchema),
+    defaultValues: {
+      companyName: '',
+      email: '',
+      password: '',
+    },
+  });
+
+  const onSubmit = async (data: OnboardClientFormValues) => {
+    setIsLoading(true);
+    console.log('Onboarding data:', data);
+    
+    // NOTE: This is where the Firebase user creation logic will go.
+    // For now, it is a placeholder.
+    
+    toast({
+      title: "Feature In Development",
+      description: "The client onboarding logic is not yet connected to the backend.",
+    });
+
+    setTimeout(() => {
+        setIsLoading(false);
+        form.reset();
+    }, 1000);
+  };
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline tracking-tight">
-          Onboard Client
+          Onboard New Client
         </h1>
         <p className="text-muted-foreground">
-          Add new clients to the system.
+          Add a new client to the RAK Safety Hub platform. This will create their account and set up their data environment.
         </p>
       </header>
-       <Card>
+      <Card className="max-w-2xl">
         <CardHeader>
-            <CardTitle className="font-headline">Coming Soon</CardTitle>
+          <CardTitle>Client Details</CardTitle>
+          <CardDescription>
+            Enter the new client's information below.
+          </CardDescription>
         </CardHeader>
         <CardContent>
-            <p className="text-muted-foreground">This feature is currently under development. Please check back later.</p>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="companyName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Company Name</FormLabel>
+                    <FormControl>
+                      <Input placeholder="Example Inc." {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Client Email</FormLabel>
+                    <FormControl>
+                      <Input placeholder="client@example.com" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Password</FormLabel>
+                    <FormControl>
+                      <Input type="password" placeholder="••••••••" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+                <FormField
+                  control={form.control}
+                  name="joinDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>Join Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={'outline'}
+                              className={cn(
+                                'w-full pl-3 text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, 'PPP')
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            disabled={(date) =>
+                              date > new Date() || date < new Date('1900-01-01')
+                            }
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="paymentDate"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-col">
+                      <FormLabel>First Payment Date</FormLabel>
+                      <Popover>
+                        <PopoverTrigger asChild>
+                          <FormControl>
+                            <Button
+                              variant={'outline'}
+                              className={cn(
+                                'w-full pl-3 text-left font-normal',
+                                !field.value && 'text-muted-foreground'
+                              )}
+                            >
+                              {field.value ? (
+                                format(field.value, 'PPP')
+                              ) : (
+                                <span>Pick a date</span>
+                              )}
+                              <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                            </Button>
+                          </FormControl>
+                        </PopoverTrigger>
+                        <PopoverContent className="w-auto p-0" align="start">
+                          <Calendar
+                            mode="single"
+                            selected={field.value}
+                            onSelect={field.onChange}
+                            initialFocus
+                          />
+                        </PopoverContent>
+                      </Popover>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              <Button type="submit" disabled={isLoading} className="w-full">
+                {isLoading ? 'Onboarding...' : 'Onboard Client'}
+              </Button>
+            </form>
+          </Form>
         </CardContent>
-       </Card>
+      </Card>
     </div>
   );
 }
