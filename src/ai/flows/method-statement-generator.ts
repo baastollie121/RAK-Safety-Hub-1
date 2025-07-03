@@ -1,80 +1,182 @@
 'use server';
 
 /**
- * @fileOverview Generates method statements by guiding the user through a series of questions.
+ * @fileOverview Generates legally compliant, OSHA-adherent Method Statement documents.
  *
- * - generateMethodStatement - A function that initiates the method statement generation process.
- * - MethodStatementInput - The input type for the generateMethodStatement function.
- * - MethodStatementOutput - The return type for the generateMethodStatement function.
+ * - generateMethodStatement - A function that handles the Method Statement generation process.
  */
 
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const MethodStatementInputSchema = z.object({
-  taskDescription: z.string().describe('A detailed description of the task for which the method statement is being generated.'),
-  location: z.string().describe('The location where the task will be performed.'),
-  equipmentUsed: z.string().describe('A list of equipment that will be used during the task.'),
-  stepByStepInstructions: z.string().describe('Step by step instructions on how to conduct the task safely.'),
-  riskAssessment: z.string().describe('A list of potential risks associated with the task.'),
-  controlMeasures: z.string().describe('Control measures to mitigate identified risks.'),
-  emergencyProcedures: z.string().describe('Emergency procedures in case of an incident.'),
-  personnelTraining: z.string().describe('Details of required training for personnel involved.'),
+const GenerateMethodStatementInputSchema = z.object({
+  companyName: z.string().describe('The name of the company or organization.'),
+  projectTitle: z.string().describe('The title of the project or contract.'),
+  taskTitle: z.string().describe('The specific task or operation this method statement covers.'),
+  preparedBy: z.string().describe('Name of the person preparing the document.'),
+  reviewDate: z.string().describe('The next scheduled review date for this document.'),
+  scope: z.string().describe('A detailed description of the work, its boundaries, and personnel involved.'),
+  hazards: z.string().describe('A summary of key hazards identified from the JHA/HIRA for this task.'),
+  ppe: z.string().describe('A comprehensive list of all mandatory and task-specific Personal Protective Equipment (PPE).'),
+  procedure: z.array(z.string()).describe('An array of strings, where each string is a single, sequential step in the work method.'),
+  equipment: z.string().describe('A list of all tools, machinery, and equipment required for the task.'),
+  training: z.string().describe('A summary of required training, qualifications, and competencies for personnel.'),
+  monitoring: z.string().describe('A description of how the work will be monitored for safety and compliance.'),
+  emergencyProcedures: z.string().describe('A detailed description of actions to take in case of various emergencies relevant to the task.'),
 });
 
-export type MethodStatementInput = z.infer<typeof MethodStatementInputSchema>;
-
-const MethodStatementOutputSchema = z.object({
-  methodStatement: z.string().describe('The complete method statement document.'),
+// This schema includes the values we'll calculate in the flow.
+const GenerateMethodStatementPromptInputSchema = GenerateMethodStatementInputSchema.extend({
+    documentNumber: z.string(),
+    effectiveDate: z.string(),
 });
 
-export type MethodStatementOutput = z.infer<typeof MethodStatementOutputSchema>;
+const GenerateMethodStatementOutputSchema = z.object({
+  methodStatementDocument: z.string().describe('The complete, OSHA-compliant Method Statement document in Markdown format.'),
+});
 
-export async function generateMethodStatement(input: MethodStatementInput): Promise<MethodStatementOutput> {
-  return methodStatementGeneratorFlow(input);
+export async function generateMethodStatement(input: z.infer<typeof GenerateMethodStatementInputSchema>): Promise<z.infer<typeof GenerateMethodStatementOutputSchema>> {
+  return generateMethodStatementFlow(input);
 }
 
 const prompt = ai.definePrompt({
-  name: 'methodStatementGeneratorPrompt',
-  input: {schema: MethodStatementInputSchema},
-  output: {schema: MethodStatementOutputSchema},
-  prompt: `You are an AI assistant specialized in generating method statements according to South African OHS Act standards.
+  name: 'generateMethodStatementPrompt',
+  input: {schema: GenerateMethodStatementPromptInputSchema},
+  output: {schema: GenerateMethodStatementOutputSchema},
+  prompt: `You are an expert safety manager specializing in creating legally compliant, OSHA-adherent Method Statement documents. Your task is to generate a professional Method Statement in Markdown format based on the provided data.
 
-  Based on the information provided, create a comprehensive method statement document.
+The document must be comprehensive and follow a logical structure compliant with safety management best practices.
 
-  Task Description: {{{taskDescription}}}
-  Location: {{{location}}}
-  Equipment Used: {{{equipmentUsed}}}
-  Step-by-Step Instructions: {{{stepByStepInstructions}}}
-  Risk Assessment: {{{riskAssessment}}}
-  Control Measures: {{{controlMeasures}}}
-  Emergency Procedures: {{{emergencyProcedures}}}
-  Personnel Training: {{{personnelTraining}}}
+## Document Generation Start
 
-  Ensure that the method statement includes all necessary sections and complies with relevant safety regulations.
-  The method statement should be detailed, clear, and easy to understand.
-  Follow the standard format for method statements, including:
-  1. Task Description
-  2. Location
-  3. Equipment
-  4. Step-by-step Instructions
-  5. Risk Assessment
-  6. Control Measures
-  7. Emergency Procedures
-  8. Personnel Training
+# **Method Statement: {{{taskTitle}}}**
 
-  Generate the complete method statement document:
-  `, 
+---
+
+### **1. Document Control & Legal Information**
+- **Company:** {{{companyName}}}
+- **Project Reference:** {{{projectTitle}}}
+- **Document Title:** Method Statement - {{{taskTitle}}}
+- **Document Number:** {{{documentNumber}}}
+- **Effective Date:** {{{effectiveDate}}}
+- **Prepared By:** {{{preparedBy}}}
+- **Next Review Date:** {{{reviewDate}}}
+
+| Approval Role       | Name | Signature | Date |
+|---------------------|------|-----------|------|
+| **Project Manager** |      |           |      |
+| **Safety Manager**  |      |           |      |
+
+---
+
+### **2. Scope of Work**
+{{{scope}}}
+
+---
+
+### **3. Regulatory & Standards Compliance**
+This Method Statement is developed in accordance with the Occupational Safety and Health Act (OSHA) General Duty Clause (Section 5(a)(1)). It integrates principles from relevant OSHA standards, including but not limited to 29 CFR 1926 (Construction) and 29 CFR 1910 (General Industry). All work must comply with these regulations and any applicable state or local codes.
+
+---
+
+### **4. Hazard Identification and Risk Assessment (HIRA)**
+A full Job Hazard Analysis (JHA) or Hazard Identification and Risk Assessment (HIRA) must be completed, understood, and signed by all personnel before commencing this task. This Method Statement serves as the primary administrative control for the identified risks.
+
+**Key hazards associated with this work include, but are not limited to:**
+{{{hazards}}}
+
+The hierarchy of controls has been applied to manage these risks. Where hazards cannot be eliminated or substituted, engineering and administrative controls, followed by Personal Protective Equipment (PPE), are the primary means of risk reduction.
+
+---
+
+### **5. Personal Protective Equipment (PPE)**
+The following PPE is mandatory for all personnel performing this task, as per the site-specific PPE assessment and OSHA standards. All PPE must be inspected prior to use and maintained in good condition.
+
+{{{ppe}}}
+
+---
+
+### **6. Equipment & Resources**
+Only authorized and inspected equipment shall be used for this task. All equipment must be suitable for its intended purpose and used in accordance with manufacturer's instructions.
+
+**Required Equipment:**
+{{{equipment}}}
+
+---
+
+### **7. Step-by-Step Work Procedure**
+The following steps must be followed in sequence to ensure the task is completed safely, efficiently, and to the required quality standard. Any deviation from this procedure requires a Stop Work Authority review and formal authorization from a supervisor.
+
+{{#each procedure}}
+{{add @index 1}}. {{{this}}}
+{{/each}}
+
+---
+
+### **8. Training & Competency**
+All personnel assigned to this task must be trained on this Method Statement and be competent to perform their assigned duties. Records of training and competency must be maintained.
+
+**Required Training & Competencies:**
+{{{training}}}
+
+---
+
+### **9. Supervision & Monitoring**
+Continuous monitoring will be in place to ensure compliance with this Method Statement.
+
+{{{monitoring}}}
+
+---
+
+### **10. Emergency Procedures**
+In the event of an emergency, all work must cease immediately. The site-specific Emergency Action Plan must be followed.
+
+**Task-Specific Emergency Actions:**
+{{{emergencyProcedures}}}
+
+**Emergency Contact Information:**
+- **Site Supervisor:** [Enter Name and Number]
+- **Emergency Services (Call):** [Enter Local Emergency Number, e.g., 911]
+- **Safety Officer:** [Enter Name and Number]
+
+---
+
+### **11. Worker Acknowledgment**
+By signing below, you acknowledge that you have read, understood, and agree to comply with this Method Statement in its entirety. You confirm you have received the necessary training and will raise any safety concerns with your supervisor.
+
+| Employee Name | Signature | Date |
+|---------------|-----------|------|
+|               |           |      |
+|               |           |      |
+|               |           |      |
+
+## Document Generation End
+`,
 });
 
-const methodStatementGeneratorFlow = ai.defineFlow(
+const generateMethodStatementFlow = ai.defineFlow(
   {
-    name: 'methodStatementGeneratorFlow',
-    inputSchema: MethodStatementInputSchema,
-    outputSchema: MethodStatementOutputSchema,
+    name: 'generateMethodStatementFlow',
+    inputSchema: GenerateMethodStatementInputSchema,
+    outputSchema: GenerateMethodStatementOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
-    return output!;
+  async (input) => {
+    // Generate dynamic values here
+    const documentNumber = `MS-${new Date().getFullYear()}-${Math.floor(Math.random() * 9000) + 1000}`;
+    const effectiveDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
+
+    const promptInput = {
+        ...input,
+        documentNumber,
+        effectiveDate,
+    };
+    
+    const {output} = await prompt(promptInput);
+
+    return { methodStatementDocument: output!.methodStatementDocument };
   }
 );
