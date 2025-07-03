@@ -21,6 +21,7 @@ import {
   TableCell,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -148,7 +149,10 @@ export default function AssetEquipmentTrackerPage() {
 
   const handleEditAssetClick = (asset: Asset) => {
     setEditingAsset(asset);
-    form.reset(asset);
+    form.reset({
+        ...asset,
+        lastReplaced: asset.lastReplaced ? new Date(asset.lastReplaced) : undefined,
+    });
     setIsAssetDialogOpen(true);
   };
 
