@@ -151,6 +151,7 @@ export default function AssetEquipmentTrackerPage() {
     setEditingAsset(asset);
     form.reset({
         ...asset,
+        lastInspected: new Date(asset.lastInspected),
         lastReplaced: asset.lastReplaced ? new Date(asset.lastReplaced) : undefined,
     });
     setIsAssetDialogOpen(true);
@@ -193,7 +194,7 @@ export default function AssetEquipmentTrackerPage() {
   const filteredAssets = useMemo(() => {
     return assets.filter(asset => 
         asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        asset.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (asset.serialNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
         asset.inspectedBy.toLowerCase().includes(searchTerm.toLowerCase())
     );
   }, [assets, searchTerm]);
@@ -254,18 +255,20 @@ export default function AssetEquipmentTrackerPage() {
         </CardContent>
       </Card>
       
-      <Accordion type="multiple" defaultValue={initialCategories} className="w-full">
+      <Accordion type="multiple" defaultValue={initialCategories} className="w-full space-y-2">
         {categories.map((category) => (
-            <AccordionItem value={category} key={category} className="border rounded-lg mb-2 bg-card">
-              <AccordionTrigger className="px-4 py-3 hover:no-underline text-lg font-headline">
-                <div className="flex items-center justify-between w-full">
+            <AccordionItem value={category} key={category} className="border rounded-lg bg-card">
+              <div className="flex items-center">
+                  <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline text-lg font-headline text-left">
                     <div className='flex items-center gap-2'>
                         <GripVertical className="size-5 text-muted-foreground"/>
                         {category} ({assetsByCategory[category].length})
                     </div>
+                  </AccordionTrigger>
+                  <div className="pr-4">
                     <AlertDialog>
                       <AlertDialogTrigger asChild>
-                         <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={(e) => e.stopPropagation()}>
+                         <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10">
                             <Trash2 className="size-4" />
                         </Button>
                       </AlertDialogTrigger>
@@ -284,9 +287,9 @@ export default function AssetEquipmentTrackerPage() {
                         </AlertDialogFooter>
                       </AlertDialogContent>
                     </AlertDialog>
-                </div>
-              </AccordionTrigger>
-              <AccordionContent className="p-0">
+                  </div>
+              </div>
+              <AccordionContent className="p-0 border-t">
                 <div className="overflow-x-auto">
                     <Table>
                         <TableHeader>
@@ -317,9 +320,9 @@ export default function AssetEquipmentTrackerPage() {
                                             {asset.status}
                                         </Badge>
                                     </TableCell>
-                                    <TableCell>{format(asset.lastInspected, 'PPP')}</TableCell>
+                                    <TableCell>{format(new Date(asset.lastInspected), 'PPP')}</TableCell>
                                     <TableCell>{asset.inspectedBy}</TableCell>
-                                    <TableCell>{asset.lastReplaced ? format(asset.lastReplaced, 'PPP') : 'N/A'}</TableCell>
+                                    <TableCell>{asset.lastReplaced ? format(new Date(asset.lastReplaced), 'PPP') : 'N/A'}</TableCell>
                                     <TableCell className="text-right">
                                     <Button variant="ghost" size="icon" onClick={() => handleEditAssetClick(asset)}>
                                         <Edit className="size-4" />
@@ -393,7 +396,7 @@ export default function AssetEquipmentTrackerPage() {
                   <FormItem>
                     <FormLabel>Serial Number (Optional)</FormLabel>
                     <FormControl>
-                      <Input placeholder="e.g., SN-123456" {...field} />
+                      <Input placeholder="e.g., SN-123456" {...field} value={field.value || ''} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
