@@ -11,7 +11,8 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-const HazardSchema = z.object({
+// Input from the form does not include risk ratings, they are calculated in the flow.
+const HazardInputSchema = z.object({
     hazard: z.string().describe('Specific hazard description'),
     personsAffected: z.string().describe('Who could be affected and potential injuries'),
     initialLikelihood: z.number().describe('Initial likelihood rating (1-5)'),
@@ -21,12 +22,25 @@ const HazardSchema = z.object({
     residualConsequence: z.number().describe('Residual consequence rating (1-5)'),
 });
 
+// The schema passed to the prompt will have the calculated risk ratings.
+const HazardPromptSchema = HazardInputSchema.extend({
+    initialRisk: z.number().describe('Calculated Initial Risk (Likelihood * Consequence)'),
+    residualRisk: z.number().describe('Calculated Residual Risk (Likelihood * Consequence)'),
+});
+
 const GenerateHiraInputSchema = z.object({
   companyName: z.string().describe('The name of the company or organization.'),
   taskTitle: z.string().describe('The title of the task or project being assessed.'),
-  hazards: z.array(HazardSchema).describe('A list of identified hazards and their assessments.'),
+  hazards: z.array(HazardInputSchema).describe('A list of identified hazards and their assessments.'),
 });
 export type GenerateHiraInput = z.infer<typeof GenerateHiraInputSchema>;
+
+const GenerateHiraPromptInputSchema = z.object({
+    companyName: z.string(),
+    taskTitle: z.string(),
+    hazards: z.array(HazardPromptSchema),
+});
+
 
 const GenerateHiraOutputSchema = z.object({
   hiraDocument: z.string().describe('A professionally formatted, South African OHS Act-compliant HIRA document in Markdown format.'),
@@ -39,7 +53,7 @@ export async function generateHira(input: GenerateHiraInput): Promise<GenerateHi
 
 const prompt = ai.definePrompt({
   name: 'generateHiraPrompt',
-  input: {schema: GenerateHiraInputSchema},
+  input: {schema: GenerateHiraPromptInputSchema},
   output: {schema: GenerateHiraOutputSchema},
   prompt: `You are an expert safety officer specializing in creating South African OHS Act-compliant Hazard Identification and Risk Assessment (HIRA) documents. Your task is to generate a professional HIRA document in Markdown format based on the provided data.
 
@@ -48,7 +62,7 @@ The document must follow this exact structure:
 2.  **Contents/Hazards List**: Create a numbered list of all identified hazard descriptions.
 3.  **Generic Control Measures Section**: Include the standard safety measures provided below.
 4.  **Risk Assessment Matrix Explanation**: Include the provided explanation of the risk matrix.
-5.  **Detailed Hazard Analysis Table**: Create a Markdown table with the specified columns, populating it with the hazard data provided. For risk ratings, you MUST calculate them as (Likelihood * Consequence).
+5.  **Detailed Hazard Analysis Table**: Create a Markdown table with the specified columns, populating it with the hazard data provided. You have been provided with the pre-calculated risk ratings.
 
 ## Document Generation Start
 
@@ -114,7 +128,7 @@ The risk assessment is conducted using the following matrix:
 | Hazards | Persons Affected & Likely Harm | Initial Risk (L-S-R) | Additional Control Measures | Residual Risk (L-S-R) |
 |---|---|---|---|---|
 {{#each hazards}}
-| {{{this.hazard}}} | {{{this.personsAffected}}} | {{this.initialLikelihood}} - {{this.initialConsequence}} - **{{multiply this.initialLikelihood this.initialConsequence}}** | {{{this.controlMeasures}}} | {{this.residualLikelihood}} - {{this.residualConsequence}} - **{{multiply this.residualLikelihood this.residualConsequence}}** |
+| {{{this.hazard}}} | {{{this.personsAffected}}} | {{this.initialLikelihood}} - {{this.initialConsequence}} - **{{this.initialRisk}}** | {{{this.controlMeasures}}} | {{this.residualLikelihood}} - {{this.residualConsequence}} - **{{this.residualRisk}}** |
 {{/each}}
 
 ## Document Generation End
@@ -127,8 +141,20 @@ const generateHiraFlow = ai.defineFlow(
     inputSchema: GenerateHiraInputSchema,
     outputSchema: GenerateHiraOutputSchema,
   },
-  async input => {
-    const {output} = await prompt(input);
+  async (input) => {
+    // Calculate risk ratings before sending to the prompt
+    const processedHazards = input.hazards.map(h => ({
+        ...h,
+        initialRisk: h.initialLikelihood * h.initialConsequence,
+        residualRisk: h.residualLikelihood * h.residualConsequence,
+    }));
+    
+    const promptInput = {
+      ...input,
+      hazards: processedHazards,
+    };
+
+    const {output} = await prompt(promptInput);
     return output!;
   }
 );

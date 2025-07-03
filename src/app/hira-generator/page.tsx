@@ -1,9 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import {
   Card,
   CardContent,
@@ -31,7 +33,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircle, Trash2, Loader2, Wand2 } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Wand2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateHira, type GenerateHiraOutput } from '@/ai/flows/hira-generator';
 import { Separator } from '@/components/ui/separator';
@@ -133,7 +135,9 @@ const HazardRow = ({ control, index, remove }: { control: any, index: number, re
 
 export default function HIRAGeneratorPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [result, setResult] = useState<GenerateHiraOutput | null>(null);
+  const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
   const form = useForm<HiraFormValues>({
@@ -175,6 +179,63 @@ export default function HIRAGeneratorPage() {
         residualConsequence: 1,
     });
   }
+
+  const handleDownloadPdf = async () => {
+    const reportElement = reportRef.current;
+    const taskTitle = form.getValues('taskTitle');
+    if (!reportElement || !taskTitle) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Cannot download PDF. Please generate a report first.' });
+      return;
+    }
+    
+    setIsDownloadingPdf(true);
+    
+    try {
+        const canvas = await html2canvas(reportElement, {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#111827' // Same as dark theme background
+        });
+        
+        const imgData = canvas.toDataURL('image/png');
+        const pdf = new jsPDF({
+            orientation: 'p',
+            unit: 'mm',
+            format: 'a4',
+        });
+        
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const imgWidth = canvas.width;
+        const imgHeight = canvas.height;
+        const ratio = imgWidth / imgHeight;
+        
+        const PADDING = 10;
+        let finalImgWidth = pdfWidth - (PADDING * 2);
+        let finalImgHeight = finalImgWidth / ratio;
+        
+        let heightLeft = finalImgHeight;
+        let position = PADDING;
+
+        pdf.addImage(imgData, 'PNG', PADDING, position, finalImgWidth, finalImgHeight);
+        heightLeft -= (pdfHeight - (PADDING * 2));
+
+        while (heightLeft > 0) {
+            position = heightLeft - finalImgHeight + PADDING;
+            pdf.addPage();
+            pdf.addImage(imgData, 'PNG', PADDING, position, finalImgWidth, finalImgHeight);
+            heightLeft -= (pdfHeight - (PADDING * 2));
+        }
+        
+        pdf.save(`HIRA-${taskTitle.replace(/\s+/g, '_')}.pdf`);
+        toast({ title: 'Success', description: 'PDF downloaded successfully.' });
+    } catch(err) {
+        console.error("PDF generation error:", err);
+        toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate PDF.' });
+    } finally {
+        setIsDownloadingPdf(false);
+    }
+  };
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -253,11 +314,18 @@ export default function HIRAGeneratorPage() {
       {result && (
         <Card className="mt-8">
             <CardHeader>
-                <CardTitle>Generated HIRA Document</CardTitle>
-                 <CardDescription>Review the AI-generated document below. You can copy the text.</CardDescription>
+                <div className="flex justify-between items-start">
+                    <div>
+                        <CardTitle>Generated HIRA Document</CardTitle>
+                        <CardDescription>Review the document below. You can copy the text or download it as a PDF.</CardDescription>
+                    </div>
+                    <Button onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
+                        {isDownloadingPdf ? <><Loader2 className="animate-spin mr-2" /> Downloading...</> : <><Download className="mr-2" /> Download as PDF</>}
+                    </Button>
+                </div>
             </CardHeader>
             <CardContent>
-                 <div className="prose prose-sm dark:prose-invert max-w-none rounded-lg border p-4 bg-background/50">
+                 <div ref={reportRef} className="prose prose-sm dark:prose-invert max-w-none rounded-lg border p-6 bg-card">
                     <ReactMarkdown>{result.hiraDocument}</ReactMarkdown>
                 </div>
             </CardContent>
