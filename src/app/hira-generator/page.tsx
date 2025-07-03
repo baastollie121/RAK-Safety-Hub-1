@@ -2,11 +2,13 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useForm, useFieldArray, useWatch, FormProvider } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import ReactMarkdown from 'react-markdown';
+import { format } from 'date-fns';
 import {
   Card,
   CardContent,
@@ -17,7 +19,6 @@ import {
 } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -35,14 +36,6 @@ import {
   FormMessage,
 } from '@/components/ui/form';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
@@ -53,8 +46,6 @@ import { useToast } from '@/hooks/use-toast';
 import { generateHira, type GenerateHiraOutput } from '@/ai/flows/hira-generator';
 import { suggestHiraHazards } from '@/ai/flows/hira-suggester';
 import { Separator } from '@/components/ui/separator';
-import ReactMarkdown from 'react-markdown';
-import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const hazardSchema = z.object({
@@ -97,7 +88,7 @@ const consequenceOptions = [
     { value: '1', label: '1 - Minor first aid injury' },
     { value: '2', label: '2 - Break bone/minor illness' },
     { value: '3', label: '3 - Break bone/serious illness' },
-    { value: '4', label: '4 - Loss of limb/eye' },
+    { value: '4 - Loss of limb/eye' },
     { value: '5', label: '5 - Fatality' },
 ];
 
@@ -109,8 +100,7 @@ const getRiskRating = (likelihood: number, consequence: number) => {
   return { rating, color: 'text-green-400', level: 'Low' };
 };
 
-const HazardRow = ({ control, index, remove }: { control: any, index: number, remove: (index: number) => void }) => {
-    const {formState: {errors}, register, setValue} = control;
+const HazardInputCard = ({ index, remove, control }: { index: number; remove: (index: number) => void; control: any }) => {
     const hazardValues = useWatch({
         name: `hazards.${index}`,
         control,
@@ -118,48 +108,146 @@ const HazardRow = ({ control, index, remove }: { control: any, index: number, re
     
     const initialRisk = getRiskRating(hazardValues.initialLikelihood, hazardValues.initialConsequence);
     const residualRisk = getRiskRating(hazardValues.residualLikelihood, hazardValues.residualConsequence);
-    const hazardErrors = errors.hazards?.[index];
 
     return (
-        <TableRow className="bg-card hover:bg-card/90">
-            <TableCell className="align-top space-y-2 p-2 min-w-[300px]">
-                <Textarea placeholder="Hazard Description..." {...register(`hazards.${index}.hazard`)} />
-                 {hazardErrors?.hazard && <p className="text-destructive text-xs">{hazardErrors.hazard.message}</p>}
-                <Textarea placeholder="Persons Affected & Likely Harm..." {...register(`hazards.${index}.personsAffected`)} />
-                 {hazardErrors?.personsAffected && <p className="text-destructive text-xs">{hazardErrors.personsAffected.message}</p>}
-            </TableCell>
-            <TableCell className="align-top space-y-2 p-2 min-w-[220px]">
-                <Select onValueChange={(value) => setValue(`hazards.${index}.initialLikelihood`, parseInt(value), { shouldValidate: true })} defaultValue={String(hazardValues.initialLikelihood || '')}>
-                    <SelectTrigger><SelectValue placeholder="Select Likelihood" /></SelectTrigger>
-                    <SelectContent>{likelihoodOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-                 <Select onValueChange={(value) => setValue(`hazards.${index}.initialConsequence`, parseInt(value), { shouldValidate: true })} defaultValue={String(hazardValues.initialConsequence || '')}>
-                    <SelectTrigger><SelectValue placeholder="Select Consequence" /></SelectTrigger>
-                    <SelectContent>{consequenceOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-                <div className="text-center font-bold p-2 border rounded-md">Risk: <span className={initialRisk.color}>{initialRisk.rating} ({initialRisk.level})</span></div>
-            </TableCell>
-            <TableCell className="align-top p-2">
-                <Textarea placeholder="Additional Control Measures..." {...register(`hazards.${index}.controlMeasures`)} className="min-w-[300px] h-full"/>
-                 {hazardErrors?.controlMeasures && <p className="text-destructive text-xs">{hazardErrors.controlMeasures.message}</p>}
-            </TableCell>
-            <TableCell className="align-top space-y-2 p-2 min-w-[220px]">
-                <Select onValueChange={(value) => setValue(`hazards.${index}.residualLikelihood`, parseInt(value), { shouldValidate: true })} defaultValue={String(hazardValues.residualLikelihood || '')}>
-                    <SelectTrigger><SelectValue placeholder="Select Likelihood" /></SelectTrigger>
-                    <SelectContent>{likelihoodOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-                 <Select onValueChange={(value) => setValue(`hazards.${index}.residualConsequence`, parseInt(value), { shouldValidate: true })} defaultValue={String(hazardValues.residualConsequence || '')}>
-                    <SelectTrigger><SelectValue placeholder="Select Consequence" /></SelectTrigger>
-                    <SelectContent>{consequenceOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
-                </Select>
-                <div className="text-center font-bold p-2 border rounded-md">Risk: <span className={residualRisk.color}>{residualRisk.rating} ({residualRisk.level})</span></div>
-            </TableCell>
-            <TableCell className="align-top text-center p-2">
-                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}><Trash2 className="text-destructive" /></Button>
-            </TableCell>
-        </TableRow>
+        <Card className="bg-card/50">
+            <CardHeader className="flex flex-row items-center justify-between py-4">
+                <CardTitle className="font-headline text-lg">Hazard #{index + 1}</CardTitle>
+                <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
+                    <Trash2 className="text-destructive" />
+                </Button>
+            </CardHeader>
+            <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 pt-0">
+                {/* Column 1: Descriptions */}
+                <div className="space-y-4">
+                    <FormField
+                        control={control}
+                        name={`hazards.${index}.hazard`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Hazard Description</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="e.g., Working at heights on a ladder" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                     <FormField
+                        control={control}
+                        name={`hazards.${index}.personsAffected`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Persons Affected & Likely Harm</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="e.g., Maintenance staff, risk of falls causing injury" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={control}
+                        name={`hazards.${index}.controlMeasures`}
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Additional Control Measures</FormLabel>
+                                <FormControl>
+                                    <Textarea placeholder="e.g., Ensure ladder is stable, use a spotter, inspect ladder before use" {...field} />
+                                </FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+
+                {/* Column 2: Risk Ratings */}
+                <div className="space-y-6">
+                    {/* Initial Risk */}
+                    <div className="space-y-2 rounded-lg border p-4">
+                        <h4 className="font-medium text-center">Initial Risk</h4>
+                        <div className="grid grid-cols-2 gap-4">
+                           <FormField
+                                control={control}
+                                name={`hazards.${index}.initialLikelihood`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Likelihood</FormLabel>
+                                        <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value || '')}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>{likelihoodOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={control}
+                                name={`hazards.${index}.initialConsequence`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Consequence</FormLabel>
+                                        <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value || '')}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>{consequenceOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <div className="text-center font-bold p-2 border rounded-md bg-background">Risk Rating: <span className={initialRisk.color}>{initialRisk.rating} ({initialRisk.level})</span></div>
+                    </div>
+
+                    {/* Residual Risk */}
+                    <div className="space-y-2 rounded-lg border p-4">
+                        <h4 className="font-medium text-center">Residual Risk</h4>
+                         <div className="grid grid-cols-2 gap-4">
+                           <FormField
+                                control={control}
+                                name={`hazards.${index}.residualLikelihood`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Likelihood</FormLabel>
+                                        <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value || '')}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>{likelihoodOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={control}
+                                name={`hazards.${index}.residualConsequence`}
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Consequence</FormLabel>
+                                        <Select onValueChange={(value) => field.onChange(parseInt(value))} defaultValue={String(field.value || '')}>
+                                            <FormControl>
+                                                <SelectTrigger><SelectValue placeholder="Select" /></SelectTrigger>
+                                            </FormControl>
+                                            <SelectContent>{consequenceOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        </div>
+                        <div className="text-center font-bold p-2 border rounded-md bg-background">Risk Rating: <span className={residualRisk.color}>{residualRisk.rating} ({residualRisk.level})</span></div>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
     );
-}
+};
+
 
 export default function HIRAGeneratorPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -357,15 +445,15 @@ export default function HIRAGeneratorPage() {
       </header>
       
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)}>
-          <Card className="mb-6">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <Card>
               <CardHeader>
-                  <CardTitle className="text-xl font-headline">Project Details</CardTitle>
+                  <CardTitle className="text-xl font-headline">1. Project Details</CardTitle>
                   <CardDescription>Enter the high-level details for this HIRA.</CardDescription>
               </CardHeader>
-              <CardContent className="p-6">
-                  <div className="flex flex-col space-y-6 md:flex-row md:space-y-0 md:space-x-6">
-                      <div className="flex-1 w-full">
+              <CardContent>
+                  <div className="flex flex-col space-y-6 md:flex-row md:space-y-0 md:space-x-6 md:items-center">
+                      <div className="flex-1 space-y-2">
                           <FormField
                               control={form.control}
                               name="companyName"
@@ -381,10 +469,10 @@ export default function HIRAGeneratorPage() {
                           />
                       </div>
                       
-                      <Separator orientation="vertical" className="h-auto hidden md:block" />
+                      <Separator orientation="vertical" className="h-16 hidden md:block" />
                       <Separator orientation="horizontal" className="w-full block md:hidden" />
 
-                      <div className="flex-1 w-full">
+                      <div className="flex-1 space-y-2">
                           <FormField
                               control={form.control}
                               name="taskTitle"
@@ -400,10 +488,10 @@ export default function HIRAGeneratorPage() {
                           />
                       </div>
                       
-                      <Separator orientation="vertical" className="h-auto hidden md:block" />
+                      <Separator orientation="vertical" className="h-16 hidden md:block" />
                       <Separator orientation="horizontal" className="w-full block md:hidden" />
 
-                      <div className="flex-1 w-full">
+                      <div className="flex-1 space-y-2">
                           <FormField
                               control={form.control}
                               name="reviewDate"
@@ -436,52 +524,42 @@ export default function HIRAGeneratorPage() {
           </Card>
 
           <Card>
-              <CardHeader>
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div>
-                      <CardTitle>Hazard Analysis</CardTitle>
-                      <CardDescription>Add each identified hazard and assess its risk. Use the AI to get suggestions.</CardDescription>
-                    </div>
-                    <Button type="button" variant="outline" onClick={handleSuggestHazards} disabled={isSuggesting || !useWatch({control: form.control, name: 'taskTitle'})}>
-                        {isSuggesting ? <><Loader2 className="animate-spin mr-2" /> Thinking...</> : <><WandSparkles className="mr-2" /> Suggest Hazards</>}
-                    </Button>
-                  </div>
-              </CardHeader>
-              <CardContent>
-                  <div className="overflow-x-auto border rounded-lg">
-                      <Table>
-                          <TableHeader>
-                              <TableRow className="hover:bg-transparent">
-                                  <TableHead className="w-[30%]">Hazard & Persons Affected</TableHead>
-                                  <TableHead>Initial Risk (L-S-R)</TableHead>
-                                  <TableHead className="w-[30%]">Control Measures</TableHead>
-                                  <TableHead>Residual Risk (L-S-R)</TableHead>
-                                  <TableHead>Action</TableHead>
-                              </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                              {fields.length > 0 ? (
-                                  fields.map((field, index) => (
-                                      <HazardRow key={field.id} control={form} index={index} remove={remove} />
-                                  ))
-                              ) : (
-                                  <TableRow>
-                                      <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                                          No hazards added yet. Click "Add Hazard" or "Suggest Hazards" to begin.
-                                      </TableCell>
-                                  </TableRow>
-                              )}
-                          </TableBody>
-                      </Table>
-                  </div>
-                  {form.formState.errors.hazards && <p className="text-destructive text-sm mt-4 p-2">{form.formState.errors.hazards.message || form.formState.errors.hazards?.root?.message}</p>}
-                  <Button type="button" variant="outline" onClick={addHazard} className="mt-4">
-                      <PlusCircle className="mr-2" /> Add Hazard Manually
-                  </Button>
-              </CardContent>
-              <CardFooter className="flex-col items-stretch gap-4">
-                  <Separator />
-                  <Button type="submit" disabled={isLoading} size="lg">
+            <CardHeader>
+                <CardTitle className="text-xl font-headline">2. Hazard Analysis</CardTitle>
+                <CardDescription>Add each identified hazard and assess its risk. Use the AI to get suggestions for the Task/Project Title you entered above.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-6">
+                    {fields.length > 0 ? (
+                        fields.map((field, index) => (
+                            <HazardInputCard key={field.id} control={form.control} index={index} remove={remove} />
+                        ))
+                    ) : (
+                        <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-12 px-6 border-2 border-dashed rounded-lg bg-background/50">
+                             <p className="font-semibold">No hazards added yet</p>
+                             <p className="text-sm">Click the buttons below to begin.</p>
+                        </div>
+                    )}
+                </div>
+                 {form.formState.errors.hazards && <p className="text-destructive text-sm mt-4 p-2">{form.formState.errors.hazards.message || form.formState.errors.hazards?.root?.message}</p>}
+            </CardContent>
+            <CardFooter className="gap-2 justify-start">
+                 <Button type="button" variant="outline" onClick={addHazard}>
+                    <PlusCircle className="mr-2" /> Add Hazard Manually
+                </Button>
+                <Button type="button" variant="outline" onClick={handleSuggestHazards} disabled={isSuggesting || !useWatch({control: form.control, name: 'taskTitle'})}>
+                    {isSuggesting ? <><Loader2 className="animate-spin mr-2" /> Thinking...</> : <><WandSparkles className="mr-2" /> Suggest Hazards (AI)</>}
+                </Button>
+            </CardFooter>
+          </Card>
+
+          <Card>
+            <CardHeader>
+                <CardTitle className="text-xl font-headline">3. Generate Document</CardTitle>
+                <CardDescription>Once all sections are complete, generate your professional HIRA document.</CardDescription>
+            </CardHeader>
+            <CardFooter className="p-6">
+                  <Button type="submit" disabled={isLoading} size="lg" className="w-full">
                       {isLoading ? <><Loader2 className="animate-spin mr-2" /> Generating...</> : <><Wand2 className="mr-2" /> Generate HIRA Document</>}
                   </Button>
               </CardFooter>
