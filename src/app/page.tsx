@@ -9,7 +9,7 @@ import {
 import { 
   ArrowRight,
   Bot,
-  FileCheck, 
+  FileCheck2, 
   FileText, 
   Folder, 
   Newspaper, 
@@ -44,10 +44,10 @@ const features = [
     href: "/hazard-hunter",
   },
   {
-    title: "Risk Assessment Generator",
-    description: "Generate compliant risk assessments with an AI-guided tool.",
-    icon: <FileCheck className="size-8 text-primary" />,
-    href: "/risk-assessment",
+    title: "HIRA Generator",
+    description: "Generate OHS Act-compliant HIRA documents with a guided tool.",
+    icon: <FileCheck2 className="size-8 text-primary" />,
+    href: "/hira-generator",
   },
   {
     title: "Method Statement Generator",

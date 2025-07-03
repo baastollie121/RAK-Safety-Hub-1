@@ -7,7 +7,6 @@ import {
   Bot,
   CalendarCog,
   FileArchive,
-  FileCheck,
   FileCheck2,
   FileCog,
   FileJson2,
@@ -58,7 +57,6 @@ const adminNav = [
 
 const aiToolsNav = [
   { href: '/hazard-hunter', icon: <ScanSearch />, label: 'AI Hazard Hunter' },
-  { href: '/risk-assessment', icon: <FileCheck />, label: 'Risk Assessment' },
   { href: '/hira-generator', icon: <FileCheck2 />, label: 'HIRA Generator' },
   { href: '/she-site-plan-generator', icon: <Map />, label: 'SHE Site Plan Generator' },
   { href: '/safe-work-procedure', icon: <ShieldCheck />, label: 'Safe Work Procedure' },
@@ -74,7 +72,6 @@ const trackersNav = [
 ];
 
 const aiDocsNav = [
-  { href: '/ai-docs/saved-risk-assessments', icon: <FileCheck />, label: 'Saved Risk Assessments' },
   { href: '/ai-docs/saved-hira-reports', icon: <FileCheck2 />, label: 'Saved HIRA Reports' },
   { href: '/ai-docs/saved-she-plans', icon: <FileJson2 />, label: 'Saved SHE Plans' },
   { href: '/ai-docs/saved-swps', icon: <Shield />, label: 'Saved SWPs' },
