@@ -1,8 +1,8 @@
+
 'use client';
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import {
@@ -180,8 +180,9 @@ export default function SafetyConsultantPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8 h-[calc(100vh-theme(spacing.16))] flex flex-col">
-      <div className="mb-4 neon-gradient-card">
-        <div className="bg-card rounded-md p-6 flex flex-col md:flex-row items-start justify-between gap-4">
+      <div className="neon-gradient-card flex-grow flex flex-col">
+        <div className="bg-card rounded-lg flex flex-col flex-grow overflow-hidden">
+          <div className="p-6 flex flex-col md:flex-row items-start justify-between gap-4 border-b">
             <div>
               <h1 className="text-3xl font-bold font-headline tracking-tight">AI Safety Consultant</h1>
               <p className="text-muted-foreground mt-2">Chat with Winston, your AI safety expert, for guidance and advice.</p>
@@ -196,16 +197,13 @@ export default function SafetyConsultantPage() {
                     </Button>
                 )}
             </div>
-        </div>
-      </div>
-
-        <Card className="flex-grow flex flex-col">
+          </div>
+          
           <ScrollArea className="flex-grow" ref={scrollAreaRef}>
-             <CardContent className="p-4 space-y-4">
+             <div className="p-4 space-y-4">
                 {messages.map((message) => (
                     <div key={message.id} className={cn("flex items-end gap-3", message.role === 'user' ? 'justify-end' : 'justify-start')}>
                     {message.role === 'bot' && (
-                        // This is Winston, the fat orange cat on a surfboard (in spirit)
                         <Avatar className="size-8 shrink-0">
                             <AvatarFallback className="bg-orange-500 text-white"><Bot className="size-5" /></AvatarFallback>
                         </Avatar>
@@ -245,9 +243,9 @@ export default function SafetyConsultantPage() {
                         </div>
                     </div>
                 )}
-             </CardContent>
+             </div>
           </ScrollArea>
-           <div className="p-4 border-t bg-background">
+           <div className="p-4 border-t">
             <div className="flex w-full items-center space-x-2">
               <Textarea
                 placeholder="Ask Winston a safety question..."
@@ -268,7 +266,8 @@ export default function SafetyConsultantPage() {
               </Button>
             </div>
           </div>
-        </Card>
+        </div>
+      </div>
 
       <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
         <DialogContent className="sm:max-w-md">
