@@ -118,4 +118,40 @@
       box-shadow: 0 0 10px var(--neon-blue), 0 0 20px #fff, 0 0 30px var(--neon-blue);
     }
   }
+
+  .neon-glow-yellow-animated {
+    --neon-yellow: #FFFF00;
+    color: var(--neon-yellow) !important;
+    border: 1px solid var(--neon-yellow) !important;
+    background-color: #000 !important;
+    animation: neon-pulse-yellow 1.5s infinite alternate;
+    text-shadow: 0 0 2px var(--neon-yellow), 0 0 5px #fff;
+  }
+
+  @keyframes neon-pulse-yellow {
+    from {
+      box-shadow: 0 0 5px var(--neon-yellow), 0 0 10px #fff, 0 0 15px var(--neon-yellow);
+    }
+    to {
+      box-shadow: 0 0 10px var(--neon-yellow), 0 0 20px #fff, 0 0 30px var(--neon-yellow);
+    }
+  }
+
+  .neon-glow-red-animated {
+    --neon-red: #FF1414;
+    color: var(--neon-red) !important;
+    border: 1px solid var(--neon-red) !important;
+    background-color: #000 !important;
+    animation: neon-pulse-red 1.5s infinite alternate;
+    text-shadow: 0 0 2px var(--neon-red), 0 0 5px #fff;
+  }
+
+  @keyframes neon-pulse-red {
+    from {
+      box-shadow: 0 0 5px var(--neon-red), 0 0 10px #fff, 0 0 15px var(--neon-red);
+    }
+    to {
+      box-shadow: 0 0 10px var(--neon-red), 0 0 20px #fff, 0 0 30px var(--neon-red);
+    }
+  }
 }

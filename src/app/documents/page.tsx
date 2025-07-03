@@ -276,7 +276,14 @@ export default function DocumentsPage() {
 
       <Tabs defaultValue="safety" onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
-          <TabsTrigger value="safety">Safety ({safetyCount})</TabsTrigger>
+          <TabsTrigger
+            value="safety"
+            className={cn(
+              activeTab === 'safety' && 'neon-glow-yellow-animated'
+            )}
+          >
+            Safety ({safetyCount})
+          </TabsTrigger>
           <TabsTrigger
             value="environmental"
             className={cn(
@@ -293,7 +300,14 @@ export default function DocumentsPage() {
           >
             Quality ({qualityCount})
           </TabsTrigger>
-          <TabsTrigger value="hr">HR ({hrCount})</TabsTrigger>
+          <TabsTrigger
+            value="hr"
+            className={cn(
+              activeTab === 'hr' && 'neon-glow-red-animated'
+            )}
+          >
+            HR ({hrCount})
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="safety">
           <Card>
