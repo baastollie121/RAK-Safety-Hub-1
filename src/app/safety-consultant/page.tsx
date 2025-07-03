@@ -180,22 +180,25 @@ export default function SafetyConsultantPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8 h-[calc(100vh-theme(spacing.16))] flex flex-col">
-      <header className="mb-4 flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">AI Safety Consultant</h1>
-          <p className="text-muted-foreground">Chat with Winston, your AI safety expert, for guidance and advice.</p>
-        </div>
-        <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={startNewChat}>
-                <RefreshCcw className="mr-2 size-4" /> New Chat
-            </Button>
-            {user?.role === 'admin' && (
-                <Button size="sm" onClick={openUploadDialog}>
-                    <Upload className="mr-2" /> Core Memory
+      <div className="mb-4 neon-gradient-card">
+        <div className="bg-card rounded-md p-6 flex flex-col md:flex-row items-start justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold font-headline tracking-tight">AI Safety Consultant</h1>
+              <p className="text-muted-foreground mt-2">Chat with Winston, your AI safety expert, for guidance and advice.</p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+                <Button variant="outline" size="sm" onClick={startNewChat}>
+                    <RefreshCcw className="mr-2 size-4" /> New Chat
                 </Button>
-            )}
+                {user?.role === 'admin' && (
+                    <Button size="sm" onClick={openUploadDialog}>
+                        <Upload className="mr-2" /> Core Memory
+                    </Button>
+                )}
+            </div>
         </div>
-      </header>
+      </div>
+
         <Card className="flex-grow flex flex-col">
           <ScrollArea className="flex-grow" ref={scrollAreaRef}>
              <CardContent className="p-4 space-y-4">

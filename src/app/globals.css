@@ -154,4 +154,37 @@
       box-shadow: 0 0 10px var(--neon-red), 0 0 20px #fff, 0 0 30px var(--neon-red);
     }
   }
+
+  @keyframes rotate-gradient {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .neon-gradient-card {
+    position: relative;
+    z-index: 0;
+    border-radius: var(--radius);
+    overflow: hidden;
+    padding: 2px; /* This acts as the border thickness */
+  }
+
+  .neon-gradient-card::before {
+    content: '';
+    position: absolute;
+    z-index: -1;
+    inset: -10px; /* Make it larger to allow for blur */
+    background: conic-gradient(
+      from 180deg at 50% 50%,
+      #00ffc8,
+      #ffff00,
+      #ff00c7,
+      #00ffc8
+    );
+    filter: blur(15px);
+    animation: rotate-gradient 4s linear infinite;
+  }
 }
