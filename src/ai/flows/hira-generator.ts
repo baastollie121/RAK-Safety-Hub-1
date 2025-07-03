@@ -31,6 +31,7 @@ const HazardPromptSchema = HazardInputSchema.extend({
 const GenerateHiraInputSchema = z.object({
   companyName: z.string().describe('The name of the company or organization.'),
   taskTitle: z.string().describe('The title of the task or project being assessed.'),
+  reviewDate: z.string().describe('The scheduled review date for this HIRA.'),
   hazards: z.array(HazardInputSchema).describe('A list of identified hazards and their assessments.'),
 });
 export type GenerateHiraInput = z.infer<typeof GenerateHiraInputSchema>;
@@ -38,6 +39,7 @@ export type GenerateHiraInput = z.infer<typeof GenerateHiraInputSchema>;
 const GenerateHiraPromptInputSchema = z.object({
     companyName: z.string(),
     taskTitle: z.string(),
+    reviewDate: z.string(),
     hazards: z.array(HazardPromptSchema),
 });
 
@@ -63,6 +65,7 @@ The document must follow this exact structure:
 3.  **Generic Control Measures Section**: Include the standard safety measures provided below.
 4.  **Risk Assessment Matrix Explanation**: Include the provided explanation of the risk matrix.
 5.  **Detailed Hazard Analysis Table**: Create a Markdown table with the specified columns, populating it with the hazard data provided. You have been provided with the pre-calculated risk ratings.
+6.  **Approval Section**: Include the review date and signature blocks.
 
 ## Document Generation Start
 
@@ -130,6 +133,17 @@ The risk assessment is conducted using the following matrix:
 {{#each hazards}}
 | {{{this.hazard}}} | {{{this.personsAffected}}} | {{this.initialLikelihood}} - {{this.initialConsequence}} - **{{this.initialRisk}}** | {{{this.controlMeasures}}} | {{this.residualLikelihood}} - {{this.residualConsequence}} - **{{this.residualRisk}}** |
 {{/each}}
+
+---
+
+### Approval and Review
+
+**Next Review Date:** {{{reviewDate}}}
+
+| Role | Name | Signature | Date |
+|------|-----------|-----------|------|
+| **Compiled By** | | | |
+| **Approved By** | | | |
 
 ## Document Generation End
 `,

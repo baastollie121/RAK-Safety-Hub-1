@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { useForm, useFieldArray, useWatch, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import jsPDF from 'jspdf';
@@ -26,6 +26,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
   Table,
   TableBody,
   TableCell,
@@ -33,11 +41,20 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { PlusCircle, Trash2, Loader2, Wand2, Download } from 'lucide-react';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { PlusCircle, Trash2, Loader2, Wand2, Download, CalendarIcon, WandSparkles } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateHira, type GenerateHiraOutput } from '@/ai/flows/hira-generator';
+import { suggestHiraHazards } from '@/ai/flows/hira-suggester';
 import { Separator } from '@/components/ui/separator';
 import ReactMarkdown from 'react-markdown';
+import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 const hazardSchema = z.object({
   hazard: z.string().min(1, 'Hazard description is required.'),
@@ -52,6 +69,7 @@ const hazardSchema = z.object({
 const hiraSchema = z.object({
   companyName: z.string().min(1, 'Company name is required.'),
   taskTitle: z.string().min(1, 'Task title is required.'),
+  reviewDate: z.date({ required_error: 'A review date is required.' }),
   hazards: z.array(hazardSchema).min(1, 'At least one hazard must be added.'),
 });
 
@@ -135,6 +153,7 @@ const HazardRow = ({ control, index, remove }: { control: any, index: number, re
 
 export default function HIRAGeneratorPage() {
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [result, setResult] = useState<GenerateHiraOutput | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -145,6 +164,7 @@ export default function HIRAGeneratorPage() {
     defaultValues: {
       companyName: '',
       taskTitle: '',
+      reviewDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)), // Default to one year from now
       hazards: [],
     },
   });
@@ -158,7 +178,11 @@ export default function HIRAGeneratorPage() {
     setIsLoading(true);
     setResult(null);
     try {
-      const response = await generateHira(data);
+      const submissionData = {
+        ...data,
+        reviewDate: format(data.reviewDate, 'PPP'), // Format date to string
+      };
+      const response = await generateHira(submissionData);
       setResult(response);
       toast({ title: 'Success', description: 'HIRA document generated successfully.' });
     } catch (error) {
@@ -179,6 +203,54 @@ export default function HIRAGeneratorPage() {
         residualConsequence: 1,
     });
   }
+
+  const handleSuggestHazards = async () => {
+    const taskTitle = form.getValues('taskTitle');
+    if (!taskTitle) {
+      toast({
+        variant: 'destructive',
+        title: 'Task Title Required',
+        description: 'Please enter a task title before getting AI suggestions.',
+      });
+      return;
+    }
+
+    setIsSuggesting(true);
+    try {
+      const result = await suggestHiraHazards({ taskTitle });
+      if (result.suggestedHazards && result.suggestedHazards.length > 0) {
+        result.suggestedHazards.forEach(h => {
+          append({
+            hazard: h.hazard,
+            personsAffected: h.personsAffected,
+            controlMeasures: h.controlMeasures,
+            initialLikelihood: 3,
+            initialConsequence: 3,
+            residualLikelihood: 1,
+            residualConsequence: 1,
+          });
+        });
+        toast({
+          title: 'Hazards Suggested',
+          description: `${result.suggestedHazards.length} new hazards have been added to the list.`,
+        });
+      } else {
+        toast({
+          title: 'No Suggestions',
+          description: 'The AI could not find any specific suggestions for this task.',
+        });
+      }
+    } catch (error) {
+      console.error('Error suggesting hazards:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Suggestion Failed',
+        description: 'An error occurred while fetching AI suggestions.',
+      });
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
 
   const handleDownloadPdf = async () => {
     const reportElement = reportRef.current;
@@ -246,70 +318,127 @@ export default function HIRAGeneratorPage() {
         </p>
       </header>
       
-      <form onSubmit={form.handleSubmit(onSubmit)}>
-        <Card className="mb-6">
-            <CardHeader>
-                <CardTitle>Project Details</CardTitle>
-            </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-4">
-                <div>
-                    <Label htmlFor="companyName">Company/Organization Name</Label>
-                    <Input id="companyName" {...form.register('companyName')} />
-                    {form.formState.errors.companyName && <p className="text-destructive text-sm mt-1">{form.formState.errors.companyName.message}</p>}
-                </div>
-                <div>
-                    <Label htmlFor="taskTitle">Task/Project Title</Label>
-                    <Input id="taskTitle" {...form.register('taskTitle')} />
-                    {form.formState.errors.taskTitle && <p className="text-destructive text-sm mt-1">{form.formState.errors.taskTitle.message}</p>}
-                </div>
-            </CardContent>
-        </Card>
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)}>
+          <Card className="mb-6">
+              <CardHeader>
+                  <CardTitle>Project Details</CardTitle>
+              </CardHeader>
+              <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="md:col-span-1">
+                      <FormField
+                          control={form.control}
+                          name="companyName"
+                          render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Company/Organization Name</FormLabel>
+                                  <FormControl>
+                                      <Input placeholder="e.g., RAK Safety" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                  </div>
+                  <div className="md:col-span-1">
+                      <FormField
+                          control={form.control}
+                          name="taskTitle"
+                          render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Task/Project Title</FormLabel>
+                                  <FormControl>
+                                      <Input placeholder="e.g., Office Electrical Maintenance" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                  </div>
+                   <div className="md:col-span-1">
+                      <FormField
+                          control={form.control}
+                          name="reviewDate"
+                          render={({ field }) => (
+                              <FormItem className="flex flex-col">
+                                  <FormLabel>Next Review Date</FormLabel>
+                                  <Popover>
+                                      <PopoverTrigger asChild>
+                                          <FormControl>
+                                              <Button
+                                                  variant={'outline'}
+                                                  className={cn('pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
+                                              >
+                                                  {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                              </Button>
+                                          </FormControl>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                      </PopoverContent>
+                                  </Popover>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                  </div>
+              </CardContent>
+          </Card>
 
-        <Card>
-            <CardHeader>
-                <CardTitle>Hazard Analysis</CardTitle>
-                <CardDescription>Add each identified hazard and assess its risk.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <div className="overflow-x-auto border rounded-lg">
-                    <Table>
-                        <TableHeader>
-                            <TableRow className="hover:bg-transparent">
-                                <TableHead className="w-[30%]">Hazard & Persons Affected</TableHead>
-                                <TableHead>Initial Risk (L-S-R)</TableHead>
-                                <TableHead className="w-[30%]">Control Measures</TableHead>
-                                <TableHead>Residual Risk (L-S-R)</TableHead>
-                                <TableHead>Action</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {fields.length > 0 ? (
-                                fields.map((field, index) => (
-                                    <HazardRow key={field.id} control={form} index={index} remove={remove} />
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
-                                        No hazards added yet.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-                {form.formState.errors.hazards && <p className="text-destructive text-sm mt-4 p-2">{form.formState.errors.hazards.message || form.formState.errors.hazards?.root?.message}</p>}
-                 <Button type="button" variant="outline" onClick={addHazard} className="mt-4">
-                    <PlusCircle className="mr-2" /> Add Hazard
-                </Button>
-            </CardContent>
-            <CardFooter className="flex-col items-stretch gap-4">
-                 <Separator />
-                 <Button type="submit" disabled={isLoading} size="lg">
-                    {isLoading ? <><Loader2 className="animate-spin mr-2" /> Generating...</> : <><Wand2 className="mr-2" /> Generate HIRA Document</>}
-                </Button>
-            </CardFooter>
-        </Card>
-      </form>
+          <Card>
+              <CardHeader>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                    <div>
+                      <CardTitle>Hazard Analysis</CardTitle>
+                      <CardDescription>Add each identified hazard and assess its risk. Use the AI to get suggestions.</CardDescription>
+                    </div>
+                    <Button type="button" variant="outline" onClick={handleSuggestHazards} disabled={isSuggesting || !useWatch({control: form.control, name: 'taskTitle'})}>
+                        {isSuggesting ? <><Loader2 className="animate-spin mr-2" /> Thinking...</> : <><WandSparkles className="mr-2" /> Suggest Hazards</>}
+                    </Button>
+                  </div>
+              </CardHeader>
+              <CardContent>
+                  <div className="overflow-x-auto border rounded-lg">
+                      <Table>
+                          <TableHeader>
+                              <TableRow className="hover:bg-transparent">
+                                  <TableHead className="w-[30%]">Hazard & Persons Affected</TableHead>
+                                  <TableHead>Initial Risk (L-S-R)</TableHead>
+                                  <TableHead className="w-[30%]">Control Measures</TableHead>
+                                  <TableHead>Residual Risk (L-S-R)</TableHead>
+                                  <TableHead>Action</TableHead>
+                              </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                              {fields.length > 0 ? (
+                                  fields.map((field, index) => (
+                                      <HazardRow key={field.id} control={form} index={index} remove={remove} />
+                                  ))
+                              ) : (
+                                  <TableRow>
+                                      <TableCell colSpan={5} className="text-center h-24 text-muted-foreground">
+                                          No hazards added yet. Click "Add Hazard" or "Suggest Hazards" to begin.
+                                      </TableCell>
+                                  </TableRow>
+                              )}
+                          </TableBody>
+                      </Table>
+                  </div>
+                  {form.formState.errors.hazards && <p className="text-destructive text-sm mt-4 p-2">{form.formState.errors.hazards.message || form.formState.errors.hazards?.root?.message}</p>}
+                  <Button type="button" variant="outline" onClick={addHazard} className="mt-4">
+                      <PlusCircle className="mr-2" /> Add Hazard Manually
+                  </Button>
+              </CardContent>
+              <CardFooter className="flex-col items-stretch gap-4">
+                  <Separator />
+                  <Button type="submit" disabled={isLoading} size="lg">
+                      {isLoading ? <><Loader2 className="animate-spin mr-2" /> Generating...</> : <><Wand2 className="mr-2" /> Generate HIRA Document</>}
+                  </Button>
+              </CardFooter>
+          </Card>
+        </form>
+      </Form>
 
       {result && (
         <Card className="mt-8">
