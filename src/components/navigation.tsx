@@ -225,12 +225,6 @@ export function Navigation() {
       <SidebarGroup className="p-2 mt-auto">
         <SidebarMenu>
             {renderNavItems(supportNav)}
-            <SidebarMenuItem>
-                <SidebarMenuButton onClick={logout} tooltip={{children: 'Logout'}}>
-                    <LogOut />
-                    <span>Logout</span>
-                </SidebarMenuButton>
-            </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroup>
     </>

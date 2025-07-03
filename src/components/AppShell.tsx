@@ -12,6 +12,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
+import { Header } from "@/components/Header";
 import { Logo } from "@/components/logo";
 import { Navigation } from "@/components/navigation";
 import { Skeleton } from './ui/skeleton';
@@ -90,7 +91,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </SidebarContent>
       </Sidebar>
       <SidebarInset>
-        <main>{children}</main>
+        <div className="flex flex-col h-screen">
+          <Header />
+          <main className="flex-1 overflow-y-auto">{children}</main>
+        </div>
         {user?.role === 'client' && <ChatWidget />}
       </SidebarInset>
     </SidebarProvider>

@@ -8,6 +8,8 @@ type User = {
   uid: string;
   email: string | null;
   role: 'admin' | 'client';
+  firstName: string;
+  lastName: string;
 };
 
 type AuthContextType = {
@@ -43,9 +45,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     let loggedInUser: User | null = null;
     if (email.toLowerCase() === 'rukoen@gmail.com' && pass === '50700Koen*') {
-      loggedInUser = { uid: 'admin-user', email, role: 'admin' };
+      loggedInUser = { uid: 'admin-user', email, role: 'admin', firstName: 'Admin', lastName: 'User' };
     } else if (email.toLowerCase() === 'ruanakoen@gmail.com' && pass === '50700Frikkie*') {
-      loggedInUser = { uid: 'client-user', email, role: 'client' };
+      loggedInUser = { uid: 'client-user', email, role: 'client', firstName: 'Ruan', lastName: 'Koen' };
     }
     
     if (loggedInUser) {
