@@ -8,6 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Info } from 'lucide-react';
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -61,6 +63,14 @@ export default function LoginPage() {
                 required
               />
             </div>
+             <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>Demo Credentials</AlertTitle>
+                <AlertDescription>
+                  <p><b>Admin:</b> rukoen@gmail.com / 50700Koen*</p>
+                  <p><b>Client:</b> ruanakoen@gmail.com / 50700Frikkie*</p>
+                </AlertDescription>
+            </Alert>
           </CardContent>
           <CardFooter>
             <Button type="submit" className="w-full">

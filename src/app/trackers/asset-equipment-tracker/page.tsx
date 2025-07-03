@@ -29,7 +29,19 @@ import {
   DialogTrigger,
   DialogFooter,
   DialogClose,
+  DialogDescription,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import {
   Form,
   FormControl,
@@ -203,6 +215,7 @@ export default function AssetEquipmentTrackerPage() {
                     <DialogContent>
                         <DialogHeader>
                             <DialogTitle>Create a New Category</DialogTitle>
+                            <DialogDescription>Enter a name for the new equipment category.</DialogDescription>
                         </DialogHeader>
                         <div className="py-4">
                             <Input 
@@ -232,9 +245,27 @@ export default function AssetEquipmentTrackerPage() {
                         <GripVertical className="size-5 text-muted-foreground"/>
                         {category} ({assetsByCategory[category].length})
                     </div>
-                    <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={(e) => {e.stopPropagation(); handleDeleteCategory(category)}}>
-                      <Trash2 className="size-4" />
-                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                         <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10" onClick={(e) => e.stopPropagation()}>
+                            <Trash2 className="size-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will permanently delete the &quot;{category}&quot; category and all {assetsByCategory[category].length} assets within it. This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={() => handleDeleteCategory(category)}>
+                            Yes, delete category
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                 </div>
               </AccordionTrigger>
               <AccordionContent className="p-0">
@@ -258,7 +289,13 @@ export default function AssetEquipmentTrackerPage() {
                                     <TableCell className="font-medium">{asset.name}</TableCell>
                                     <TableCell>{asset.serialNumber || 'N/A'}</TableCell>
                                     <TableCell>
-                                        <Badge variant={asset.status === 'Operational' ? 'secondary' : 'destructive'}>
+                                        <Badge variant={asset.status === 'Operational' ? 'secondary' : asset.status === 'Needs Repair' ? 'default' : 'destructive'}
+                                            className={cn({
+                                                'bg-green-500/20 text-green-300 border-green-500/30': asset.status === 'Operational',
+                                                'bg-yellow-500/20 text-yellow-300 border-yellow-500/30': asset.status === 'Needs Repair',
+                                                'bg-red-500/20 text-red-300 border-red-500/30': asset.status === 'Out of Service'
+                                            })}
+                                        >
                                             {asset.status}
                                         </Badge>
                                     </TableCell>
@@ -294,6 +331,9 @@ export default function AssetEquipmentTrackerPage() {
         <DialogContent className="sm:max-w-[425px]">
           <DialogHeader>
             <DialogTitle>{editingAsset ? 'Edit' : 'Add'} Equipment/Asset</DialogTitle>
+             <DialogDescription>
+                Fill out the details for the equipment below.
+            </DialogDescription>
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSaveAsset)} className="space-y-4 py-4">
@@ -446,4 +486,3 @@ export default function AssetEquipmentTrackerPage() {
     </div>
   );
 }
-
