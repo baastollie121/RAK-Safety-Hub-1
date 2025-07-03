@@ -74,7 +74,7 @@ export default function DashboardPage() {
     <div className="p-4 sm:p-6 md:p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline tracking-tight">
-          Welcome to RAK Safety Hub
+          Welcome to RAK-Safety Management System
         </h1>
         <p className="text-muted-foreground">
           Your all-in-one platform for workplace safety management.
