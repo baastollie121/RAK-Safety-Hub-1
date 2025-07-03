@@ -71,8 +71,8 @@ const aiToolsNav = [
 
 const trackersNav = [
   { href: '/trackers/site-health-dashboard', icon: <LayoutDashboard />, label: 'Site Health Dashboard' },
-  { href: '/trackers/vehicle-equipment-tracker', icon: <Truck />, label: 'Vehicle & Equipment' },
-  { href: '/trackers/asset-equipment-tracker', icon: <Package />, label: 'Asset & Equipment' },
+  { href: '/trackers/vehicle-equipment-tracker', icon: <Truck />, label: 'Fleet Vehicle Tracker' },
+  { href: '/trackers/asset-equipment-tracker', icon: <Package />, label: 'Tool & Equipment Tracker' },
   { href: '/trackers/employee-training-tracker', icon: <Users />, label: 'Employee Training' },
   { href: '/trackers/site-resource-planner', icon: <CalendarCog />, label: 'Site & Resource Planner' },
 ];
@@ -117,7 +117,7 @@ const NavGroup = ({
               <SidebarMenuButton
                 asChild
                 size="sm"
-                isActive={pathname === item.href}
+                isActive={pathname.startsWith(item.href) && (item.href !== '/' || pathname === '/')}
                 tooltip={{
                   children: item.label,
                 }}
