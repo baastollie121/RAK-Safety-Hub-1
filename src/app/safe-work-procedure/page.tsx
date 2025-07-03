@@ -35,13 +35,24 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Loader2, Download, CalendarIcon, WandSparkles, FileArchive, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { generateSafeWorkProcedure, GenerateSafeWorkProcedureInputSchema, type GenerateSafeWorkProcedureOutput } from '@/ai/flows/safe-work-procedure-generator';
+import { generateSafeWorkProcedure, type GenerateSafeWorkProcedureOutput } from '@/ai/flows/safe-work-procedure-generator';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
+const formSchema = z.object({
+  taskTitle: z.string().min(1, 'Task / Operation Title is required.'),
+  companyName: z.string().min(1, 'Company Name is required.'),
+  preparedBy: z.string().min(1, 'Prepared By is required.'),
+  reviewDate: z.date({ required_error: 'A review date is required.' }),
+  scope: z.string().min(1, 'Scope & Application is required.'),
+  hazards: z.string().min(1, 'Identified Hazards are required.'),
+  ppe: z.string().min(1, 'Personal Protective Equipment (PPE) is required.'),
+  procedure: z.array(z.string().min(1, "Step description cannot be empty.")).min(1, "At least one procedure step is required."),
+  emergencyProcedures: z.string().min(1, 'Emergency Procedures are required.'),
+});
 
-type SwpFormValues = z.infer<typeof GenerateSafeWorkProcedureInputSchema>;
+type SwpFormValues = z.infer<typeof formSchema>;
 
 interface SavedSwp {
     id: string;
@@ -52,11 +63,6 @@ interface SavedSwp {
     swpDocument: string;
 }
 
-const formSchema = GenerateSafeWorkProcedureInputSchema.extend({
-    reviewDate: z.date({ required_error: 'A review date is required.' }),
-    procedure: z.array(z.string().min(1, "Step description cannot be empty.")).min(1, "At least one procedure step is required."),
-})
-
 export default function SafeWorkProcedurePage() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -65,7 +71,7 @@ export default function SafeWorkProcedurePage() {
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<SwpFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       companyName: '',
@@ -85,7 +91,7 @@ export default function SafeWorkProcedurePage() {
     name: "procedure",
   });
 
-  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+  const onSubmit = async (data: SwpFormValues) => {
     setIsLoading(true);
     setResult(null);
     try {

@@ -16,12 +16,12 @@ const SuggestedHazardSchema = z.object({
     controlMeasures: z.string().describe('A set of recommended control measures to mitigate this hazard.'),
 });
 
-export const SuggestHiraHazardsInputSchema = z.object({
+const SuggestHiraHazardsInputSchema = z.object({
   taskTitle: z.string().describe('The title of the task or project being assessed.'),
 });
 export type SuggestHiraHazardsInput = z.infer<typeof SuggestHiraHazardsInputSchema>;
 
-export const SuggestHiraHazardsOutputSchema = z.object({
+const SuggestHiraHazardsOutputSchema = z.object({
   suggestedHazards: z.array(SuggestedHazardSchema).describe('A list of up to 5 suggested hazards with details.'),
 });
 export type SuggestHiraHazardsOutput = z.infer<typeof SuggestHiraHazardsOutputSchema>;

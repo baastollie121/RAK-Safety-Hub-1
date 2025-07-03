@@ -12,7 +12,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const GenerateSafeWorkProcedureInputSchema = z.object({
+const GenerateSafeWorkProcedureInputSchema = z.object({
   taskTitle: z.string().describe('The title of the task or operation.'),
   companyName: z.string().describe('The name of the company.'),
   preparedBy: z.string().describe('Name of the person preparing the SWP.'),
@@ -31,7 +31,7 @@ const GenerateSafeWorkProcedurePromptInputSchema = GenerateSafeWorkProcedureInpu
     effectiveDate: z.string(),
 });
 
-export const GenerateSafeWorkProcedureOutputSchema = z.object({
+const GenerateSafeWorkProcedureOutputSchema = z.object({
   swpDocument: z.string().describe('The complete, OSHA-compliant Safe Work Procedure document in Markdown format.'),
 });
 export type GenerateSafeWorkProcedureOutput = z.infer<typeof GenerateSafeWorkProcedureOutputSchema>;

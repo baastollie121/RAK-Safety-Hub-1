@@ -11,7 +11,7 @@
 import {ai} from '@/ai/genkit';
 import {z} from 'genkit';
 
-export const GenerateShePlanInputSchema = z.object({
+const GenerateShePlanInputSchema = z.object({
   companyName: z.string().describe('The name of the company or organization.'),
   projectTitle: z.string().describe('The title of the project being assessed.'),
   projectLocation: z.string().describe('The physical location of the project.'),

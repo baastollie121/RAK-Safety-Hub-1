@@ -34,14 +34,26 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Loader2, Download, CalendarIcon, WandSparkles, FileArchive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { generateShePlan, GenerateShePlanInputSchema, type GenerateShePlanOutput } from '@/ai/flows/she-plan-generator';
-import { Separator } from '@/components/ui/separator';
+import { generateShePlan, type GenerateShePlanOutput } from '@/ai/flows/she-plan-generator';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 
+const formSchema = z.object({
+  companyName: z.string().min(1, 'Company Name is required.'),
+  projectTitle: z.string().min(1, 'Project Title is required.'),
+  projectLocation: z.string().min(1, 'Project Location is required.'),
+  preparedBy: z.string().min(1, 'Prepared By is required.'),
+  reviewDate: z.date({ required_error: 'A review date is required.' }),
+  projectOverview: z.string().min(1, 'Project Overview is required.'),
+  siteHazards: z.string().min(1, 'Site-Specific Hazards are required.'),
+  emergencyProcedures: z.string().min(1, 'Emergency Response Procedures are required.'),
+  ppeRequirements: z.string().min(1, 'PPE Requirements are required.'),
+  trainingRequirements: z.string().min(1, 'Training & Competency is required.'),
+  environmentalControls: z.string().min(1, 'Environmental Controls are required.'),
+});
 
-type ShePlanFormValues = z.infer<typeof GenerateShePlanInputSchema>;
+type ShePlanFormValues = z.infer<typeof formSchema>;
 
 interface SavedShePlan {
     id: string;
@@ -61,7 +73,7 @@ export default function SHESitePlanGeneratorPage() {
   const { toast } = useToast();
 
   const form = useForm<ShePlanFormValues>({
-    resolver: zodResolver(GenerateShePlanInputSchema),
+    resolver: zodResolver(formSchema),
     defaultValues: {
       companyName: '',
       projectTitle: '',
