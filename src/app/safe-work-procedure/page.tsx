@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef } from 'react';
@@ -53,6 +54,7 @@ interface SavedSwp {
 
 const formSchema = GenerateSafeWorkProcedureInputSchema.extend({
     reviewDate: z.date({ required_error: 'A review date is required.' }),
+    procedure: z.array(z.string().min(1, "Step description cannot be empty.")).min(1, "At least one procedure step is required."),
 })
 
 export default function SafeWorkProcedurePage() {
@@ -176,7 +178,7 @@ export default function SafeWorkProcedurePage() {
   const formSection = (name: keyof SwpFormValues, label: string, placeholder: string, isTextarea = true, rows = 4) => (
       <FormField
           control={form.control}
-          name={name}
+          name={name as any}
           render={({ field }) => (
               <FormItem>
                   <FormLabel>{label}</FormLabel>
@@ -255,6 +257,7 @@ export default function SafeWorkProcedurePage() {
                 
                 <div>
                     <FormLabel>Step-by-Step Procedure</FormLabel>
+                     {form.formState.errors.procedure && <p className="text-destructive text-sm mt-1">{form.formState.errors.procedure.root?.message}</p>}
                     <div className="space-y-2 mt-2">
                         {fields.map((field, index) => (
                            <FormField
@@ -266,9 +269,9 @@ export default function SafeWorkProcedurePage() {
                                     <div className="flex items-center gap-2">
                                         <span className="text-muted-foreground">{index + 1}.</span>
                                         <FormControl>
-                                            <Input {...field} placeholder={`Step ${index + 1}`}/>
+                                            <Textarea {...field} placeholder={`Step ${index + 1} description...`} rows={2} />
                                         </FormControl>
-                                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)} disabled={fields.length <= 1}>
+                                        <Button type="button" variant="ghost" size="icon" onClick={() => remove(index)}>
                                             <Trash2 className="size-4 text-destructive" />
                                         </Button>
                                     </div>

@@ -1,3 +1,4 @@
+
 'use server';
 
 /**
@@ -24,6 +25,12 @@ export const GenerateSafeWorkProcedureInputSchema = z.object({
 });
 export type GenerateSafeWorkProcedureInput = z.infer<typeof GenerateSafeWorkProcedureInputSchema>;
 
+// This schema includes the values we'll calculate in the flow.
+const GenerateSafeWorkProcedurePromptInputSchema = GenerateSafeWorkProcedureInputSchema.extend({
+    documentNumber: z.string(),
+    effectiveDate: z.string(),
+});
+
 export const GenerateSafeWorkProcedureOutputSchema = z.object({
   swpDocument: z.string().describe('The complete, OSHA-compliant Safe Work Procedure document in Markdown format.'),
 });
@@ -35,10 +42,8 @@ export async function generateSafeWorkProcedure(input: GenerateSafeWorkProcedure
 
 const prompt = ai.definePrompt({
   name: 'generateSafeWorkProcedurePrompt',
-  input: {schema: GenerateSafeWorkProcedureInputSchema},
-  output: {schema: GenerateSafeWorkProcedureOutputSchema,
-    format: 'markdown'
-  },
+  input: {schema: GenerateSafeWorkProcedurePromptInputSchema},
+  output: {schema: GenerateSafeWorkProcedureOutputSchema},
   prompt: `You are an expert safety officer specializing in creating legally compliant, OSHA-adherent Safe Work Procedure (SWP) documents. Your task is to generate a professional SWP document in Markdown format based on the provided data.
 
 The document must follow this exact structure:
@@ -52,8 +57,8 @@ The document must follow this exact structure:
 ### **1. Document Control**
 - **Company:** {{{companyName}}}
 - **Document Title:** Safe Work Procedure - {{{taskTitle}}}
-- **Document Number:** SWP-${new Date().getFullYear()}-${Math.floor(Math.random() * 900) + 100}
-- **Effective Date:** ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+- **Document Number:** {{{documentNumber}}}
+- **Effective Date:** {{{effectiveDate}}}
 - **Prepared By:** {{{preparedBy}}}
 - **Next Review Date:** {{{reviewDate}}}
 
@@ -125,7 +130,21 @@ const generateSafeWorkProcedureFlow = ai.defineFlow(
     outputSchema: GenerateSafeWorkProcedureOutputSchema,
   },
   async (input) => {
-    const {output} = await prompt(input);
+    // Generate dynamic values here instead of in the prompt template.
+    const documentNumber = `SWP-${new Date().getFullYear()}-${Math.floor(Math.random() * 900) + 100}`;
+    const effectiveDate = new Date().toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+    });
+
+    const promptInput = {
+        ...input,
+        documentNumber,
+        effectiveDate,
+    };
+    
+    const {output} = await prompt(promptInput);
 
     return { swpDocument: output!.swpDocument };
   }
