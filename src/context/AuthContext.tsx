@@ -3,8 +3,6 @@
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut, type User as FirebaseUser } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 
 type User = {
   uid: string;
@@ -14,7 +12,6 @@ type User = {
 
 type AuthContextType = {
   user: User | null;
-  firebaseUser: FirebaseUser | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, pass: string) => Promise<boolean>;
@@ -25,58 +22,54 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [firebaseUser, setFirebaseUser] = useState<FirebaseUser | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (fbUser) => {
-      if (fbUser) {
-        setFirebaseUser(fbUser);
-        const userEmail = fbUser.email || '';
-        // Determine role based on email - this is a temporary measure
-        const role = userEmail.toLowerCase() === 'rukoen@gmail.com' ? 'admin' : 'client';
-        setUser({
-          uid: fbUser.uid,
-          email: fbUser.email,
-          role: role
-        });
-      } else {
-        setFirebaseUser(null);
-        setUser(null);
+    // On initial load, check localStorage for a logged in user.
+    try {
+      const storedUser = localStorage.getItem('user');
+      if (storedUser) {
+        setUser(JSON.parse(storedUser));
       }
-      setIsLoading(false);
-    });
-
-    return () => unsubscribe();
+    } catch (error) {
+      console.error("Failed to parse user from localStorage", error);
+      localStorage.removeItem('user');
+    }
+    setIsLoading(false);
   }, []);
 
   const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email, pass);
-      router.push('/');
-      return true;
-    } catch (error) {
-      console.error("Login failed:", error);
-      setIsLoading(false);
-      return false;
+    let loggedInUser: User | null = null;
+    if (email.toLowerCase() === 'rukoen@gmail.com' && pass === '50700Koen*') {
+      loggedInUser = { uid: 'admin-user', email, role: 'admin' };
+    } else if (email.toLowerCase() === 'ruanakoen@gmail.com' && pass === '50700Frikkie*') {
+      loggedInUser = { uid: 'client-user', email, role: 'client' };
     }
+    
+    if (loggedInUser) {
+      setUser(loggedInUser);
+      localStorage.setItem('user', JSON.stringify(loggedInUser));
+      router.push('/');
+      setIsLoading(false);
+      return true;
+    }
+
+    setIsLoading(false);
+    return false;
   };
 
-  const logout = async () => {
-    try {
-      await signOut(auth);
-      router.push('/login');
-    } catch (error) {
-      console.error("Logout failed:", error);
-    }
+  const logout = () => {
+    setUser(null);
+    localStorage.removeItem('user');
+    router.push('/login');
   };
   
   const isAuthenticated = !isLoading && !!user;
 
   return (
-    <AuthContext.Provider value={{ user, firebaseUser, isAuthenticated, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

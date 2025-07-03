@@ -88,7 +88,7 @@ export default function OnboardClientPage() {
           <CardTitle>Client Details</CardTitle>
           <CardDescription>
             Enter the new client's information below.
-          </CardDescription>
+          </Description>
         </CardHeader>
         <CardContent>
           <Form {...form}>
