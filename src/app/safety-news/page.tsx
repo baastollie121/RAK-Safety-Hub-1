@@ -18,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
 import type { Article } from '@/lib/articles';
 import { articleCategories } from '@/lib/articles';
+import { Separator } from '@/components/ui/separator';
 
 const articleFilterCategories = ['All', ...articleCategories];
 
@@ -143,45 +144,94 @@ export default function SafetyNewsPage() {
       </div>
 
       {filteredArticles.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {filteredArticles.map((article) => (
-            <Card key={article.id} className="flex flex-col">
-              <CardHeader>
-                {article.imageUrl && (
-                  <div className="relative mb-4 aspect-video w-full">
+        <div className="space-y-8">
+            {/* Featured Article */}
+            <Card 
+                className="grid grid-cols-1 md:grid-cols-5 gap-6 p-4 transition-all duration-200 ease-in-out hover:border-primary cursor-pointer"
+                onClick={() => setSelectedArticle(filteredArticles[0])}
+            >
+                {filteredArticles[0].imageUrl && (
+                <div className="relative aspect-video w-full md:col-span-2">
                     <Image
-                      src={article.imageUrl}
-                      alt={article.title}
-                      fill
-                      className="rounded-md object-cover"
-                      data-ai-hint="news article"
-                      unoptimized
+                        src={filteredArticles[0].imageUrl}
+                        alt={filteredArticles[0].title}
+                        fill
+                        className="rounded-md object-cover"
+                        data-ai-hint="news article"
+                        unoptimized
                     />
-                  </div>
+                </div>
                 )}
-                <CardTitle className="font-headline">{article.title}</CardTitle>
-                <CardDescription>
-                  <Badge variant="secondary" className="mr-2">
-                    {article.category}
-                  </Badge>
-                  Published on {format(new Date(article.createdAt), 'PPP')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-grow">
-                <p className="text-sm text-muted-foreground line-clamp-3">
-                  {article.content}
-                </p>
-              </CardContent>
-              <CardFooter>
-                <Button
-                  onClick={() => setSelectedArticle(article)}
-                  className="w-full"
-                >
-                  Read More <ArrowRight className="ml-2 size-4" />
-                </Button>
-              </CardFooter>
+                <div className={`flex flex-col justify-center ${filteredArticles[0].imageUrl ? 'md:col-span-3' : 'md:col-span-5'}`}>
+                    <CardHeader>
+                        <CardTitle className="font-headline text-2xl">{filteredArticles[0].title}</CardTitle>
+                        <CardDescription>
+                            <Badge variant="secondary" className="mr-2">
+                                {filteredArticles[0].category}
+                            </Badge>
+                            Published on {format(new Date(filteredArticles[0].createdAt), 'PPP')}
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <p className="text-sm text-muted-foreground line-clamp-4">
+                        {filteredArticles[0].content}
+                        </p>
+                    </CardContent>
+                      <CardFooter>
+                        <div className="flex items-center text-sm font-medium text-primary">
+                            <span>Read More</span>
+                            <ArrowRight className="ml-1 size-4" />
+                        </div>
+                    </CardFooter>
+                </div>
             </Card>
-          ))}
+
+            {/* Separator and Grid for other articles */}
+            {filteredArticles.length > 1 && (
+                <>
+                    <Separator />
+                    <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
+                        {filteredArticles.slice(1).map((article) => (
+                             <Card key={article.id} className="flex flex-col">
+                                <CardHeader>
+                                    {article.imageUrl && (
+                                    <div className="relative mb-4 aspect-video w-full">
+                                        <Image
+                                        src={article.imageUrl}
+                                        alt={article.title}
+                                        fill
+                                        className="rounded-md object-cover"
+                                        data-ai-hint="news article"
+                                        unoptimized
+                                        />
+                                    </div>
+                                    )}
+                                    <CardTitle className="font-headline">{article.title}</CardTitle>
+                                    <CardDescription>
+                                    <Badge variant="secondary" className="mr-2">
+                                        {article.category}
+                                    </Badge>
+                                    Published on {format(new Date(article.createdAt), 'PPP')}
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex-grow">
+                                    <p className="text-sm text-muted-foreground line-clamp-3">
+                                    {article.content}
+                                    </p>
+                                </CardContent>
+                                <CardFooter>
+                                    <Button
+                                    onClick={() => setSelectedArticle(article)}
+                                    className="w-full"
+                                    >
+                                    Read More <ArrowRight className="ml-2 size-4" />
+                                    </Button>
+                                </CardFooter>
+                            </Card>
+                        ))}
+                    </div>
+                </>
+            )}
         </div>
       ) : (
         <Card className="py-12 text-center">
