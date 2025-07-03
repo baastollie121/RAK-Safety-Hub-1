@@ -122,13 +122,27 @@ export default function AssetEquipmentTrackerPage() {
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
     defaultValues: {
+      name: '',
+      serialNumber: '',
+      category: '',
       status: 'Operational',
+      inspectedBy: '',
+      lastInspected: new Date(),
+      lastReplaced: undefined,
     },
   });
 
   const handleAddAssetClick = () => {
     setEditingAsset(null);
-    form.reset({ status: 'Operational', lastInspected: new Date() });
+    form.reset({
+      name: '',
+      serialNumber: '',
+      category: '',
+      status: 'Operational',
+      inspectedBy: '',
+      lastInspected: new Date(),
+      lastReplaced: undefined,
+    });
     setIsAssetDialogOpen(true);
   };
 
