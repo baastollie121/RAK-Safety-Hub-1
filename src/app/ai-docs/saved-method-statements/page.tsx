@@ -1,4 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { FileArchive } from "lucide-react";
+import Link from 'next/link';
 
 export default function SavedMethodStatementsPage() {
   return (
@@ -13,10 +15,11 @@ export default function SavedMethodStatementsPage() {
       </header>
        <Card>
         <CardHeader>
-            <CardTitle className="font-headline">Coming Soon</CardTitle>
+            <CardTitle className="font-headline flex items-center gap-2"><FileArchive /> No Saved Statements</CardTitle>
         </CardHeader>
         <CardContent>
-            <p className="text-muted-foreground">This feature is currently under development. Please check back later.</p>
+            <p className="text-muted-foreground">When you generate a method statement, you can save it here for later access. Go to the <Link href="/method-statement" className="text-primary underline">Method Statement Generator</Link> to get started.</p>
+             <p className="text-sm text-muted-foreground mt-4">(This feature is currently under development.)</p>
         </CardContent>
        </Card>
     </div>

@@ -47,7 +47,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { PlusCircle, Trash2, Loader2, Wand2, Download, CalendarIcon, WandSparkles } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Wand2, Download, CalendarIcon, WandSparkles, FileArchive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateHira, type GenerateHiraOutput } from '@/ai/flows/hira-generator';
 import { suggestHiraHazards } from '@/ai/flows/hira-suggester';
@@ -74,6 +74,15 @@ const hiraSchema = z.object({
 });
 
 type HiraFormValues = z.infer<typeof hiraSchema>;
+
+interface SavedHiraReport {
+    id: string;
+    title: string;
+    companyName: string;
+    reviewDate: string;
+    createdAt: string;
+    hiraDocument: string;
+}
 
 const likelihoodOptions = [
   { value: '1', label: '1 - Almost Impossible' },
@@ -185,6 +194,7 @@ export default function HIRAGeneratorPage() {
       const response = await generateHira(submissionData);
       setResult(response);
       toast({ title: 'Success', description: 'HIRA document generated successfully.' });
+      window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     } catch (error) {
       console.error("HIRA Generation Error:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate HIRA document.' });
@@ -252,6 +262,35 @@ export default function HIRAGeneratorPage() {
     }
   };
 
+  const handleSaveHira = () => {
+    if (!result || !result.hiraDocument) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No HIRA document to save.' });
+      return;
+    }
+
+    const { companyName, taskTitle, reviewDate } = form.getValues();
+
+    const newReport: SavedHiraReport = {
+      id: new Date().toISOString(),
+      companyName,
+      title: taskTitle,
+      reviewDate: format(reviewDate, 'PPP'),
+      createdAt: format(new Date(), 'PPP p'),
+      hiraDocument: result.hiraDocument,
+    };
+
+    try {
+      const savedReports: SavedHiraReport[] = JSON.parse(localStorage.getItem('savedHiraReports') || '[]');
+      savedReports.unshift(newReport); // Add to the beginning of the array
+      localStorage.setItem('savedHiraReports', JSON.stringify(savedReports));
+      toast({ title: 'Success', description: `HIRA report "${taskTitle}" has been saved.` });
+    } catch (error) {
+      console.error('Failed to save HIRA to localStorage', error);
+      toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the report.' });
+    }
+  };
+
+
   const handleDownloadPdf = async () => {
     const reportElement = reportRef.current;
     const taskTitle = form.getValues('taskTitle');
@@ -266,7 +305,7 @@ export default function HIRAGeneratorPage() {
         const canvas = await html2canvas(reportElement, {
             scale: 2,
             useCORS: true,
-            backgroundColor: '#111827' // Same as dark theme background
+            backgroundColor: null, // Use transparent background for canvas
         });
         
         const imgData = canvas.toDataURL('image/png');
@@ -277,7 +316,6 @@ export default function HIRAGeneratorPage() {
         });
         
         const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
         const imgWidth = canvas.width;
         const imgHeight = canvas.height;
         const ratio = imgWidth / imgHeight;
@@ -290,13 +328,13 @@ export default function HIRAGeneratorPage() {
         let position = PADDING;
 
         pdf.addImage(imgData, 'PNG', PADDING, position, finalImgWidth, finalImgHeight);
-        heightLeft -= (pdfHeight - (PADDING * 2));
+        heightLeft -= (pdf.internal.pageSize.getHeight() - (PADDING * 2));
 
         while (heightLeft > 0) {
             position = heightLeft - finalImgHeight + PADDING;
             pdf.addPage();
             pdf.addImage(imgData, 'PNG', PADDING, position, finalImgWidth, finalImgHeight);
-            heightLeft -= (pdfHeight - (PADDING * 2));
+            heightLeft -= (pdf.internal.pageSize.getHeight() - (PADDING * 2));
         }
         
         pdf.save(`HIRA-${taskTitle.replace(/\s+/g, '_')}.pdf`);
@@ -443,18 +481,23 @@ export default function HIRAGeneratorPage() {
       {result && (
         <Card className="mt-8">
             <CardHeader>
-                <div className="flex justify-between items-start">
+                <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
                     <div>
                         <CardTitle>Generated HIRA Document</CardTitle>
-                        <CardDescription>Review the document below. You can copy the text or download it as a PDF.</CardDescription>
+                        <CardDescription>Review the document below. You can save the report or download it as a PDF.</CardDescription>
                     </div>
-                    <Button onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
-                        {isDownloadingPdf ? <><Loader2 className="animate-spin mr-2" /> Downloading...</> : <><Download className="mr-2" /> Download as PDF</>}
-                    </Button>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                        <Button onClick={handleSaveHira} variant="outline">
+                            <FileArchive className="mr-2" /> Save Report
+                        </Button>
+                        <Button onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
+                            {isDownloadingPdf ? <><Loader2 className="animate-spin mr-2" /> Downloading...</> : <><Download className="mr-2" /> Download as PDF</>}
+                        </Button>
+                    </div>
                 </div>
             </CardHeader>
             <CardContent>
-                 <div ref={reportRef} className="prose prose-sm dark:prose-invert max-w-none rounded-lg border p-6 bg-card">
+                 <div ref={reportRef} className="prose prose-sm dark:prose-invert max-w-none rounded-lg border p-6 bg-background">
                     <ReactMarkdown>{result.hiraDocument}</ReactMarkdown>
                 </div>
             </CardContent>
