@@ -19,6 +19,17 @@ import {
   DialogFooter,
   DialogClose,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -106,7 +117,7 @@ export default function ManageDocumentsPage() {
     setIsUploadDialogOpen(true);
   };
 
-  const handleDelete = (category: keyof AllDocs, subSection: string, docId: string) => {
+  const handleDelete = (category: keyof AllDocs, subSection: string, docId: string, docName: string) => {
     // This is where you would add logic to delete the file from your storage bucket.
     console.log(`Deleting doc ${docId} from ${category}/${subSection}`);
 
@@ -117,7 +128,7 @@ export default function ManageDocumentsPage() {
       );
       return { ...prevDocs, [category]: newCategoryDocs };
     });
-    toast({ title: "Success", description: "Document has been deleted." });
+    toast({ title: "Success", description: `Document "${docName}" has been deleted.` });
   };
 
   const handleUpload = () => {
@@ -165,14 +176,31 @@ export default function ManageDocumentsPage() {
                           <File className="size-4 text-muted-foreground" />
                           <span>{doc.name}</span>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
-                          onClick={() => handleDelete(category, subSection, doc.id)}
-                        >
-                          <Trash2 className="size-4" />
-                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                             <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
+                            >
+                              <Trash2 className="size-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the document &quot;{doc.name}&quot;.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction onClick={() => handleDelete(category, subSection, doc.id, doc.name)}>
+                                Yes, delete document
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
                       </li>
                     ))}
                      {docList.length === 0 && (

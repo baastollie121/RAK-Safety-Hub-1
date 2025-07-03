@@ -138,9 +138,9 @@ export default function AssetEquipmentTrackerPage() {
     setIsAssetDialogOpen(true);
   };
 
-  const handleDeleteAsset = (assetId: string) => {
+  const handleDeleteAsset = (assetId: string, assetName: string) => {
     setAssets(assets.filter((asset) => asset.id !== assetId));
-    toast({ title: 'Success', description: 'Asset removed.' });
+    toast({ title: 'Success', description: `Asset "${assetName}" removed.` });
   };
 
   const handleSaveAsset = (data: AssetFormValues) => {
@@ -306,9 +306,27 @@ export default function AssetEquipmentTrackerPage() {
                                     <Button variant="ghost" size="icon" onClick={() => handleEditAssetClick(asset)}>
                                         <Edit className="size-4" />
                                     </Button>
-                                    <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDeleteAsset(asset.id)}>
-                                        <Trash2 className="size-4" />
-                                    </Button>
+                                    <AlertDialog>
+                                      <AlertDialogTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                            <Trash2 className="size-4" />
+                                        </Button>
+                                      </AlertDialogTrigger>
+                                      <AlertDialogContent>
+                                        <AlertDialogHeader>
+                                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                          <AlertDialogDescription>
+                                            This will permanently delete the asset &quot;{asset.name}&quot;. This action cannot be undone.
+                                          </AlertDialogDescription>
+                                        </AlertDialogHeader>
+                                        <AlertDialogFooter>
+                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                          <AlertDialogAction onClick={() => handleDeleteAsset(asset.id, asset.name)}>
+                                            Yes, delete asset
+                                          </AlertDialogAction>
+                                        </AlertDialogFooter>
+                                      </AlertDialogContent>
+                                    </AlertDialog>
                                     </TableCell>
                                 </TableRow>
                                 ))

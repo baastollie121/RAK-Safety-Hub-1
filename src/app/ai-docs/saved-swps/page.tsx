@@ -2,8 +2,6 @@
 
 import { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import {
   Card,
   CardContent,
@@ -29,7 +27,8 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Trash2, FileArchive, Download, Loader2 } from 'lucide-react';
+import { useDownloadPdf } from '@/hooks/use-download-pdf';
+import { Trash2, FileArchive } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -44,48 +43,10 @@ interface SavedSwp {
 
 const ReportContent = ({ report, onDelete }: { report: SavedSwp, onDelete: (id: string, title: string) => void }) => {
     const reportRef = useRef<HTMLDivElement>(null);
-    const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
-    const { toast } = useToast();
-
-    const handleDownloadPdf = async () => {
-        const reportElement = reportRef.current;
-        if (!reportElement) {
-          toast({ variant: 'destructive', title: 'Error', description: 'Cannot download PDF.' });
-          return;
-        }
-        
-        setIsDownloadingPdf(true);
-        try {
-            const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true, backgroundColor: null });
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-            
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const PADDING = 10;
-            const contentWidth = pdfWidth - (PADDING * 2);
-            const imgHeight = (canvas.height * contentWidth) / canvas.width;
-            let heightLeft = imgHeight;
-            let position = PADDING;
-
-            pdf.addImage(imgData, 'PNG', PADDING, position, contentWidth, imgHeight);
-            heightLeft -= (pdf.internal.pageSize.getHeight() - (PADDING * 2));
-
-            while (heightLeft > 0) {
-                position = heightLeft - imgHeight + PADDING;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', PADDING, position, contentWidth, imgHeight);
-                heightLeft -= (pdf.internal.pageSize.getHeight() - (PADDING * 2));
-            }
-            
-            pdf.save(`SWP-${report.title.replace(/\s+/g, '_')}.pdf`);
-            toast({ title: 'Success', description: 'PDF downloaded successfully.' });
-        } catch(err) {
-            console.error("PDF generation error:", err);
-            toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate PDF.' });
-        } finally {
-            setIsDownloadingPdf(false);
-        }
-    };
+    const { DownloadButton } = useDownloadPdf({
+      reportRef,
+      fileName: `SWP-${report.title.replace(/\s+/g, '_')}`
+    });
     
     return (
         <>
@@ -93,9 +54,7 @@ const ReportContent = ({ report, onDelete }: { report: SavedSwp, onDelete: (id: 
                 <ReactMarkdown>{report.swpDocument}</ReactMarkdown>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-                 <Button onClick={handleDownloadPdf} disabled={isDownloadingPdf} variant="outline">
-                    {isDownloadingPdf ? <><Loader2 className="animate-spin mr-2 size-4" /> Downloading...</> : <><Download className="mr-2 size-4" /> Download PDF</>}
-                </Button>
+                <DownloadButton />
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="destructive">

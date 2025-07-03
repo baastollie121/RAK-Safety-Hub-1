@@ -46,7 +46,7 @@ export default function LoginPage() {
               <Input
                 id="email"
                 type="email"
-                placeholder="rukoen@gmail.com"
+                placeholder="admin@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -67,8 +67,11 @@ export default function LoginPage() {
                 <Info className="h-4 w-4" />
                 <AlertTitle>Demo Credentials</AlertTitle>
                 <AlertDescription>
-                  <p><b>Admin:</b> rukoen@gmail.com / 50700Koen*</p>
-                  <p><b>Client:</b> ruanakoen@gmail.com / 50700Frikkie*</p>
+                  <p className="text-xs"><b>Admin:</b> rukoen@gmail.com</p>
+                  <p className="text-xs"><b>Pass:</b> 50700Koen*</p>
+                  <hr className="my-1 border-border" />
+                  <p className="text-xs"><b>Client:</b> ruanakoen@gmail.com</p>
+                  <p className="text-xs"><b>Pass:</b> 50700Frikkie*</p>
                 </AlertDescription>
             </Alert>
           </CardContent>

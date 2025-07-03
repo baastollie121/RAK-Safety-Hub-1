@@ -86,9 +86,9 @@ const likelihoodOptions = [
 
 const consequenceOptions = [
     { value: '1', label: '1 - Minor first aid injury' },
-    { value: '2', label: '2 - Break bone/minor illness' },
-    { value: '3', label: '3 - Break bone/serious illness' },
-    { value: '4 - Loss of limb/eye' },
+    { value: '2', label: '2 - Break bone/minor illness/1st-2nd degree burns' },
+    { value: '3', label: '3 - Break bone/serious illness/3rd-4th degree burns over 50% body' },
+    { value: '4', label: '4 - Loss of limb/eye/serious illness/50%+ burns' },
     { value: '5', label: '5 - Fatality' },
 ];
 
@@ -451,74 +451,72 @@ export default function HIRAGeneratorPage() {
                   <CardTitle className="text-xl font-headline">1. Project Details</CardTitle>
                   <CardDescription>Enter the high-level details for this HIRA.</CardDescription>
               </CardHeader>
-              <CardContent>
-                  <div className="flex flex-col space-y-6 md:flex-row md:space-y-0 md:space-x-6 md:items-center">
-                      <div className="flex-1 space-y-2">
-                          <FormField
-                              control={form.control}
-                              name="companyName"
-                              render={({ field }) => (
-                                  <FormItem>
-                                      <FormLabel>Company/Organization</FormLabel>
-                                      <FormControl>
-                                          <Input placeholder="e.g., RAK Safety" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                      </div>
-                      
-                      <Separator orientation="vertical" className="h-16 hidden md:block" />
-                      <Separator orientation="horizontal" className="w-full block md:hidden" />
+              <CardContent className="flex flex-col space-y-6 md:flex-row md:space-y-0 md:space-x-6 md:items-center">
+                  <div className="flex-1 space-y-2">
+                      <FormField
+                          control={form.control}
+                          name="companyName"
+                          render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Company/Organization</FormLabel>
+                                  <FormControl>
+                                      <Input placeholder="e.g., RAK Safety" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                  </div>
+                  
+                  <Separator orientation="vertical" className="h-16 hidden md:block" />
+                  <Separator orientation="horizontal" className="w-full block md:hidden" />
 
-                      <div className="flex-1 space-y-2">
-                          <FormField
-                              control={form.control}
-                              name="taskTitle"
-                              render={({ field }) => (
-                                  <FormItem>
-                                      <FormLabel>Task/Project Title</FormLabel>
-                                      <FormControl>
-                                          <Input placeholder="e.g., Office Electrical Maintenance" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                      </div>
-                      
-                      <Separator orientation="vertical" className="h-16 hidden md:block" />
-                      <Separator orientation="horizontal" className="w-full block md:hidden" />
+                  <div className="flex-1 space-y-2">
+                      <FormField
+                          control={form.control}
+                          name="taskTitle"
+                          render={({ field }) => (
+                              <FormItem>
+                                  <FormLabel>Task/Project Title</FormLabel>
+                                  <FormControl>
+                                      <Input placeholder="e.g., Office Electrical Maintenance" {...field} />
+                                  </FormControl>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
+                  </div>
+                  
+                  <Separator orientation="vertical" className="h-16 hidden md:block" />
+                  <Separator orientation="horizontal" className="w-full block md:hidden" />
 
-                      <div className="flex-1 space-y-2">
-                          <FormField
-                              control={form.control}
-                              name="reviewDate"
-                              render={({ field }) => (
-                                  <FormItem className="flex flex-col">
-                                      <FormLabel>Next Review Date</FormLabel>
-                                      <Popover>
-                                          <PopoverTrigger asChild>
-                                              <FormControl>
-                                                  <Button
-                                                      variant={'outline'}
-                                                      className={cn('pl-3 text-left font-normal w-full', !field.value && 'text-muted-foreground')}
-                                                  >
-                                                      {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
-                                                      <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                                  </Button>
-                                              </FormControl>
-                                          </PopoverTrigger>
-                                          <PopoverContent className="w-auto p-0" align="start">
-                                              <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                                          </PopoverContent>
-                                      </Popover>
-                                      <FormMessage />
-                                  </FormItem>
-                              )}
-                          />
-                      </div>
+                  <div className="flex-1 space-y-2">
+                      <FormField
+                          control={form.control}
+                          name="reviewDate"
+                          render={({ field }) => (
+                              <FormItem className="flex flex-col">
+                                  <FormLabel>Next Review Date</FormLabel>
+                                  <Popover>
+                                      <PopoverTrigger asChild>
+                                          <FormControl>
+                                              <Button
+                                                  variant={'outline'}
+                                                  className={cn('pl-3 text-left font-normal w-full', !field.value && 'text-muted-foreground')}
+                                              >
+                                                  {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
+                                                  <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                                              </Button>
+                                          </FormControl>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-auto p-0" align="start">
+                                          <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                                      </PopoverContent>
+                                  </Popover>
+                                  <FormMessage />
+                              </FormItem>
+                          )}
+                      />
                   </div>
               </CardContent>
           </Card>
