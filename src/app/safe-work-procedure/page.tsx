@@ -35,7 +35,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Loader2, Download, CalendarIcon, WandSparkles, FileArchive, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { generateSafeWorkProcedure, type GenerateSafeWorkProcedureOutput } from '@/ai/flows/safe-work-procedure-generator';
+import { generateSafeWorkProcedure } from '@/ai/flows/safe-work-procedure-generator';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -53,6 +53,11 @@ const formSchema = z.object({
 });
 
 type SwpFormValues = z.infer<typeof formSchema>;
+
+const swpOutputSchema = z.object({
+  swpDocument: z.string(),
+});
+type GenerateSafeWorkProcedureOutput = z.infer<typeof swpOutputSchema>;
 
 interface SavedSwp {
     id: string;

@@ -34,7 +34,7 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Loader2, Download, CalendarIcon, WandSparkles, FileArchive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { generateShePlan, type GenerateShePlanOutput } from '@/ai/flows/she-plan-generator';
+import { generateShePlan } from '@/ai/flows/she-plan-generator';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
@@ -54,6 +54,12 @@ const formSchema = z.object({
 });
 
 type ShePlanFormValues = z.infer<typeof formSchema>;
+
+const shePlanOutputSchema = z.object({
+  shePlanDocument: z.string(),
+});
+type GenerateShePlanOutput = z.infer<typeof shePlanOutputSchema>;
+
 
 interface SavedShePlan {
     id: string;

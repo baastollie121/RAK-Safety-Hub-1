@@ -4,8 +4,6 @@
  * @fileOverview An AI agent for generating Site Safety, Health, and Environment (SHE) plans.
  *
  * - generateShePlan - A function that handles the SHE plan generation process.
- * - GenerateShePlanInput - The input type for the generateShePlan function.
- * - GenerateShePlanOutput - The return type for the generateShePlan function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -24,12 +22,12 @@ const GenerateShePlanInputSchema = z.object({
   trainingRequirements: z.string().describe('A summary of mandatory training and competency requirements for the site.'),
   environmentalControls: z.string().describe('A description of controls for environmental hazards like waste, dust, and water.'),
 });
-export type GenerateShePlanInput = z.infer<typeof GenerateShePlanInputSchema>;
+type GenerateShePlanInput = z.infer<typeof GenerateShePlanInputSchema>;
 
-export const GenerateShePlanOutputSchema = z.object({
+const GenerateShePlanOutputSchema = z.object({
   shePlanDocument: z.string().describe('A professionally formatted, comprehensive SHE Site Plan document in Markdown format.'),
 });
-export type GenerateShePlanOutput = z.infer<typeof GenerateShePlanOutputSchema>;
+type GenerateShePlanOutput = z.infer<typeof GenerateShePlanOutputSchema>;
 
 export async function generateShePlan(input: GenerateShePlanInput): Promise<GenerateShePlanOutput> {
   return generateShePlanFlow(input);

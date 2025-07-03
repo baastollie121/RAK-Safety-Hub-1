@@ -5,8 +5,6 @@
  * @fileOverview An AI agent for generating OSHA-compliant Safe Work Procedure (SWP) documents.
  *
  * - generateSafeWorkProcedure - A function that handles the SWP generation process.
- * - GenerateSafeWorkProcedureInput - The input type for the generateSafeWorkProcedure function.
- * - GenerateSafeWorkProcedureOutput - The return type for the generateSafeWorkProcedure function.
  */
 
 import {ai} from '@/ai/genkit';
@@ -23,7 +21,7 @@ const GenerateSafeWorkProcedureInputSchema = z.object({
   procedure: z.array(z.string()).describe('An array of strings, where each string is a single step in the safe work procedure.'),
   emergencyProcedures: z.string().describe('A detailed description of actions to take in case of various emergencies.'),
 });
-export type GenerateSafeWorkProcedureInput = z.infer<typeof GenerateSafeWorkProcedureInputSchema>;
+type GenerateSafeWorkProcedureInput = z.infer<typeof GenerateSafeWorkProcedureInputSchema>;
 
 // This schema includes the values we'll calculate in the flow.
 const GenerateSafeWorkProcedurePromptInputSchema = GenerateSafeWorkProcedureInputSchema.extend({
@@ -34,7 +32,7 @@ const GenerateSafeWorkProcedurePromptInputSchema = GenerateSafeWorkProcedureInpu
 const GenerateSafeWorkProcedureOutputSchema = z.object({
   swpDocument: z.string().describe('The complete, OSHA-compliant Safe Work Procedure document in Markdown format.'),
 });
-export type GenerateSafeWorkProcedureOutput = z.infer<typeof GenerateSafeWorkProcedureOutputSchema>;
+type GenerateSafeWorkProcedureOutput = z.infer<typeof GenerateSafeWorkProcedureOutputSchema>;
 
 export async function generateSafeWorkProcedure(input: GenerateSafeWorkProcedureInput): Promise<GenerateSafeWorkProcedureOutput> {
   return generateSafeWorkProcedureFlow(input);
