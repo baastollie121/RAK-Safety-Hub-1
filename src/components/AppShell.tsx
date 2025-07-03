@@ -75,7 +75,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarHeader>
+        <SidebarHeader className="bg-black">
           <div className="flex items-center gap-2 p-2">
             <Logo />
             <h1 className="text-xl font-headline font-semibold">RAK-SMS</h1>
