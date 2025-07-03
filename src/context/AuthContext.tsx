@@ -20,8 +20,8 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const hardcodedUsers = {
-  'admin@rak.com': { password: 'admin123', role: 'admin' },
-  'client@rak.com': { password: 'client123', role: 'client' },
+  'rukoen@gmail.com': { password: '50700Koen*', role: 'admin' },
+  'ruanakoen@gmail.com': { password: '50700Frikkie*', role: 'client' },
 };
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
