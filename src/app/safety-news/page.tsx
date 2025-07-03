@@ -20,11 +20,10 @@ import type { Article } from '@/lib/articles';
 
 const articleCategories = [
   'All',
-  'Industry Alerts',
-  'Legal Updates',
-  'Toolbox Tips',
-  'Company News',
-  'Product Updates',
+  'Legislative & Legal Updates',
+  'Industry Partner News',
+  'Global Incidents & Case Studies',
+  'Professional Body News',
 ];
 
 export default function SafetyNewsPage() {
@@ -51,10 +50,10 @@ export default function SafetyNewsPage() {
   }, []);
 
   const filteredArticles = useMemo(() => {
-    if (activeFilter === 'All') {
-      return articles;
-    }
-    return articles.filter((article) => article.category === activeFilter);
+    const allFiltered = activeFilter === 'All'
+      ? articles
+      : articles.filter((article) => article.category === activeFilter);
+    return allFiltered.slice(0, 6); // Limit to 6 articles
   }, [articles, activeFilter]);
 
   if (isLoading) {

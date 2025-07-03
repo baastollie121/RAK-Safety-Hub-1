@@ -59,11 +59,10 @@ import { useToast } from '@/hooks/use-toast';
 import type { Article } from '@/lib/articles';
 
 const articleCategories = [
-    "Industry Alerts", 
-    "Legal Updates", 
-    "Toolbox Tips", 
-    "Company News", 
-    "Product Updates"
+    "Legislative & Legal Updates",
+    "Industry Partner News",
+    "Global Incidents & Case Studies",
+    "Professional Body News",
 ];
 
 const articleSchema = z.object({
