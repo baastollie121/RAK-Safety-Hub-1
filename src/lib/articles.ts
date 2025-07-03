@@ -5,4 +5,5 @@ export interface Article {
   content: string;
   imageUrl: string | null; // Will store the image as a data URI
   createdAt: string;
+  category: string;
 }

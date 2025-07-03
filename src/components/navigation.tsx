@@ -11,6 +11,7 @@ import {
   FileCheck2,
   FileCog,
   FileJson2,
+  FileSearch,
   FileText,
   Folder,
   Home,
@@ -162,7 +163,8 @@ export function Navigation() {
   const adminNav = [
     { href: '/admin/onboard-client', icon: <UserPlus />, label: 'Onboard Client' },
     { href: '/admin/manage-documents', icon: <FileCog />, label: 'Manage Documents' },
-    { href: '/admin/manage-news', icon: <FilePlus />, label: 'Manage News' },
+    { href: '/admin/manage-news', icon: <FilePlus />, label: 'Manage Articles' },
+    { href: '/admin/news-scraper', icon: <FileSearch />, label: 'News Scraper' },
     { href: '/admin/client-messages', icon: <MessageSquare />, label: 'Client Messages', notification: hasNewMessages },
   ];
 

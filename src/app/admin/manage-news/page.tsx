@@ -47,14 +47,31 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
+import {
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import { Plus, Edit, Trash2, Newspaper } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Article } from '@/lib/articles';
 
+const articleCategories = [
+    "Industry Alerts", 
+    "Legal Updates", 
+    "Toolbox Tips", 
+    "Company News", 
+    "Product Updates"
+];
+
 const articleSchema = z.object({
   title: z.string().min(5, 'Title must be at least 5 characters.'),
   content: z.string().min(20, 'Content must be at least 20 characters.'),
+  category: z.string().min(1, 'Category is required.'),
   image: z.any().optional(),
+  imageUrl: z.string().url().optional(), // For scraped image URL
 });
 
 type ArticleFormValues = z.infer<typeof articleSchema>;
@@ -78,22 +95,40 @@ export default function ManageNewsPage() {
     try {
       const storedArticles = JSON.parse(localStorage.getItem('newsArticles') || '[]');
       setArticles(storedArticles);
+      
+      const scrapedDataString = localStorage.getItem('scrapedArticle');
+      if (scrapedDataString) {
+        const scrapedData = JSON.parse(scrapedDataString);
+        localStorage.removeItem('scrapedArticle');
+        openDialog(null, scrapedData);
+      }
+
     } catch (error) {
       console.error('Failed to load articles from localStorage', error);
       toast({ variant: 'destructive', title: 'Load Failed', description: 'Could not load news articles.' });
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [toast]);
   
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
+    defaultValues: {
+      title: '',
+      content: '',
+      category: '',
+      image: null,
+      imageUrl: '',
+    }
   });
 
-  const openDialog = (article: Article | null = null) => {
+  const openDialog = (article: Article | null = null, scrapedData: any = null) => {
     setEditingArticle(article);
     if (article) {
-        form.reset({ title: article.title, content: article.content, image: null });
+        form.reset({ title: article.title, content: article.content, category: article.category, image: null, imageUrl: article.imageUrl || '' });
+    } else if (scrapedData) {
+        form.reset({ title: scrapedData.title || '', content: scrapedData.content || '', category: '', image: null, imageUrl: scrapedData.imageUrl || '' });
     } else {
-        form.reset({ title: '', content: '', image: null });
+        form.reset({ title: '', content: '', category: '', image: null, imageUrl: '' });
     }
     setIsDialogOpen(true);
   };
@@ -106,11 +141,11 @@ export default function ManageNewsPage() {
   };
 
   const onSubmit = async (data: ArticleFormValues) => {
-    let imageUrl: string | null = editingArticle?.imageUrl || null;
+    let finalImageUrl: string | null = editingArticle?.imageUrl || data.imageUrl || null;
     
     if (data.image && data.image[0]) {
         try {
-            imageUrl = await fileToDataUri(data.image[0]);
+            finalImageUrl = await fileToDataUri(data.image[0]);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Image Error', description: 'Could not process the image file.'});
             return;
@@ -119,14 +154,15 @@ export default function ManageNewsPage() {
 
     let updatedArticles: Article[];
     if (editingArticle) {
-        updatedArticles = articles.map(a => a.id === editingArticle.id ? { ...a, title: data.title, content: data.content, imageUrl } : a);
+        updatedArticles = articles.map(a => a.id === editingArticle.id ? { ...a, title: data.title, content: data.content, category: data.category, imageUrl: finalImageUrl } : a);
         toast({ title: 'Success', description: 'Article updated.' });
     } else {
         const newArticle: Article = {
             id: new Date().toISOString(),
             title: data.title,
             content: data.content,
-            imageUrl,
+            category: data.category,
+            imageUrl: finalImageUrl,
             createdAt: new Date().toISOString(),
         };
         updatedArticles = [newArticle, ...articles];
@@ -144,7 +180,7 @@ export default function ManageNewsPage() {
     <div className="p-4 sm:p-6 md:p-8">
       <header className="mb-8 flex items-center justify-between">
         <div>
-            <h1 className="text-3xl font-bold font-headline tracking-tight">Manage News</h1>
+            <h1 className="text-3xl font-bold font-headline tracking-tight">Manage Articles</h1>
             <p className="text-muted-foreground">Create, edit, and delete news articles for clients.</p>
         </div>
         <Button onClick={() => openDialog()}>
@@ -163,7 +199,7 @@ export default function ManageNewsPage() {
                         <li key={article.id} className="flex items-center justify-between p-3 border rounded-lg">
                             <div>
                                 <h3 className="font-semibold">{article.title}</h3>
-                                <p className="text-sm text-muted-foreground">Published on {format(new Date(article.createdAt), 'PPP')}</p>
+                                <p className="text-sm text-muted-foreground">Category: {article.category} | Published: {format(new Date(article.createdAt), 'PPP')}</p>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Button variant="outline" size="sm" onClick={() => openDialog(article)}>
@@ -236,12 +272,35 @@ export default function ManageNewsPage() {
                             </FormItem>
                         )}
                     />
+                    <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Category</FormLabel>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select a category" />
+                                    </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                    {articleCategories.map(cat => (
+                                        <SelectItem key={cat} value={cat}>{cat}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                                </Select>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                        />
                      <FormField
                         control={form.control}
                         name="image"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Article Image (Optional)</FormLabel>
+                                <FormLabel>Upload Image (Optional)</FormLabel>
+                                <FormDescription>This will override the scraped image if one exists.</FormDescription>
                                 <FormControl>
                                     <Input 
                                         type="file" 
@@ -253,10 +312,18 @@ export default function ManageNewsPage() {
                             </FormItem>
                         )}
                     />
-                    {(editingArticle?.imageUrl) && (
+                    {(editingArticle?.imageUrl || form.getValues('imageUrl')) && (
                         <div>
                             <p className="text-sm text-muted-foreground">Current Image:</p>
-                             <Image src={editingArticle.imageUrl} alt="Current article image" width={100} height={100} className="rounded-md border object-cover"/>
+                             <Image 
+                                src={editingArticle?.imageUrl || form.getValues('imageUrl')!} 
+                                alt="Current article image" 
+                                width={100} 
+                                height={100} 
+                                className="rounded-md border object-cover"
+                                unoptimized
+                                data-ai-hint="news article"
+                            />
                         </div>
                     )}
                     <DialogFooter>

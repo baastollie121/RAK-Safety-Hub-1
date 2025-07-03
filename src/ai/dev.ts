@@ -9,3 +9,4 @@ import '@/ai/flows/safe-work-procedure-generator.ts';
 import '@/ai/flows/document-analyzer.ts';
 import '@/ai/flows/hira-suggester.ts';
 import '@/ai/flows/she-plan-generator.ts';
+import '@/ai/flows/news-scraper-flow.ts';
