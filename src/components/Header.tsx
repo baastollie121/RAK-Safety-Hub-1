@@ -29,6 +29,10 @@ export function Header() {
             <SidebarTrigger />
         )}
 
+        <h1 className="text-lg font-semibold text-primary-foreground/90 font-headline hidden md:block">
+            Safety Management System
+        </h1>
+
         <div className="ml-auto flex items-center gap-2">
             <DropdownMenu>
                 <DropdownMenuTrigger asChild>
