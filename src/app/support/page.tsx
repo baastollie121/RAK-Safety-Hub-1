@@ -1,7 +1,11 @@
+
+'use client';
+
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { Mail, CreditCard, Banknote } from 'lucide-react';
+import { Mail, CreditCard, Banknote, MessageSquare, ArrowLeft, LifeBuoy } from 'lucide-react';
 
 const FnbLogo = () => (
     <svg viewBox="0 0 97 97" xmlns="http://www.w3.org/2000/svg" className="w-16 h-16">
@@ -26,7 +30,131 @@ const PayGateLogo = () => (
     </div>
 );
 
+
 export default function SupportPage() {
+    const [view, setView] = useState<'main' | 'support' | 'billing'>('main');
+
+    const renderMainView = () => (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => setView('support')}>
+                <CardHeader>
+                    <CardTitle className="font-headline flex items-center gap-2"><LifeBuoy /> Contact Support</CardTitle>
+                    <CardDescription>Reach out to us for any technical or general questions.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">Get help via email, live chat, or WhatsApp.</p>
+                </CardContent>
+            </Card>
+            <Card className="hover:border-primary transition-colors cursor-pointer" onClick={() => setView('billing')}>
+                <CardHeader>
+                    <CardTitle className="font-headline flex items-center gap-2"><CreditCard /> Billing Information</CardTitle>
+                    <CardDescription>Details for making payments for your subscription.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <p className="text-sm text-muted-foreground">Find our banking details and online payment information.</p>
+                </CardContent>
+            </Card>
+        </div>
+    );
+
+    const renderSupportView = () => (
+         <Card>
+            <CardHeader>
+                <Button variant="ghost" onClick={() => setView('main')} className="mb-2 -ml-4 justify-start w-fit">
+                    <ArrowLeft className="mr-2"/> Back
+                </Button>
+                <CardTitle className="font-headline">Contact Support</CardTitle>
+                <CardDescription>Reach out to us for any technical or billing questions.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="flex items-start gap-4">
+                    <Mail className="size-6 text-primary mt-1"/>
+                    <div>
+                        <h3 className="font-semibold">Email Support</h3>
+                        <p className="text-muted-foreground text-sm mb-2">For all inquiries, please email our support team. We aim to respond within 24 hours.</p>
+                        <Button asChild variant="outline" size="sm">
+                            <a href="mailto:support@sitesafety.services">support@sitesafety.services</a>
+                        </Button>
+                    </div>
+                </div>
+                 <Separator />
+                 <div className="flex items-start gap-4">
+                    <WhatsAppIcon />
+                    <div>
+                        <h3 className="font-semibold">WhatsApp Chat</h3>
+                        <p className="text-muted-foreground text-sm mb-2">For urgent billing or technical support, you can reach us on WhatsApp.</p>
+                         <Button asChild variant="outline" size="sm">
+                            <a href="https://wa.me/27790225981" target="_blank" rel="noopener noreferrer">
+                                Chat on WhatsApp (079 022 5981)
+                            </a>
+                        </Button>
+                    </div>
+                </div>
+                 <Separator />
+                <div className="flex items-start gap-4">
+                    <MessageSquare className="size-6 text-primary mt-1"/>
+                    <div>
+                        <h3 className="font-semibold">Live Site Chat</h3>
+                        <p className="text-muted-foreground text-sm mb-2">For quick questions, use the live chat widget located at the bottom-right of your screen. Our agents are standing by to assist you.</p>
+                    </div>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
+    const renderBillingView = () => (
+         <Card>
+            <CardHeader>
+                <Button variant="ghost" onClick={() => setView('main')} className="mb-2 -ml-4 justify-start w-fit">
+                     <ArrowLeft className="mr-2"/> Back
+                </Button>
+                <CardTitle className="font-headline">Billing Information</CardTitle>
+                <CardDescription>Details for making payments for your subscription.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+               <div>
+                    <h3 className="font-semibold flex items-center gap-2"><CreditCard className="size-5 text-primary"/> Online Payment</h3>
+                    <p className="text-muted-foreground text-sm mb-3">We use PayGate for secure online credit card payments. Please use the link provided on your invoice.</p>
+                    <div className="p-4 border rounded-lg bg-background flex items-center gap-4">
+                        <PayGateLogo />
+                        <span className="text-muted-foreground text-sm">Secure payments processed by PayGate.</span>
+                    </div>
+               </div>
+                <Separator />
+                <div>
+                    <h3 className="font-semibold flex items-center gap-2"><Banknote className="size-5 text-primary"/> Direct EFT Payment</h3>
+                     <div className="flex items-center gap-4 mt-3">
+                        <FnbLogo />
+                        <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm flex-1">
+                            <span className="text-muted-foreground">Bank:</span> <strong>First National Bank (FNB)</strong>
+                            <span className="text-muted-foreground">Account Number:</span> <strong>6315 2958 890</strong>
+                            <span className="text-muted-foreground">Branch Code:</span> <strong>250 655</strong>
+                        </div>
+                    </div>
+                     <p className="text-muted-foreground text-sm mt-4">
+                        Please email your proof of payment to{' '}
+                        <a href="mailto:support@sitesafety.services" className="font-medium text-primary hover:underline">
+                            support@sitesafety.services
+                        </a> to ensure your account is updated promptly.
+                     </p>
+                </div>
+            </CardContent>
+        </Card>
+    );
+
+    const renderContent = () => {
+        switch(view) {
+            case 'support':
+                return renderSupportView();
+            case 'billing':
+                return renderBillingView();
+            case 'main':
+            default:
+                return renderMainView();
+        }
+    }
+
+
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <header className="mb-8">
@@ -37,77 +165,7 @@ export default function SupportPage() {
           Get help, manage your subscription, and view payment details.
         </p>
       </header>
-       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Contact Support</CardTitle>
-                    <CardDescription>Reach out to us for any technical or billing questions.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                    <div className="flex items-start gap-4">
-                        <Mail className="size-6 text-primary mt-1"/>
-                        <div>
-                            <h3 className="font-semibold">Email Support</h3>
-                            <p className="text-muted-foreground text-sm mb-2">For all inquiries, please email our support team. We aim to respond within 24 hours.</p>
-                            <Button asChild variant="outline" size="sm">
-                                <a href="mailto:support@sitesafety.services">support@sitesafety.services</a>
-                            </Button>
-                        </div>
-                    </div>
-                     <Separator />
-                     <div className="flex items-start gap-4">
-                        <WhatsAppIcon />
-                        <div>
-                            <h3 className="font-semibold">WhatsApp Chat</h3>
-                            <p className="text-muted-foreground text-sm mb-2">For urgent billing or technical support, you can reach us on WhatsApp.</p>
-                             <Button asChild variant="outline" size="sm">
-                                <a href="https://wa.me/27790225981" target="_blank" rel="noopener noreferrer">
-                                    Chat on WhatsApp (079 022 5981)
-                                </a>
-                            </Button>
-                        </div>
-                    </div>
-                </CardContent>
-            </Card>
-
-             <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">Billing Information</CardTitle>
-                    <CardDescription>Details for making payments for your subscription.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                   <div>
-                        <h3 className="font-semibold flex items-center gap-2"><CreditCard className="size-5 text-primary"/> Online Payment</h3>
-                        <p className="text-muted-foreground text-sm mb-3">We use PayGate for secure online credit card payments. Please use the link provided on your invoice.</p>
-                        <div className="p-4 border rounded-lg bg-background flex items-center gap-4">
-                            <PayGateLogo />
-                            <span className="text-muted-foreground text-sm">Secure payments processed by PayGate.</span>
-                        </div>
-                   </div>
-
-                    <Separator />
-
-                    <div>
-                        <h3 className="font-semibold flex items-center gap-2"><Banknote className="size-5 text-primary"/> Direct EFT Payment</h3>
-                         <div className="flex items-center gap-4 mt-3">
-                            <FnbLogo />
-                            <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm flex-1">
-                                <span className="text-muted-foreground">Bank:</span> <strong>First National Bank (FNB)</strong>
-                                <span className="text-muted-foreground">Account Number:</span> <strong>6315 2958 890</strong>
-                                <span className="text-muted-foreground">Branch Code:</span> <strong>250 655</strong>
-                            </div>
-                        </div>
-                         <p className="text-muted-foreground text-sm mt-4">
-                            Please email your proof of payment to{' '}
-                            <a href="mailto:support@sitesafety.services" className="font-medium text-primary hover:underline">
-                                support@sitesafety.services
-                            </a> to ensure your account is updated promptly.
-                         </p>
-                    </div>
-
-                </CardContent>
-            </Card>
-       </div>
+       {renderContent()}
     </div>
   );
 }
