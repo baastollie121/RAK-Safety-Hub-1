@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -157,14 +156,16 @@ export default function SupportPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      <header className="mb-8">
-        <h1 className="text-3xl font-bold font-headline tracking-tight">
-          Support & Billing
-        </h1>
-        <p className="text-muted-foreground">
-          Get help, manage your subscription, and view payment details.
-        </p>
-      </header>
+        <Card className="mb-8">
+            <CardContent className="p-6">
+                <h1 className="text-3xl font-bold font-headline tracking-tight">
+                Support & Billing
+                </h1>
+                <p className="text-muted-foreground mt-2">
+                Get help, manage your subscription, and view payment details.
+                </p>
+            </CardContent>
+        </Card>
        {renderContent()}
     </div>
   );
