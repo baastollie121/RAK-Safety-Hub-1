@@ -17,7 +17,7 @@ export function Logo() {
         {/* Shield */}
         <path
           d="M50,34 L65,42 L65,58 C65,66 50,70 50,70 C50,70 35,66 35,58 L35,42 Z"
-          fill="#F9A825"
+          fill="#003366"
           stroke="#003366"
           strokeWidth="6"
           strokeLinejoin="round"
