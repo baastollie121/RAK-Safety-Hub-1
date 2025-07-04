@@ -3,25 +3,55 @@ import React from 'react';
 export function Logo() {
   return (
     <svg
-      width="32"
-      height="32"
-      viewBox="0 0 100 100"
+      width="200"
+      height="40"
+      viewBox="0 0 420 100"
       xmlns="http://www.w3.org/2000/svg"
     >
       <g>
-        {/* Gear */}
-        <path
-          d="M96.7,66.2,87.2,63.1A34.3,34.3,0,0,0,84,56.8l2.9-9.5-8.5-8.5-9.5,2.9a34.3,34.3,0,0,0-6.3-3.2l3.1-9.5L57.2,20.3,54.1,29.8a34.3,34.3,0,0,0-8.2,0L36.4,20.3,27.9,28.8l3.1,9.5a34.3,34.3,0,0,0-3.2,6.3L18.3,41.5,9.8,50l9.5,2.9a34.3,34.3,0,0,0,3.2,6.3l-3.1,9.5,8.5,8.5,9.5-3.1a34.3,34.3,0,0,0,6.3,3.2l-3.1,9.5,8.5,8.5,3.1-9.5a34.3,34.3,0,0,0,8.2,0l9.5,8.5,8.5-8.5-9.5-3.1a34.3,34.3,0,0,0,3.2-6.3l9.5-2.9,8.5-8.5ZM50,67.5A17.5,17.5,0,1,1,67.5,50,17.5,17.5,0,0,1,50,67.5Z"
-          fill="#F9A825"
-        />
-        {/* Shield */}
-        <path
-          d="M50,34 L65,42 L65,58 C65,66 50,70 50,70 C50,70 35,66 35,58 L35,42 Z"
-          fill="#003366"
-          stroke="#003366"
-          strokeWidth="6"
-          strokeLinejoin="round"
-        />
+        {/* Gear and Shield, positioned on the left */}
+        <g transform="translate(0, 0) scale(1)">
+          {/* Gear */}
+          <path
+            d="M96.7,66.2,87.2,63.1A34.3,34.3,0,0,0,84,56.8l2.9-9.5-8.5-8.5-9.5,2.9a34.3,34.3,0,0,0-6.3-3.2l3.1-9.5L57.2,20.3,54.1,29.8a34.3,34.3,0,0,0-8.2,0L36.4,20.3,27.9,28.8l3.1,9.5a34.3,34.3,0,0,0-3.2,6.3L18.3,41.5,9.8,50l9.5,2.9a34.3,34.3,0,0,0,3.2,6.3l-3.1,9.5,8.5,8.5,9.5-3.1a34.3,34.3,0,0,0,6.3,3.2l-3.1,9.5,8.5,8.5,3.1-9.5a34.3,34.3,0,0,0,8.2,0l9.5,8.5,8.5-8.5-9.5-3.1a34.3,34.3,0,0,0,3.2-6.3l9.5-2.9,8.5-8.5ZM50,67.5A17.5,17.5,0,1,1,67.5,50,17.5,17.5,0,0,1,50,67.5Z"
+            fill="#F9A825"
+          />
+          {/* Shield */}
+          <path
+            d="M50,34 L65,42 L65,58 C65,66 50,70 50,70 C50,70 35,66 35,58 L35,42 Z"
+            fill="#F9A825"
+            stroke="#003366"
+            strokeWidth="6"
+            strokeLinejoin="round"
+          />
+        </g>
+        
+        {/* Text group */}
+        <g transform="translate(120, 0)">
+          {/* RAK-SSS Text */}
+          <text
+            x="0"
+            y="55"
+            fontFamily="Space Grotesk, sans-serif"
+            fontSize="40"
+            fontWeight="bold"
+            className="fill-[#003366] dark:fill-[hsl(var(--sidebar-primary))]"
+          >
+            RAK-SSS
+          </text>
+
+          {/* SITE SUPPORT SERVICES Text */}
+          <text
+            x="0"
+            y="80"
+            fontFamily="Space Grotesk, sans-serif"
+            fontSize="16"
+            fontWeight="bold"
+            fill="#F9A825"
+          >
+            SITE SUPPORT SERVICES
+          </text>
+        </g>
       </g>
     </svg>
   );
