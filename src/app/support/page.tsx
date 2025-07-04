@@ -9,15 +9,19 @@ import { Mail, CreditCard, Banknote, MessageSquare, ArrowLeft, LifeBuoy } from '
 
 const FnbLogo = () => (
     <svg width="241" height="97" viewBox="0 0 241 97" xmlns="http://www.w3.org/2000/svg" className="w-40 h-auto">
+        <rect width="241" height="97" fill="white" />
         <g>
             <circle cx="48.5" cy="48.5" r="48.5" fill="#FBB612"/>
             <path d="M-2.52783 75.8339C28.7995 56.916 63.8587 56.916 99.186 75.8339L105.862 68.217C67.7336 47.7479 25.0236 47.7479 -13.1047 68.217L-2.52783 75.8339Z" fill="#00A79D"/>
-            {/* Tree */}
-            <path d="M48.5,85 V58 M48.5,58 L29.3,46.2 M48.5,58 L67.7,46.2 M29.3,46.2 H21.8 L25.9,36.6 H43.3 L37.8,46.2z M67.7,46.2 H75.2 L71.1,36.6 H53.8 L59.3,46.2z M43.3,36.6 H53.8 L48.5,27z" fill="#231f20"/>
+            <path d="M48.4,26.7l-4.2,29.3H44l-20.9-8.4l5.6-4.3h-7.1l-4.7-9.5h14.4l-5.1,9.4h3.7l17.4-26.5h0.2l17.4,26.5h3.7l-5.1-9.4h14.4l-4.7,9.5h-7.1l5.6,4.3L52.8,56h-0.2l-4.2-29.3Z M48.4,85v-27H48v27H48.4z" fill="#000"/>
         </g>
-        <text x="115" y="65" fontFamily="Arial, 'Helvetica Neue', Helvetica, sans-serif" fontSize="60" fontWeight="bold" fill="#00A79D">FNB</text>
+        <g transform="translate(115, 23)">
+            <path d="M11.5,71.2H0.2V34.4H0.2V27.3h9.5V14.1c0-8.9,4.4-14.9,14.6-14.9c4.1,0,7.3,0.3,9,0.5v8.5c-1.4-0.2-2.9-0.3-4.5-0.3 c-4.8,0-6.1,2.1-6.1,6.5v6.9h10.9v7.1H22.7v36.8H11.5z" fill="#00A79D"/>
+            <path d="M63.5,71.2H52.2V0h11.3V71.2z M87.1,71.2l-10.4-18V71.2H65.4V0h16.2L96.4,17.9L111.2,0h11.3v71.1H111.2V38.8L100.8,56.7h-4.6 L87.1,38.8V71.2z" fill="#00A79D"/>
+        </g>
     </svg>
 );
+
 
 const WhatsAppIcon = () => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="size-6 text-green-500 fill-current mt-1">
