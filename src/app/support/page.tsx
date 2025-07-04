@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -7,12 +8,14 @@ import { Button } from "@/components/ui/button";
 import { Mail, CreditCard, Banknote, MessageSquare, ArrowLeft, LifeBuoy } from 'lucide-react';
 
 const FnbLogo = () => (
-    <svg viewBox="0 0 97 97" xmlns="http://www.w3.org/2000/svg" className="w-16 h-16">
+    <svg width="241" height="97" viewBox="0 0 241 97" xmlns="http://www.w3.org/2000/svg" className="w-40 h-auto">
         <g>
             <circle cx="48.5" cy="48.5" r="48.5" fill="#FBB612"/>
             <path d="M-2.52783 75.8339C28.7995 56.916 63.8587 56.916 99.186 75.8339L105.862 68.217C67.7336 47.7479 25.0236 47.7479 -13.1047 68.217L-2.52783 75.8339Z" fill="#00A79D"/>
-            <path d="M48.5001 84.875V58.3751M48.5001 58.3751L29.3334 46.2084M48.5001 58.3751L67.6667 46.2084M29.3334 46.2084L21.7501 46.2084L25.9167 36.625L43.2501 36.625L37.7501 46.2084H29.3334ZM67.6667 46.2084L75.2501 46.2084L71.0834 36.625L53.7501 36.625L59.2501 46.2084H67.6667ZM43.2501 36.625L53.7501 36.625L48.5001 27.0417L43.2501 36.625Z" stroke="#231F20" strokeWidth="6.46667" strokeLinecap="round" strokeLinejoin="round"/>
+            {/* Tree */}
+            <path d="M48.5,85 V58 M48.5,58 L29.3,46.2 M48.5,58 L67.7,46.2 M29.3,46.2 H21.8 L25.9,36.6 H43.3 L37.8,46.2z M67.7,46.2 H75.2 L71.1,36.6 H53.8 L59.3,46.2z M43.3,36.6 H53.8 L48.5,27z" fill="#231f20"/>
         </g>
+        <text x="115" y="65" fontFamily="Arial, 'Helvetica Neue', Helvetica, sans-serif" fontSize="60" fontWeight="bold" fill="#00A79D">FNB</text>
     </svg>
 );
 
