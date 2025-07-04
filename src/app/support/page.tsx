@@ -2,27 +2,11 @@
 'use client';
 
 import { useState } from 'react';
+import Image from 'next/image';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Mail, CreditCard, Banknote, MessageSquare, ArrowLeft, LifeBuoy } from 'lucide-react';
-
-const FnbLogo = () => (
-    <svg width="241" height="97" viewBox="0 0 241 97" xmlns="http://www.w3.org/2000/svg" className="w-40 h-auto">
-        <rect width="241" height="97" fill="white" />
-        <g transform="translate(0, 1)">
-            <circle cx="48" cy="48" r="48" fill="#FBB612"/>
-            <path d="M-4.28 75.48C30.52 54.48 68.12 54.28 99.88 75.08L100.28 96C65.48 96 29.88 96 -4.28 96Z" fill="#00A79D"/>
-            <path d="M48.5,78.5 V56.5 L37.5,50.5 L32.5,35.5 L20.5,31.5 L27.5,19.5 L41.5,23.5 L45.5,37.5 L48.5,41.5 L51.5,37.5 L55.5,23.5 L69.5,19.5 L76.5,31.5 L65.5,35.5 L59.5,50.5 L48.5,56.5 Z M32.5,35.5 L42.5,39.5 M65.5,35.5 L55.5,39.5 M45.5,37.5 L36.5,46.5 M51.5,37.5 L60.5,46.5" fill="#231F20" />
-        </g>
-        <g transform="translate(115, 23)" fill="#00A79D">
-            <path d="M11.5,71.2 H0.2 V0 h21.8 v9.5 H11.5z M11.5,40.7 H22.7 V31.2 H11.5z"/>
-            <path d="M35.2,71.2 H23.9 V0 h11.3 l14.8,21.1 v-21.1 H61.4 V71.2 h-11.3 L35.3,50.1 v21.1 z"/>
-            <path d="M87.2,71.2 H75.9 V0 h19.3 c10,0 15,5 15,15 c0,10 -5,15 -15,15 h-8.1 v9.5 h8.1 c11,0 16,6 16,16 c0,10 -5,16 -16,16 z M87.2,25.5 h6.3 c4,0 6,-2 6,-6 s-2,-6 -6,-6 h-6.3 z M87.2,61.7 h7.3 c4,0 6,-2.5 6,-6.5 s-2,-6.5 -6,-6.5 h-7.3 z"/>
-        </g>
-    </svg>
-);
-
 
 const WhatsAppIcon = () => (
     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" className="size-6 text-green-500 fill-current mt-1">
@@ -131,7 +115,14 @@ export default function SupportPage() {
                 <div>
                     <h3 className="font-semibold flex items-center gap-2"><Banknote className="size-5 text-primary"/> Direct EFT Payment</h3>
                      <div className="flex items-center gap-4 mt-3">
-                        <FnbLogo />
+                        <Image
+                            src="https://placehold.co/241x97.png"
+                            alt="FNB Logo Placeholder"
+                            width={241}
+                            height={97}
+                            className="w-40 h-auto"
+                            data-ai-hint="logo company"
+                        />
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm flex-1">
                             <span className="text-muted-foreground">Bank:</span> <strong>First National Bank (FNB)</strong>
                             <span className="text-muted-foreground">Account Number:</span> <strong>6315 2958 890</strong>
