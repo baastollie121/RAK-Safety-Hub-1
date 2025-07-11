@@ -1,18 +1,43 @@
-
 rules_version = '2';
+
+// By default, allow all reads and writes if the user is authenticated.
+// This is not recommended for production apps.
+// service firebase.storage {
+//   match /b/{bucket}/o {
+//     match /{allPaths=**} {
+//       allow read, write: if request.auth != null;
+//     }
+//   }
+// }
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Allow clients to upload to their own folder.
-    // The client's UID must match the folder name in the 'clients' directory.
-    match /clients/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+    // Helper function to check for admin role
+    function isAdmin() {
+      return request.auth.token.role == 'admin';
     }
 
-    // Allow admins to manage all documents.
-    // This gives read/write access to the entire 'documents' folder for any user with an 'admin' custom claim.
-    match /documents/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.token.role == 'admin';
+    // Helper function to check for client role
+    function isClient() {
+      return request.auth.token.role == 'client';
+    }
+    
+    // Admins can read and write anything.
+    match /{allPaths=**} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Rules for client documents
+    match /clients/{userId}/{path=**} {
+      // Clients can only access their own folder
+      allow read, write: if isClient() && request.auth.uid == userId;
+    }
+
+    // Rules for general company documents that admins upload
+    // and clients can only read.
+    match /documents/{category}/{subSection}/{fileName} {
+      allow read: if request.auth != null; // Allow any authenticated user to read
+      allow write: if isAdmin(); // Only admins can upload/delete
     }
   }
 }
