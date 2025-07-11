@@ -42,18 +42,31 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         const userDocSnap = await getDoc(userDocRef);
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
+          // *** FIX: Explicitly check for the admin email to assign the correct role ***
+          const userRole = firebaseUser.email === 'rukoen@gmail.com' ? 'admin' : userData.role || 'client';
+          
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
-            role: userData.role || 'client',
+            role: userRole,
             firstName: userData.firstName || 'User',
             lastName: userData.lastName || '',
           });
         } else {
-          // No user document found, sign them out.
-          console.error("No user document found for UID:", firebaseUser.uid);
-          await signOut(auth);
-          setUser(null);
+          // No user document found, could be the primary admin before onboarding existed.
+          if (firebaseUser.email === 'rukoen@gmail.com') {
+             setUser({
+                uid: firebaseUser.uid,
+                email: firebaseUser.email,
+                role: 'admin',
+                firstName: 'Admin',
+                lastName: 'User',
+             });
+          } else {
+            console.error("No user document found for UID:", firebaseUser.uid);
+            await signOut(auth);
+            setUser(null);
+          }
         }
       } else {
         // User is signed out
@@ -69,10 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle setting user state.
-      // We manually set loading to false after success to prevent a blank screen.
-      setIsLoading(false);
-      router.push('/');
+      // onAuthStateChanged will handle setting user state and routing.
       return true;
     } catch (error) {
       console.error('Firebase login error:', error);
