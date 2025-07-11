@@ -2,51 +2,15 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    // Public files (logos, static assets, etc.)
-    match /public/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null && request.auth.uid != null;
+    // Allow read/write access to the documents folder for any authenticated user
+    match /documents/{allPaths=**} {
+      allow read, write: if request.auth != null;
     }
-    
-    // User-specific files - users can only access their own files
-    match /users/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
-    }
-    
-    // Shared files with size and type restrictions
-    match /shared/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null 
-        && request.auth.uid != null
-        && request.resource.size < 5 * 1024 * 1024 // 5MB limit
-        && request.resource.contentType.matches('image/.*|application/pdf|text/.*');
-    }
-    
-    // Admin-only files
-    match /admin/{allPaths=**} {
-      allow read, write: if request.auth != null 
-        && request.auth.token.admin == true;
-    }
-    
-    // Profile pictures with additional restrictions
-    match /profile-pictures/{userId} {
-      allow read;
-      allow write: if request.auth != null 
-        && request.auth.uid == userId
-        && request.resource.size < 2 * 1024 * 1024 // 2MB limit
-        && request.resource.contentType.matches('image/(jpeg|png|webp)');
-    }
-    
-    // Safety/compliance documents - read-only for most users
-    match /safety-documents/{allPaths=**} {
-      allow read;
-      allow write: if request.auth != null 
-        && request.auth.token.role == 'safety_manager';
-    }
-    
-    // Default deny rule - important for security
-    match /{allPaths=**} {
-      allow read, write: if false;
-    }
+
+    // You can add other rules for other paths here
+    // For example, if you had user-specific profile pictures:
+    // match /users/{userId}/{allPaths=**} {
+    //   allow read, write: if request.auth != null && request.auth.uid == userId;
+    // }
   }
 }
