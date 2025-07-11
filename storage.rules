@@ -1,17 +1,18 @@
+
 rules_version = '2';
 
-// By default, deny all reads and writes
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Allow any authenticated user to read and write to the documents folder
-    match /documents/{allPaths=**} {
-      allow read, write: if request.auth != null;
+    // Allow clients to upload to their own folder.
+    // The client's UID must match the folder name in the 'clients' directory.
+    match /clients/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    
-    // By default, deny all other access
-    match /{allPaths=**} {
-      allow read, write: if false;
+
+    // Allow admins to manage all documents.
+    // This gives read/write access to the entire 'documents' folder for any user with an 'admin' custom claim.
+    match /documents/{allPaths=**} {
+      allow read, write: if request.auth != null && request.auth.token.role == 'admin';
     }
   }
 }

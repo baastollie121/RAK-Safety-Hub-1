@@ -41,7 +41,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { storage } from '@/lib/firebase';
-import { ref, deleteObject } from 'firebase/storage';
+import { ref, deleteObject, uploadBytes, getDownloadURL } from 'firebase/storage';
 
 interface Doc {
   id: string;
@@ -224,22 +224,10 @@ export default function ManageDocumentsPage() {
     const sanitizedFileName = fileToUpload.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const storagePath = `documents/${uploadTarget.category}/${uploadTarget.subSection}/${timestamp}_${sanitizedFileName}`;
     
-    const formData = new FormData();
-    formData.append('file', fileToUpload);
-    formData.append('storagePath', storagePath);
-
     try {
-        const response = await fetch('/api/upload', {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Upload failed');
-        }
-
-        const { downloadURL } = await response.json();
+        const storageRef = ref(storage, storagePath);
+        await uploadBytes(storageRef, fileToUpload);
+        const downloadURL = await getDownloadURL(storageRef);
 
         const newDoc: Doc = {
           id: `${uploadTarget.category}_${timestamp}`,
@@ -267,7 +255,7 @@ export default function ManageDocumentsPage() {
         
     } catch (error: any) {
         console.error("File upload error:", error);
-        toast({ variant: 'destructive', title: 'Upload Failed', description: error.message || 'Could not upload the file.' });
+        toast({ variant: 'destructive', title: 'Upload Failed', description: error.message || 'Could not upload the file. Check storage rules and permissions.' });
     } finally {
         setIsUploading(false);
     }
