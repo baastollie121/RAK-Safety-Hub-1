@@ -67,8 +67,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle setting the user state.
-      // After a successful login, we should always redirect to the main page.
+      // onAuthStateChanged will handle setting the user state and setting loading to false.
       router.push('/');
       return true;
     } catch (error) {
@@ -83,7 +82,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     await signOut(auth);
     setUser(null);
     router.push('/login');
-    setIsLoading(false);
+    // After logout, onAuthStateChanged will set isLoading to false.
   };
   
   const isAuthenticated = !isLoading && !!user;
