@@ -1,0 +1,22 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper function to check for admin role
+    function isAdmin() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+
+    // Users can only read and update their own document
+    match /users/{userId} {
+      allow read, update: if request.auth.uid == userId || isAdmin();
+      allow create: if isAdmin(); // Only admins can create new users
+    }
+    
+    // Default to locked down
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
