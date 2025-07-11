@@ -1,8 +1,12 @@
+
 'use client';
 
 import type { ReactNode } from 'react';
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
+import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '@/lib/firebase';
 
 type User = {
   uid: string;
@@ -26,46 +30,60 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    // On initial load, check localStorage for a logged in user.
-    try {
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        setUser(JSON.parse(storedUser));
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      if (firebaseUser) {
+        // User is signed in, get their custom data from Firestore
+        const userDocRef = doc(db, 'users', firebaseUser.uid);
+        const userDocSnap = await getDoc(userDocRef);
+        if (userDocSnap.exists()) {
+          const userData = userDocSnap.data();
+          setUser({
+            uid: firebaseUser.uid,
+            email: firebaseUser.email,
+            role: userData.role || 'client',
+            firstName: userData.firstName || 'User',
+            lastName: userData.lastName || '',
+          });
+        } else {
+          // No user document found, sign them out.
+          console.error("No user document found for UID:", firebaseUser.uid);
+          await signOut(auth);
+          setUser(null);
+        }
+      } else {
+        // User is signed out
+        setUser(null);
       }
-    } catch (error) {
-      console.error("Failed to parse user from localStorage", error);
-      localStorage.removeItem('user');
-    }
-    setIsLoading(false);
-  }, []);
+      setIsLoading(false);
+    });
 
+    return () => unsubscribe();
+  }, []);
+  
   const login = async (email: string, pass: string): Promise<boolean> => {
     setIsLoading(true);
-    let loggedInUser: User | null = null;
-    if (email.toLowerCase() === 'rukoen@gmail.com' && pass === '50700Koen*') {
-      loggedInUser = { uid: 'admin-user', email, role: 'admin', firstName: 'Admin', lastName: 'User' };
-    } else if (email.toLowerCase() === 'ruanakoen@gmail.com' && pass === '50700Frikkie*') {
-      loggedInUser = { uid: 'client-user', email, role: 'client', firstName: 'Ruan', lastName: 'Koen' };
-    }
-    
-    if (loggedInUser) {
-      setUser(loggedInUser);
-      localStorage.setItem('user', JSON.stringify(loggedInUser));
-      router.push('/');
-      setIsLoading(false);
+    try {
+      await signInWithEmailAndPassword(auth, email, pass);
+      // onAuthStateChanged will handle setting the user state and redirecting
+      // We can just return true here upon success.
+      if(pathname !== '/login') router.push('/');
       return true;
+    } catch (error) {
+      console.error('Firebase login error:', error);
+      setIsLoading(false);
+      return false;
     }
-
-    setIsLoading(false);
-    return false;
   };
 
-  const logout = () => {
+  const logout = async () => {
+    setIsLoading(true);
+    await signOut(auth);
     setUser(null);
-    localStorage.removeItem('user');
     router.push('/login');
+    setIsLoading(false);
   };
   
   const isAuthenticated = !isLoading && !!user;

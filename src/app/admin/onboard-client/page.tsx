@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -27,10 +28,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
-import { CalendarIcon } from 'lucide-react';
+import { CalendarIcon, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
+import { functions } from '@/lib/firebase-functions'; // We'll create this file
+import { httpsCallable } from 'firebase/functions';
 
 const onboardClientSchema = z.object({
   firstName: z.string().min(2, { message: 'First name must be at least 2 characters.' }),
@@ -43,6 +46,9 @@ const onboardClientSchema = z.object({
 });
 
 type OnboardClientFormValues = z.infer<typeof onboardClientSchema>;
+
+// This function will call a Firebase Cloud Function to create the user securely.
+const createClientUser = httpsCallable(functions, 'createClientUser');
 
 export default function OnboardClientPage() {
   const [isLoading, setIsLoading] = useState(false);
@@ -61,17 +67,37 @@ export default function OnboardClientPage() {
 
   const onSubmit = async (data: OnboardClientFormValues) => {
     setIsLoading(true);
-    console.log('Onboarding data:', data);
     
-    toast({
-      title: "Feature In Development",
-      description: "The client onboarding logic is not yet connected to the backend.",
-    });
+    try {
+      const result = await createClientUser({
+        email: data.email,
+        password: data.password,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        companyName: data.companyName,
+        joinDate: data.joinDate.toISOString(),
+        paymentDate: data.paymentDate.toISOString(),
+      });
 
-    setTimeout(() => {
-        setIsLoading(false);
+      if ((result.data as any).success) {
+        toast({
+          title: "Client Onboarded",
+          description: `Successfully created account for ${data.email}.`,
+        });
         form.reset();
-    }, 1000);
+      } else {
+        throw new Error((result.data as any).error || 'An unknown error occurred.');
+      }
+    } catch (error: any) {
+        console.error("Onboarding error:", error);
+        toast({
+            variant: "destructive",
+            title: "Onboarding Failed",
+            description: error.message || "Could not create the client account.",
+        });
+    } finally {
+        setIsLoading(false);
+    }
   };
 
   return (
@@ -88,7 +114,7 @@ export default function OnboardClientPage() {
         <CardHeader>
           <CardTitle>Client Details</CardTitle>
           <CardDescription>
-            Enter the new client's information below.
+            Enter the new client's information below. An invitation email will not be sent; you must provide the password to them directly.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -142,7 +168,7 @@ export default function OnboardClientPage() {
                   <FormItem>
                     <FormLabel>Client Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="client@example.com" {...field} />
+                      <Input type="email" placeholder="client@example.com" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -153,7 +179,7 @@ export default function OnboardClientPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <FormLabel>Set Initial Password</FormLabel>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
@@ -243,7 +269,7 @@ export default function OnboardClientPage() {
                 />
               </div>
               <Button type="submit" disabled={isLoading} className="w-full">
-                {isLoading ? 'Onboarding...' : 'Onboard Client'}
+                {isLoading ? <><Loader2 className="animate-spin mr-2" /> Onboarding Client...</> : 'Onboard Client'}
               </Button>
             </form>
           </Form>
