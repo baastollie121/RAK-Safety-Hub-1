@@ -67,9 +67,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle setting the user state and redirecting
-      // We can just return true here upon success.
-      if(pathname !== '/login') router.push('/');
+      // onAuthStateChanged will handle setting the user state.
+      // After a successful login, we should always redirect to the main page.
+      router.push('/');
       return true;
     } catch (error) {
       console.error('Firebase login error:', error);
