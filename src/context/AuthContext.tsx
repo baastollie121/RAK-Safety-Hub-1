@@ -7,6 +7,8 @@ import { useRouter, usePathname } from 'next/navigation';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
+import { functions } from '@/lib/firebase-functions';
+import { httpsCallable } from 'firebase/functions';
 
 type User = {
   uid: string;
@@ -67,7 +69,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     setIsLoading(true);
     try {
       await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle setting the user state and setting loading to false.
+      // onAuthStateChanged will handle setting user state.
+      // We manually set loading to false after success to prevent a blank screen.
+      setIsLoading(false);
       router.push('/');
       return true;
     } catch (error) {
