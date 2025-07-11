@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -33,12 +34,15 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
-import { Upload, Trash2, File, CalendarIcon } from 'lucide-react';
+import { Upload, Trash2, File, CalendarIcon, Loader2 } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { storage } from '@/lib/firebase';
+import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+
 
 interface Doc {
   id: string;
@@ -46,6 +50,8 @@ interface Doc {
   fileType: string;
   fileSize: string;
   lastModified: string;
+  storagePath: string; // To keep track of the file in Firebase Storage
+  downloadURL: string;
 }
 
 interface DocCategory {
@@ -59,83 +65,84 @@ interface AllDocs {
   hr: DocCategory;
 }
 
-// Updated mock data with metadata
+// In a real app, this would be fetched from Firestore. We'll add mock storagePaths for now.
 const initialDocs: AllDocs = {
   safety: {
-    "Safety Manual": [{ id: 'sm1', name: 'Company Safety Manual v1.2', fileType: 'PDF', fileSize: '2.4 MB', lastModified: '2024-05-15' }],
+    "Safety Manual": [{ id: 'sm1', name: 'Company Safety Manual v1.2', fileType: 'PDF', fileSize: '2.4 MB', lastModified: '2024-05-15', storagePath: '', downloadURL: '' }],
     "Safety Policies & Procedures": [
-      { id: 'spp1', name: 'General Safety Policy', fileType: 'PDF', fileSize: '350 KB', lastModified: '2023-11-20' },
-      { id: 'spp2', name: 'Working from Home Policy', fileType: 'Word', fileSize: '120 KB', lastModified: '2024-01-30' },
+      { id: 'spp1', name: 'General Safety Policy', fileType: 'PDF', fileSize: '350 KB', lastModified: '2023-11-20', storagePath: '', downloadURL: '' },
+      { id: 'spp2', name: 'Working from Home Policy', fileType: 'Word', fileSize: '120 KB', lastModified: '2024-01-30', storagePath: '', downloadURL: '' },
     ],
     "Risk Assessments (HIRA)": [
-        { id: 'hira1', name: 'General Office Risk Assessment', fileType: 'Excel', fileSize: '88 KB', lastModified: '2024-06-01' },
-        { id: 'hira2', name: 'Construction Site HIRA Template', fileType: 'PDF', fileSize: '450 KB', lastModified: '2023-09-05' }
+        { id: 'hira1', name: 'General Office Risk Assessment', fileType: 'Excel', fileSize: '88 KB', lastModified: '2024-06-01', storagePath: '', downloadURL: '' },
+        { id: 'hira2', name: 'Construction Site HIRA Template', fileType: 'PDF', fileSize: '450 KB', lastModified: '2023-09-05', storagePath: '', downloadURL: '' }
     ],
     "Safe Work Procedures (SWP)": [
-        { id: 'swp1', name: 'Manual Handling SWP', fileType: 'PDF', fileSize: '210 KB', lastModified: '2024-02-11' },
-        { id: 'swp2', name: 'Lockout/Tagout SWP', fileType: 'PDF', fileSize: '315 KB', lastModified: '2024-03-22' }
+        { id: 'swp1', name: 'Manual Handling SWP', fileType: 'PDF', fileSize: '210 KB', lastModified: '2024-02-11', storagePath: '', downloadURL: '' },
+        { id: 'swp2', name: 'Lockout/Tagout SWP', fileType: 'PDF', fileSize: '315 KB', lastModified: '2024-03-22', storagePath: '', downloadURL: '' }
     ],
-    "Method Statements": [{ id: 'ms1', name: 'Installation of HV Equipment', fileType: 'Word', fileSize: '680 KB', lastModified: '2024-04-18' }],
+    "Method Statements": [{ id: 'ms1', name: 'Installation of HV Equipment', fileType: 'Word', fileSize: '680 KB', lastModified: '2024-04-18', storagePath: '', downloadURL: '' }],
     "Incident Reports & Investigations": [
-        { id: 'ir1', name: 'Incident Report Form', fileType: 'PDF', fileSize: '150 KB', lastModified: '2023-05-01' },
-        { id: 'ir2', name: 'Investigation Template', fileType: 'Word', fileSize: '95 KB', lastModified: '2023-05-02' }
+        { id: 'ir1', name: 'Incident Report Form', fileType: 'PDF', fileSize: '150 KB', lastModified: '2023-05-01', storagePath: '', downloadURL: '' },
+        { id: 'ir2', name: 'Investigation Template', fileType: 'Word', fileSize: '95 KB', lastModified: '2023-05-02', storagePath: '', downloadURL: '' }
     ],
     "Emergency Plans": [
-        { id: 'ep1', name: 'Fire Evacuation Plan', fileType: 'PDF', fileSize: '1.2 MB', lastModified: '2024-01-10' },
-        { id: 'ep2', name: 'Medical Emergency Response', fileType: 'PDF', fileSize: '850 KB', lastModified: '2024-01-12' }
+        { id: 'ep1', name: 'Fire Evacuation Plan', fileType: 'PDF', fileSize: '1.2 MB', lastModified: '2024-01-10', storagePath: '', downloadURL: '' },
+        { id: 'ep2', name: 'Medical Emergency Response', fileType: 'PDF', fileSize: '850 KB', lastModified: '2024-01-12', storagePath: '', downloadURL: '' }
     ],
-    "Toolbox Talks & Meeting Minutes": [{ id: 'tt1', name: 'Weekly Safety Meeting Record', fileType: 'Excel', fileSize: '55 KB', lastModified: '2024-07-01' }],
-    "Legal & Other Appointments": [{ id: 'la1', name: 'CEO Appointment Letter', fileType: 'PDF', fileSize: '90 KB', lastModified: '2022-01-01' }],
+    "Toolbox Talks & Meeting Minutes": [{ id: 'tt1', name: 'Weekly Safety Meeting Record', fileType: 'Excel', fileSize: '55 KB', lastModified: '2024-07-01', storagePath: '', downloadURL: '' }],
+    "Legal & Other Appointments": [{ id: 'la1', name: 'CEO Appointment Letter', fileType: 'PDF', fileSize: '90 KB', lastModified: '2022-01-01', storagePath: '', downloadURL: '' }],
     "Registers & Checklists": [
-        { id: 'rc1', name: 'First Aid Box Register', fileType: 'Excel', fileSize: '45 KB', lastModified: '2024-07-01' },
-        { id: 'rc2', name: 'Fire Extinguisher Checklist', fileType: 'PDF', fileSize: '180 KB', lastModified: '2024-06-28' }
+        { id: 'rc1', name: 'First Aid Box Register', fileType: 'Excel', fileSize: '45 KB', lastModified: '2024-07-01', storagePath: '', downloadURL: '' },
+        { id: 'rc2', name: 'Fire Extinguisher Checklist', fileType: 'PDF', fileSize: '180 KB', lastModified: '2024-06-28', storagePath: '', downloadURL: '' }
     ],
-    "Fall Protection & Working at Heights": [{ id: 'fp1', name: 'Fall Protection Plan', fileType: 'PDF', fileSize: '950 KB', lastModified: '2024-03-01' }],
-    "Gap Assessments (ISO 45001, Client-specific)": [{ id: 'ga1', name: 'ISO 45001 Gap Assessment Checklist', fileType: 'Excel', fileSize: '250 KB', lastModified: '2023-10-15' }],
-    "Legal Compliance Audit Reports": [{ id: 'lcar1', name: 'OHS Act Compliance Audit Report 2023', fileType: 'PDF', fileSize: '3.1 MB', lastModified: '2023-12-01' }],
-    "Internal Audit Plan": [{ id: 'iap1', name: 'Internal Audit Schedule 2024', fileType: 'Word', fileSize: '75 KB', lastModified: '2024-02-01' }],
-    "Internal Audit Reports": [{ id: 'iar1', name: 'Q1 Internal Audit Report', fileType: 'PDF', fileSize: '450 KB', lastModified: '2024-04-05' }],
+    "Fall Protection & Working at Heights": [{ id: 'fp1', name: 'Fall Protection Plan', fileType: 'PDF', fileSize: '950 KB', lastModified: '2024-03-01', storagePath: '', downloadURL: '' }],
+    "Gap Assessments (ISO 45001, Client-specific)": [{ id: 'ga1', name: 'ISO 45001 Gap Assessment Checklist', fileType: 'Excel', fileSize: '250 KB', lastModified: '2023-10-15', storagePath: '', downloadURL: '' }],
+    "Legal Compliance Audit Reports": [{ id: 'lcar1', name: 'OHS Act Compliance Audit Report 2023', fileType: 'PDF', fileSize: '3.1 MB', lastModified: '2023-12-01', storagePath: '', downloadURL: '' }],
+    "Internal Audit Plan": [{ id: 'iap1', name: 'Internal Audit Schedule 2024', fileType: 'Word', fileSize: '75 KB', lastModified: '2024-02-01', storagePath: '', downloadURL: '' }],
+    "Internal Audit Reports": [{ id: 'iar1', name: 'Q1 Internal Audit Report', fileType: 'PDF', fileSize: '450 KB', lastModified: '2024-04-05', storagePath: '', downloadURL: '' }],
   },
   environmental: {
-    "Environmental Manual": [{ id: 'em1', name: 'Environmental Management Manual', fileType: 'PDF', fileSize: '1.8 MB', lastModified: '2023-08-20' }],
-    "Environmental Policy": [{ id: 'epolicy1', name: 'Company Environmental Policy', fileType: 'PDF', fileSize: '200 KB', lastModified: '2023-01-15' }],
-    "Impact Assessments": [{ id: 'ia1', name: 'New Development EIA Report', fileType: 'PDF', fileSize: '5.5 MB', lastModified: '2022-11-30' }],
-    "Waste Management Plans": [{ id: 'wmp1', name: 'Hazardous Waste Management Plan', fileType: 'Word', fileSize: '400 KB', lastModified: '2024-02-28' }],
-    "Environmental Incident Reports": [{ id: 'eir1', name: 'Chemical Spill Report Form', fileType: 'PDF', fileSize: '130 KB', lastModified: '2023-04-10' }],
-    "Environmental Inspection Checklist": [{ id: 'eic1', name: 'Site Environmental Checklist', fileType: 'Excel', fileSize: '60 KB', lastModified: '2024-06-15' }],
+    "Environmental Manual": [{ id: 'em1', name: 'Environmental Management Manual', fileType: 'PDF', fileSize: '1.8 MB', lastModified: '2023-08-20', storagePath: '', downloadURL: '' }],
+    "Environmental Policy": [{ id: 'epolicy1', name: 'Company Environmental Policy', fileType: 'PDF', fileSize: '200 KB', lastModified: '2023-01-15', storagePath: '', downloadURL: '' }],
+    "Impact Assessments": [{ id: 'ia1', name: 'New Development EIA Report', fileType: 'PDF', fileSize: '5.5 MB', lastModified: '2022-11-30', storagePath: '', downloadURL: '' }],
+    "Waste Management Plans": [{ id: 'wmp1', name: 'Hazardous Waste Management Plan', fileType: 'Word', fileSize: '400 KB', lastModified: '2024-02-28', storagePath: '', downloadURL: '' }],
+    "Environmental Incident Reports": [{ id: 'eir1', name: 'Chemical Spill Report Form', fileType: 'PDF', fileSize: '130 KB', lastModified: '2023-04-10', storagePath: '', downloadURL: '' }],
+    "Environmental Inspection Checklist": [{ id: 'eic1', name: 'Site Environmental Checklist', fileType: 'Excel', fileSize: '60 KB', lastModified: '2024-06-15', storagePath: '', downloadURL: '' }],
   },
   quality: {
-    "Quality Manual": [{ id: 'qm1', name: 'ISO 9001 Quality Manual', fileType: 'PDF', fileSize: '2.1 MB', lastModified: '2023-07-01' }],
-    "Quality Policy": [{ id: 'qpolicy1', name: 'Company Quality Policy', fileType: 'PDF', fileSize: '180 KB', lastModified: '2023-01-15' }],
-    "Quality Procedures & Work Instructions": [{ id: 'qpwi1', name: 'Document Control Procedure', fileType: 'Word', fileSize: '300 KB', lastModified: '2023-02-10' }],
-    "Audit Reports (Internal & External)": [{ id: 'qar1', name: 'External Audit Report 2023', fileType: 'PDF', fileSize: '1.5 MB', lastModified: '2023-11-05' }],
-    "Non-conformance & Corrective Actions": [{ id: 'ncr1', name: 'NCR Form', fileType: 'Excel', fileSize: '90 KB', lastModified: '2023-03-01' }],
-    "Management Reviews": [{ id: 'mr1', name: 'Management Review Meeting Minutes', fileType: 'PDF', fileSize: '600 KB', lastModified: '2024-05-20' }],
-    "Client & Supplier": [{ id: 'cs1', name: 'Supplier Evaluation Form', fileType: 'Word', fileSize: '150 KB', lastModified: '2024-01-10' }],
-    "Quality Control Checklists": [{ id: 'qcc1', name: 'Final Product Inspection Checklist', fileType: 'PDF', fileSize: '220 KB', lastModified: '2024-06-18' }],
-    "Tool & Equipment Inspection Logs": [{ id: 'teil1', name: 'Crane Inspection Log', fileType: 'Excel', fileSize: '120 KB', lastModified: '2024-07-01' }],
+    "Quality Manual": [{ id: 'qm1', name: 'ISO 9001 Quality Manual', fileType: 'PDF', fileSize: '2.1 MB', lastModified: '2023-07-01', storagePath: '', downloadURL: '' }],
+    "Quality Policy": [{ id: 'qpolicy1', name: 'Company Quality Policy', fileType: 'PDF', fileSize: '180 KB', lastModified: '2023-01-15', storagePath: '', downloadURL: '' }],
+    "Quality Procedures & Work Instructions": [{ id: 'qpwi1', name: 'Document Control Procedure', fileType: 'Word', fileSize: '300 KB', lastModified: '2023-02-10', storagePath: '', downloadURL: '' }],
+    "Audit Reports (Internal & External)": [{ id: 'qar1', name: 'External Audit Report 2023', fileType: 'PDF', fileSize: '1.5 MB', lastModified: '2023-11-05', storagePath: '', downloadURL: '' }],
+    "Non-conformance & Corrective Actions": [{ id: 'ncr1', name: 'NCR Form', fileType: 'Excel', fileSize: '90 KB', lastModified: '2023-03-01', storagePath: '', downloadURL: '' }],
+    "Management Reviews": [{ id: 'mr1', name: 'Management Review Meeting Minutes', fileType: 'PDF', fileSize: '600 KB', lastModified: '2024-05-20', storagePath: '', downloadURL: '' }],
+    "Client & Supplier": [{ id: 'cs1', name: 'Supplier Evaluation Form', fileType: 'Word', fileSize: '150 KB', lastModified: '2024-01-10', storagePath: '', downloadURL: '' }],
+    "Quality Control Checklists": [{ id: 'qcc1', name: 'Final Product Inspection Checklist', fileType: 'PDF', fileSize: '220 KB', lastModified: '2024-06-18', storagePath: '', downloadURL: '' }],
+    "Tool & Equipment Inspection Logs": [{ id: 'teil1', name: 'Crane Inspection Log', fileType: 'Excel', fileSize: '120 KB', lastModified: '2024-07-01', storagePath: '', downloadURL: '' }],
   },
   hr: {
-    "HR Policies & Procedures": [{ id: 'hrpp1', name: 'Employee Handbook', fileType: 'PDF', fileSize: '1.1 MB', lastModified: '2024-01-01' }],
-    "General Appointments": [{ id: 'hrga1', name: 'Appointment Letter Template', fileType: 'Word', fileSize: '80 KB', lastModified: '2023-01-10' }],
-    "Hiring Policy": [{ id: 'hrhp1', name: 'Recruitment and Selection Policy', fileType: 'PDF', fileSize: '250 KB', lastModified: '2023-02-15' }],
-    "Company Property Policy": [{ id: 'hrcpp1', name: 'Asset Usage Policy', fileType: 'PDF', fileSize: '180 KB', lastModified: '2023-03-20' }],
-    "Performance Management": [{ id: 'hrpm1', name: 'Performance Review Form', fileType: 'Word', fileSize: '110 KB', lastModified: '2024-06-01' }],
+    "HR Policies & Procedures": [{ id: 'hrpp1', name: 'Employee Handbook', fileType: 'PDF', fileSize: '1.1 MB', lastModified: '2024-01-01', storagePath: '', downloadURL: '' }],
+    "General Appointments": [{ id: 'hrga1', name: 'Appointment Letter Template', fileType: 'Word', fileSize: '80 KB', lastModified: '2023-01-10', storagePath: '', downloadURL: '' }],
+    "Hiring Policy": [{ id: 'hrhp1', name: 'Recruitment and Selection Policy', fileType: 'PDF', fileSize: '250 KB', lastModified: '2023-02-15', storagePath: '', downloadURL: '' }],
+    "Company Property Policy": [{ id: 'hrcpp1', name: 'Asset Usage Policy', fileType: 'PDF', fileSize: '180 KB', lastModified: '2023-03-20', storagePath: '', downloadURL: '' }],
+    "Performance Management": [{ id: 'hrpm1', name: 'Performance Review Form', fileType: 'Word', fileSize: '110 KB', lastModified: '2024-06-01', storagePath: '', downloadURL: '' }],
     "Disciplinary & Grievance": [
-        { id: 'hrdg1', name: 'Disciplinary Code', fileType: 'PDF', fileSize: '350 KB', lastModified: '2023-04-01' },
-        { id: 'hrdg2', name: 'Grievance Form', fileType: 'Word', fileSize: '70 KB', lastModified: '2023-04-01' }
+        { id: 'hrdg1', name: 'Disciplinary Code', fileType: 'PDF', fileSize: '350 KB', lastModified: '2023-04-01', storagePath: '', downloadURL: '' },
+        { id: 'hrdg2', name: 'Grievance Form', fileType: 'Word', fileSize: '70 KB', lastModified: '2023-04-01', storagePath: '', downloadURL: '' }
     ],
-    "Leave Request Forms": [{ id: 'hrlr1', name: 'Annual Leave Request Form', fileType: 'PDF', fileSize: '60 KB', lastModified: '2023-01-01' }],
-    "Employment Contracts & Agreements": [{ id: 'hrec1', name: 'Permanent Employment Contract Template', fileType: 'Word', fileSize: '150 KB', lastModified: '2023-01-10' }],
+    "Leave Request Forms": [{ id: 'hrlr1', name: 'Annual Leave Request Form', fileType: 'PDF', fileSize: '60 KB', lastModified: '2023-01-01', storagePath: '', downloadURL: '' }],
+    "Employment Contracts & Agreements": [{ id: 'hrec1', name: 'Permanent Employment Contract Template', fileType: 'Word', fileSize: '150 KB', lastModified: '2023-01-10', storagePath: '', downloadURL: '' }],
     "Warning Templates": [
-        { id: 'hrwt1', name: 'Verbal Warning Template', fileType: 'Word', fileSize: '50 KB', lastModified: '2023-02-01' },
-        { id: 'hrwt2', name: 'Written Warning Template', fileType: 'Word', fileSize: '55 KB', lastModified: '2023-02-01' }
+        { id: 'hrwt1', name: 'Verbal Warning Template', fileType: 'Word', fileSize: '50 KB', lastModified: '2023-02-01', storagePath: '', downloadURL: '' },
+        { id: 'hrwt2', name: 'Written Warning Template', fileType: 'Word', fileSize: '55 KB', lastModified: '2023-02-01', storagePath: '', downloadURL: '' }
     ],
   },
 };
 
 export default function ManageDocumentsPage() {
   const [docs, setDocs] = useState<AllDocs>(initialDocs);
+  const [isUploading, setIsUploading] = useState(false);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [uploadTarget, setUploadTarget] = useState<{ category: keyof AllDocs; subSection: string } | null>(null);
   const [newDocName, setNewDocName] = useState('');
@@ -155,46 +162,72 @@ export default function ManageDocumentsPage() {
     setIsUploadDialogOpen(true);
   };
 
-  const handleDelete = (category: keyof AllDocs, subSection: string, docId: string, docName: string) => {
-    // This is where you would add logic to delete the file from your storage bucket.
-    console.log(`Deleting doc ${docId} from ${category}/${subSection}`);
+  const handleDelete = async (category: keyof AllDocs, subSection: string, doc: Doc) => {
+    // Delete from Firebase Storage if the path exists
+    if (doc.storagePath) {
+        try {
+            const fileRef = ref(storage, doc.storagePath);
+            await deleteObject(fileRef);
+        } catch (error) {
+            console.error("Error deleting file from Firebase Storage:", error);
+            toast({ variant: 'destructive', title: "Deletion Failed", description: "Could not remove the file from storage. Please try again." });
+            return; // Stop if deletion fails
+        }
+    }
 
+    // Delete from local state
     setDocs((prevDocs) => {
       const newCategoryDocs = { ...prevDocs[category] };
       newCategoryDocs[subSection] = newCategoryDocs[subSection].filter(
-        (doc) => doc.id !== docId
+        (d) => d.id !== doc.id
       );
       return { ...prevDocs, [category]: newCategoryDocs };
     });
-    toast({ title: "Success", description: `Document "${docName}" has been deleted.` });
+    toast({ title: "Success", description: `Document "${doc.name}" has been deleted.` });
   };
 
-  const handleUpload = () => {
+  const handleUpload = async () => {
     if (!uploadTarget || !newDocName || !fileToUpload || !newFileType || !newFileSize || !newLastModified) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields and select a file.' });
       return;
     }
     
-    // This is where you would add logic to upload the file to your storage bucket.
-    console.log(`Uploading ${fileToUpload.name} as "${newDocName}" to ${uploadTarget.category}/${uploadTarget.subSection}`);
-
-    const newDoc: Doc = {
-      id: new Date().toISOString(), // Use a unique ID from your backend in a real app
-      name: newDocName,
-      fileType: newFileType,
-      fileSize: newFileSize,
-      lastModified: format(newLastModified, 'yyyy-MM-dd'),
-    };
-
-    setDocs((prevDocs) => {
-      const newCategoryDocs = { ...prevDocs[uploadTarget.category] };
-      const newSubSectionDocs = [...(newCategoryDocs[uploadTarget.subSection] || []), newDoc];
-      newCategoryDocs[uploadTarget.subSection] = newSubSectionDocs;
-      return { ...prevDocs, [uploadTarget.category]: newCategoryDocs };
-    });
+    setIsUploading(true);
     
-    toast({ title: 'Success', description: `"${newDocName}" has been uploaded.` });
-    setIsUploadDialogOpen(false);
+    const storagePath = `documents/${uploadTarget.category}/${uploadTarget.subSection}/${fileToUpload.name}`;
+    const storageRef = ref(storage, storagePath);
+    
+    try {
+        // Upload the file to Firebase Storage
+        const uploadResult = await uploadBytes(storageRef, fileToUpload);
+        const downloadURL = await getDownloadURL(uploadResult.ref);
+
+        // Update local state
+        const newDoc: Doc = {
+          id: new Date().toISOString(),
+          name: newDocName,
+          fileType: newFileType,
+          fileSize: newFileSize,
+          lastModified: format(newLastModified, 'yyyy-MM-dd'),
+          storagePath: storagePath,
+          downloadURL: downloadURL,
+        };
+
+        setDocs((prevDocs) => {
+          const newCategoryDocs = { ...prevDocs[uploadTarget.category] };
+          const newSubSectionDocs = [...(newCategoryDocs[uploadTarget.subSection] || []), newDoc];
+          newCategoryDocs[uploadTarget.subSection] = newSubSectionDocs;
+          return { ...prevDocs, [uploadTarget.category]: newCategoryDocs };
+        });
+        
+        toast({ title: 'Success', description: `"${newDocName}" has been uploaded.` });
+        setIsUploadDialogOpen(false);
+    } catch (error) {
+        console.error("File upload error:", error);
+        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the file. Please check your connection and try again.' });
+    } finally {
+        setIsUploading(false);
+    }
   };
 
   const renderDocList = (category: keyof AllDocs, title: string) => (
@@ -235,7 +268,7 @@ export default function ManageDocumentsPage() {
                             </AlertDialogHeader>
                             <AlertDialogFooter>
                               <AlertDialogCancel>Cancel</AlertDialogCancel>
-                              <AlertDialogAction onClick={() => handleDelete(category, subSection, doc.id, doc.name)}>
+                              <AlertDialogAction onClick={() => handleDelete(category, subSection, doc)}>
                                 Yes, delete document
                               </AlertDialogAction>
                             </AlertDialogFooter>
@@ -367,10 +400,14 @@ export default function ManageDocumentsPage() {
             <DialogClose asChild>
                 <Button type="button" variant="outline">Cancel</Button>
             </DialogClose>
-            <Button type="button" onClick={handleUpload}>Upload</Button>
+            <Button type="button" onClick={handleUpload} disabled={isUploading}>
+                {isUploading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                {isUploading ? 'Uploading...' : 'Upload'}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
   );
-}
+
+    
