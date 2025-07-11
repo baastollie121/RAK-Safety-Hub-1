@@ -32,7 +32,7 @@ import { CalendarIcon, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { useToast } from '@/hooks/use-toast';
-import { functions } from '@/lib/firebase-functions'; // We'll create this file
+import { functions } from '@/lib/firebase-functions';
 import { httpsCallable } from 'firebase/functions';
 
 const onboardClientSchema = z.object({

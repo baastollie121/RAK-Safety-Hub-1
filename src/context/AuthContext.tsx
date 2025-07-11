@@ -7,8 +7,6 @@ import { useRouter, usePathname } from 'next/navigation';
 import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
-import { functions } from '@/lib/firebase-functions';
-import { httpsCallable } from 'firebase/functions';
 
 type User = {
   uid: string;
@@ -38,13 +36,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         // User is signed in, get their custom data from Firestore
+        const idTokenResult = await firebaseUser.getIdTokenResult();
+        const userRole = idTokenResult.claims.role || 'client'; // Default to 'client'
+
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDocSnap = await getDoc(userDocRef);
+
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
-          // *** FIX: Explicitly check for the admin email to assign the correct role ***
-          const userRole = firebaseUser.email === 'rukoen@gmail.com' ? 'admin' : userData.role || 'client';
-          
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
@@ -53,20 +52,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             lastName: userData.lastName || '',
           });
         } else {
-          // No user document found, could be the primary admin before onboarding existed.
-          if (firebaseUser.email === 'rukoen@gmail.com') {
-             setUser({
-                uid: firebaseUser.uid,
-                email: firebaseUser.email,
-                role: 'admin',
-                firstName: 'Admin',
-                lastName: 'User',
-             });
-          } else {
-            console.error("No user document found for UID:", firebaseUser.uid);
-            await signOut(auth);
-            setUser(null);
-          }
+            // Handle the primary admin case where a doc might not exist yet
+            if (userRole === 'admin') {
+                setUser({
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    role: 'admin',
+                    firstName: 'Admin',
+                    lastName: 'User'
+                });
+            } else {
+                 console.error("No user document found for UID:", firebaseUser.uid);
+                 await signOut(auth);
+                 setUser(null);
+            }
         }
       } else {
         // User is signed out
