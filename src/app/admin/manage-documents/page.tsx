@@ -41,7 +41,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { storage } from '@/lib/firebase';
-import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { ref, deleteObject } from 'firebase/storage';
 
 interface Doc {
   id: string;
@@ -189,41 +189,24 @@ export default function ManageDocumentsPage() {
     toast({ title: "Success", description: `Document "${doc.name}" has been deleted.` });
   };
 
-  // FIXED: Auto-detect file type and set document name based on file
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
       setFileToUpload(file);
       
-      // Auto-set document name if empty
       if (!newDocName) {
         const nameWithoutExtension = file.name.replace(/\.[^/.]+$/, "");
         setNewDocName(nameWithoutExtension);
       }
       
-      // Auto-detect file type
       const extension = file.name.split('.').pop()?.toLowerCase();
       if (extension) {
         switch (extension) {
-          case 'pdf':
-            setNewFileType('PDF');
-            break;
-          case 'doc':
-          case 'docx':
-            setNewFileType('Word');
-            break;
-          case 'xls':
-          case 'xlsx':
-            setNewFileType('Excel');
-            break;
-          case 'jpg':
-          case 'jpeg':
-          case 'png':
-          case 'gif':
-            setNewFileType('Image');
-            break;
-          default:
-            setNewFileType('Other');
+          case 'pdf': setNewFileType('PDF'); break;
+          case 'doc': case 'docx': setNewFileType('Word'); break;
+          case 'xls': case 'xlsx': setNewFileType('Excel'); break;
+          case 'jpg': case 'jpeg': case 'png': case 'gif': setNewFileType('Image'); break;
+          default: setNewFileType('Other');
         }
       }
     }
@@ -237,20 +220,29 @@ export default function ManageDocumentsPage() {
     
     setIsUploading(true);
     
-    // FIXED: Create unique filename to prevent conflicts
     const timestamp = Date.now();
     const sanitizedFileName = fileToUpload.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const storagePath = `documents/${uploadTarget.category}/${uploadTarget.subSection}/${timestamp}_${sanitizedFileName}`;
-    const storageRef = ref(storage, storagePath);
     
-    try {
-        // Upload the file to Firebase Storage
-        const uploadResult = await uploadBytes(storageRef, fileToUpload);
-        const downloadURL = await getDownloadURL(uploadResult.ref);
+    const formData = new FormData();
+    formData.append('file', fileToUpload);
+    formData.append('storagePath', storagePath);
 
-        // Create new document object
+    try {
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            body: formData,
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Upload failed');
+        }
+
+        const { downloadURL } = await response.json();
+
         const newDoc: Doc = {
-          id: `${uploadTarget.category}_${timestamp}`, // FIXED: More unique ID
+          id: `${uploadTarget.category}_${timestamp}`,
           name: newDocName,
           fileType: newFileType,
           fileSize: formatFileSize(fileToUpload.size),
@@ -259,26 +251,23 @@ export default function ManageDocumentsPage() {
           downloadURL: downloadURL,
         };
 
-        // FIXED: Correct state update
         setDocs((prevDocs) => {
           const newCategoryDocs = { ...prevDocs[uploadTarget.category] };
           const newSubSectionDocs = [...(newCategoryDocs[uploadTarget.subSection] || []), newDoc];
           newCategoryDocs[uploadTarget.subSection] = newSubSectionDocs;
-          return { ...prevDocs, [uploadTarget.category]: newCategoryDocs }; // FIXED: Use uploadTarget.category instead of just 'category'
+          return { ...prevDocs, [uploadTarget.category]: newCategoryDocs };
         });
         
         toast({ title: 'Success', description: `"${newDocName}" has been uploaded successfully.` });
         setIsUploadDialogOpen(false);
-        
-        // FIXED: Reset form after successful upload
         setNewDocName('');
         setFileToUpload(null);
         setNewFileType('');
         setNewLastModified(new Date());
         
-    } catch (error) {
+    } catch (error: any) {
         console.error("File upload error:", error);
-        toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the file. Please check your connection and try again.' });
+        toast({ variant: 'destructive', title: 'Upload Failed', description: error.message || 'Could not upload the file.' });
     } finally {
         setIsUploading(false);
     }
