@@ -140,6 +140,15 @@ const initialDocs: AllDocs = {
   },
 };
 
+const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+}
+
+
 export default function ManageDocumentsPage() {
   const [docs, setDocs] = useState<AllDocs>(initialDocs);
   const [isUploading, setIsUploading] = useState(false);
@@ -148,7 +157,6 @@ export default function ManageDocumentsPage() {
   const [newDocName, setNewDocName] = useState('');
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
   const [newFileType, setNewFileType] = useState('');
-  const [newFileSize, setNewFileSize] = useState('');
   const [newLastModified, setNewLastModified] = useState<Date | undefined>(new Date());
   const { toast } = useToast();
 
@@ -157,7 +165,6 @@ export default function ManageDocumentsPage() {
     setNewDocName('');
     setFileToUpload(null);
     setNewFileType('');
-    setNewFileSize('');
     setNewLastModified(new Date());
     setIsUploadDialogOpen(true);
   };
@@ -187,7 +194,7 @@ export default function ManageDocumentsPage() {
   };
 
   const handleUpload = async () => {
-    if (!uploadTarget || !newDocName || !fileToUpload || !newFileType || !newFileSize || !newLastModified) {
+    if (!uploadTarget || !newDocName || !fileToUpload || !newFileType || !newLastModified) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields and select a file.' });
       return;
     }
@@ -207,7 +214,7 @@ export default function ManageDocumentsPage() {
           id: new Date().toISOString(),
           name: newDocName,
           fileType: newFileType,
-          fileSize: newFileSize,
+          fileSize: formatFileSize(fileToUpload.size),
           lastModified: format(newLastModified, 'yyyy-MM-dd'),
           storagePath: storagePath,
           downloadURL: downloadURL,
@@ -217,7 +224,7 @@ export default function ManageDocumentsPage() {
           const newCategoryDocs = { ...prevDocs[uploadTarget.category] };
           const newSubSectionDocs = [...(newCategoryDocs[uploadTarget.subSection] || []), newDoc];
           newCategoryDocs[uploadTarget.subSection] = newSubSectionDocs;
-          return { ...prevDocs, [uploadTarget.category]: newCategoryDocs };
+          return { ...prevDocs, [category]: newCategoryDocs };
         });
         
         toast({ title: 'Success', description: `"${newDocName}" has been uploaded.` });
@@ -344,7 +351,7 @@ export default function ManageDocumentsPage() {
                 onChange={(e) => setFileToUpload(e.target.files ? e.target.files[0] : null)}
               />
             </div>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 gap-4">
                 <div className="space-y-2">
                     <Label htmlFor="file-type">File Type</Label>
                     <Select onValueChange={setNewFileType} value={newFileType}>
@@ -359,15 +366,6 @@ export default function ManageDocumentsPage() {
                             <SelectItem value="Other">Other</SelectItem>
                         </SelectContent>
                     </Select>
-                </div>
-                 <div className="space-y-2">
-                    <Label htmlFor="file-size">File Size</Label>
-                    <Input
-                        id="file-size"
-                        value={newFileSize}
-                        onChange={(e) => setNewFileSize(e.target.value)}
-                        placeholder="e.g., 2.5 MB"
-                    />
                 </div>
             </div>
              <div className="space-y-2">
