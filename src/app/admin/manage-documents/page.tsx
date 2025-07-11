@@ -43,14 +43,13 @@ import { format } from 'date-fns';
 import { storage } from '@/lib/firebase';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
-
 interface Doc {
   id: string;
   name: string;
   fileType: string;
   fileSize: string;
   lastModified: string;
-  storagePath: string; // To keep track of the file in Firebase Storage
+  storagePath: string;
   downloadURL: string;
 }
 
@@ -65,7 +64,7 @@ interface AllDocs {
   hr: DocCategory;
 }
 
-// In a real app, this would be fetched from Firestore. We'll add mock storagePaths for now.
+// Initial docs data
 const initialDocs: AllDocs = {
   safety: {
     "Safety Manual": [{ id: 'sm1', name: 'Company Safety Manual v1.2', fileType: 'PDF', fileSize: '2.4 MB', lastModified: '2024-05-15', storagePath: '', downloadURL: '' }],
@@ -148,7 +147,6 @@ const formatFileSize = (bytes: number) => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 }
 
-
 export default function ManageDocumentsPage() {
   const [docs, setDocs] = useState<AllDocs>(initialDocs);
   const [isUploading, setIsUploading] = useState(false);
@@ -170,7 +168,6 @@ export default function ManageDocumentsPage() {
   };
 
   const handleDelete = async (category: keyof AllDocs, subSection: string, doc: Doc) => {
-    // Delete from Firebase Storage if the path exists
     if (doc.storagePath) {
         try {
             const fileRef = ref(storage, doc.storagePath);
@@ -178,11 +175,10 @@ export default function ManageDocumentsPage() {
         } catch (error) {
             console.error("Error deleting file from Firebase Storage:", error);
             toast({ variant: 'destructive', title: "Deletion Failed", description: "Could not remove the file from storage. Please try again." });
-            return; // Stop if deletion fails
+            return;
         }
     }
 
-    // Delete from local state
     setDocs((prevDocs) => {
       const newCategoryDocs = { ...prevDocs[category] };
       newCategoryDocs[subSection] = newCategoryDocs[subSection].filter(
@@ -193,6 +189,46 @@ export default function ManageDocumentsPage() {
     toast({ title: "Success", description: `Document "${doc.name}" has been deleted.` });
   };
 
+  // FIXED: Auto-detect file type and set document name based on file
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setFileToUpload(file);
+      
+      // Auto-set document name if empty
+      if (!newDocName) {
+        const nameWithoutExtension = file.name.replace(/\.[^/.]+$/, "");
+        setNewDocName(nameWithoutExtension);
+      }
+      
+      // Auto-detect file type
+      const extension = file.name.split('.').pop()?.toLowerCase();
+      if (extension) {
+        switch (extension) {
+          case 'pdf':
+            setNewFileType('PDF');
+            break;
+          case 'doc':
+          case 'docx':
+            setNewFileType('Word');
+            break;
+          case 'xls':
+          case 'xlsx':
+            setNewFileType('Excel');
+            break;
+          case 'jpg':
+          case 'jpeg':
+          case 'png':
+          case 'gif':
+            setNewFileType('Image');
+            break;
+          default:
+            setNewFileType('Other');
+        }
+      }
+    }
+  };
+
   const handleUpload = async () => {
     if (!uploadTarget || !newDocName || !fileToUpload || !newFileType || !newLastModified) {
       toast({ variant: 'destructive', title: 'Error', description: 'Please fill out all fields and select a file.' });
@@ -201,7 +237,10 @@ export default function ManageDocumentsPage() {
     
     setIsUploading(true);
     
-    const storagePath = `documents/${uploadTarget.category}/${uploadTarget.subSection}/${fileToUpload.name}`;
+    // FIXED: Create unique filename to prevent conflicts
+    const timestamp = Date.now();
+    const sanitizedFileName = fileToUpload.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+    const storagePath = `documents/${uploadTarget.category}/${uploadTarget.subSection}/${timestamp}_${sanitizedFileName}`;
     const storageRef = ref(storage, storagePath);
     
     try {
@@ -209,9 +248,9 @@ export default function ManageDocumentsPage() {
         const uploadResult = await uploadBytes(storageRef, fileToUpload);
         const downloadURL = await getDownloadURL(uploadResult.ref);
 
-        // Update local state
+        // Create new document object
         const newDoc: Doc = {
-          id: new Date().toISOString(),
+          id: `${uploadTarget.category}_${timestamp}`, // FIXED: More unique ID
           name: newDocName,
           fileType: newFileType,
           fileSize: formatFileSize(fileToUpload.size),
@@ -220,15 +259,23 @@ export default function ManageDocumentsPage() {
           downloadURL: downloadURL,
         };
 
+        // FIXED: Correct state update
         setDocs((prevDocs) => {
           const newCategoryDocs = { ...prevDocs[uploadTarget.category] };
           const newSubSectionDocs = [...(newCategoryDocs[uploadTarget.subSection] || []), newDoc];
           newCategoryDocs[uploadTarget.subSection] = newSubSectionDocs;
-          return { ...prevDocs, [category]: newCategoryDocs };
+          return { ...prevDocs, [uploadTarget.category]: newCategoryDocs }; // FIXED: Use uploadTarget.category instead of just 'category'
         });
         
-        toast({ title: 'Success', description: `"${newDocName}" has been uploaded.` });
+        toast({ title: 'Success', description: `"${newDocName}" has been uploaded successfully.` });
         setIsUploadDialogOpen(false);
+        
+        // FIXED: Reset form after successful upload
+        setNewDocName('');
+        setFileToUpload(null);
+        setNewFileType('');
+        setNewLastModified(new Date());
+        
     } catch (error) {
         console.error("File upload error:", error);
         toast({ variant: 'destructive', title: 'Upload Failed', description: 'Could not upload the file. Please check your connection and try again.' });
@@ -255,6 +302,7 @@ export default function ManageDocumentsPage() {
                         <div className="flex items-center gap-2">
                           <File className="size-4 text-muted-foreground" />
                           <span>{doc.name}</span>
+                          <span className="text-xs text-muted-foreground">({doc.fileType}, {doc.fileSize})</span>
                         </div>
                         <AlertDialog>
                           <AlertDialogTrigger asChild>
@@ -334,21 +382,22 @@ export default function ManageDocumentsPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="grid gap-4 py-4">
-             <div className="space-y-2">
+            <div className="space-y-2">
+              <Label htmlFor="file-upload">File</Label>
+              <Input
+                id="file-upload"
+                type="file"
+                onChange={handleFileChange}
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif"
+              />
+            </div>
+            <div className="space-y-2">
               <Label htmlFor="doc-name">Document Name</Label>
               <Input
                 id="doc-name"
                 value={newDocName}
                 onChange={(e) => setNewDocName(e.target.value)}
                 placeholder="e.g., Q2 Safety Report"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="file-upload">File</Label>
-              <Input
-                id="file-upload"
-                type="file"
-                onChange={(e) => setFileToUpload(e.target.files ? e.target.files[0] : null)}
               />
             </div>
             <div className="grid grid-cols-1 gap-4">
@@ -407,5 +456,4 @@ export default function ManageDocumentsPage() {
       </Dialog>
     </div>
   );
-
-    
+}
