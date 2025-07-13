@@ -1,7 +1,6 @@
 
 'use server';
 import {onCall, HttpsError} from 'firebase-functions/v2/https';
-import {onSchedule} from 'firebase-functions/v2/scheduler';
 import * as admin from 'firebase-admin';
 import {getStorage, Bucket} from 'firebase-admin/storage';
 import * as logger from 'firebase-functions/logger';
@@ -67,6 +66,7 @@ async function createFolderStructure(bucket: Bucket, basePath: string) {
     CLIENT_FOLDERS.documents
   )) {
     for (const subSection of subSections) {
+      // Create a placeholder file to establish the folder structure
       const folderPath = `${basePath}/${docType}/${subSection}/.placeholder`;
       const file = bucket.file(folderPath);
       await file.save('');
@@ -76,6 +76,7 @@ async function createFolderStructure(bucket: Bucket, basePath: string) {
 }
 
 export const setAdminClaim = onCall(async request => {
+  // Ensure the caller is an admin before proceeding
   if (request.auth?.token.role !== 'admin') {
     logger.error('Unauthorized attempt to set admin claim', {
       uid: request.auth?.uid,
@@ -125,6 +126,7 @@ export const createClientUser = onCall(async request => {
     paymentDate,
   } = request.data;
 
+  // Validate input data
   if (
     !email ||
     !password ||
@@ -141,14 +143,17 @@ export const createClientUser = onCall(async request => {
   }
 
   try {
+    // Create the user in Firebase Authentication
     const userRecord = await admin.auth().createUser({
       email,
       password,
       displayName: `${firstName} ${lastName}`,
     });
 
+    // Set custom claims for the user (e.g., role)
     await admin.auth().setCustomUserClaims(userRecord.uid, {role: 'client'});
 
+    // Save user details to Firestore
     await db.collection('users').doc(userRecord.uid).set({
       firstName,
       lastName,
@@ -160,7 +165,8 @@ export const createClientUser = onCall(async request => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    const bucket = storage.bucket();
+    // Create a dedicated storage bucket folder structure for the client
+    const bucket = storage.bucket(); // Default bucket
     const clientBasePath = `clients/${userRecord.uid}`;
     await createFolderStructure(bucket, clientBasePath);
 
@@ -171,6 +177,7 @@ export const createClientUser = onCall(async request => {
   } catch (error: any) {
     logger.error('Error creating client user:', error);
 
+    // Provide a more specific error message if available
     if (error.code === 'auth/email-already-exists') {
       throw new HttpsError(
         'already-exists',
@@ -184,55 +191,3 @@ export const createClientUser = onCall(async request => {
     );
   }
 });
-
-export const sendExpiringTrainingNotifications = onSchedule(
-  'every 24 hours',
-  async event => {
-    const today = new Date();
-    const oneMonthFromNow = new Date();
-    oneMonthFromNow.setDate(today.getDate() + 30);
-
-    logger.info('Running daily check for expiring training...');
-
-    const trainingDataSnapshot = await db.collection('employeeTraining').get();
-
-    if (trainingDataSnapshot.empty) {
-      logger.info('No training data found. Exiting function.');
-      return null;
-    }
-
-    for (const doc of trainingDataSnapshot.docs) {
-      const trainingData = doc.data();
-      const clientUid = trainingData.clientUid;
-
-      if (!clientUid) continue;
-
-      for (const [course, expiryDateStr] of Object.entries(
-        trainingData.records
-      )) {
-        if (typeof expiryDateStr !== 'string') continue;
-
-        const expiryDate = new Date(expiryDateStr);
-        if (expiryDate > today && expiryDate <= oneMonthFromNow) {
-          const notification = {
-            clientUid,
-            type: 'TRAINING_EXPIRY',
-            message: `Training "${course}" for employee ${
-              trainingData.employeeName
-            } is expiring on ${expiryDate.toLocaleDateString()}.`,
-            isRead: false,
-            createdAt: admin.firestore.FieldValue.serverTimestamp(),
-          };
-
-          await db.collection('notifications').add(notification);
-          logger.info(
-            `Created notification for expiring training: ${notification.message}`
-          );
-        }
-      }
-    }
-
-    logger.info('Finished checking for expiring training.');
-    return null;
-  }
-);
