@@ -2,15 +2,16 @@ import { initializeApp, getApps, getApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 import { getStorage } from "firebase/storage";
+import { getAnalytics, isSupported } from "firebase/analytics";
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCf-pXsJRMPg6W98FRZlSTH7a-j73obFmM",
-  authDomain: "rak-safety-management-sy-fwpk7.firebaseapp.com",
-  projectId: "rak-safety-management-sy-fwpk7",
-  storageBucket: "rak-safety-management-sy-fwpk7.appspot.com",
-  messagingSenderId: "918303719545",
-  appId: "1:918303719545:web:96ac79845b65240b3094a8",
-  measurementId: "G-89P1ND38QR"
+  apiKey: "AIzaSyC7IIpgfevDfFxNHUyYisL14nfIIw9yV64",
+  authDomain: "rak-safety-hub-n0boo.firebaseapp.com",
+  projectId: "rak-safety-hub-n0boo",
+  storageBucket: "rak-safety-hub-n0boo.appspot.com",
+  messagingSenderId: "430274132305",
+  appId: "1:430274132305:web:3cdadf32d6b186843b3b70",
+  measurementId: "G-D6DSZFWTP9"
 };
 
 // Initialize Firebase
@@ -19,4 +20,7 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const storage = getStorage(app);
 
-export { app, auth, db, storage };
+// Conditionally initialize analytics only on the client side
+const analytics = isSupported().then(yes => yes ? getAnalytics(app) : null);
+
+export { app, auth, db, storage, analytics };
