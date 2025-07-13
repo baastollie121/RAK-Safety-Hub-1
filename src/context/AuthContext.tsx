@@ -91,11 +91,11 @@ setUser(null);
     setLoading(true);
     try {
         await signInWithEmailAndPassword(auth, email, pass);
-        // onAuthStateChanged will handle setting the user state
+        // onAuthStateChanged will handle setting the user state, so we just return true
         return true;
     } catch (error: any) {
         console.error("Login failed:", error.message);
-        setLoading(false);
+        setLoading(false); // Make sure to stop loading on failure
         return false;
     }
   }
