@@ -3,7 +3,7 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Helper function to check if the user is an admin
+    // Helper function to check if a user is an admin
     function isAdmin() {
       return request.auth.token.role == 'admin';
     }
@@ -13,23 +13,29 @@ service cloud.firestore {
       return request.auth.uid == userId;
     }
 
-    // Admins can read and write all documents
-    match /{document=**} {
-      allow read, write: if isAdmin();
-    }
+    // Admins have full access to everything. This rule must be specific enough
+    // to not be overridden by more specific rules below if we want admins to have god-mode.
+    // However, for better security, we will grant admin access on specific paths
+    // and use a wildcard for collections not explicitly defined.
 
-    // Rules for the 'users' collection
+    // Users collection:
+    // - Users can read their own document.
+    // - Admins can read/write any user document.
     match /users/{userId} {
-      // Allow users to read their own profile
-      allow read: if isOwner(userId);
-      // Disallow clients from writing to their own profile to prevent role escalation
-      allow write: if false;
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isAdmin();
     }
 
-    // Rules for the 'chats' collection
+    // Chats collection:
+    // A user can read/write their own conversation document and subcollections.
+    // Admins can also read/write any chat for support purposes.
     match /chats/{userId}/{document=**} {
-        // Allow users (clients or admins involved in the chat) to read/write to their own chat documents
-        allow read, write: if isOwner(userId);
+      allow read, write: if isOwner(userId) || isAdmin();
+    }
+
+    // Default deny all other collections for non-admins
+    match /{path=**}/documents/{document} {
+        allow read, write: if isAdmin();
     }
   }
 }
