@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -12,8 +13,8 @@ const nextConfig: NextConfig = {
   // Enable strict mode for better React development
   reactStrictMode: true,
   
-  // Enable SWC minification for better performance
-  swcMinify: true,
+  // Add packages that should be handled by the server
+  serverExternalPackages: ['genkit'],
   
   // Optimize images
   images: {
@@ -55,8 +56,6 @@ pathname: '/**',
   
   // Enable experimental features for better performance
   experimental: {
-    // Enable server components
-    serverComponentsExternalPackages: ['genkit'],
     // Optimize package imports
     optimizePackageImports: [
       '@radix-ui/react-accordion',
@@ -107,6 +106,10 @@ pathname: '/**',
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
+           {
+             key: 'Access-Control-Allow-Origin',
+             value: '*', // Allow all origins for development
+           },
         ],
       },
     ];
