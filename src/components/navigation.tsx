@@ -110,6 +110,14 @@ export function Navigation() {
       { href: '/how-to-guide', icon: <BookOpenCheck />, label: 'How-To Guide' },
   ]
   
+  const adminNav = [
+    { href: '/admin/onboard-client', icon: <UserPlus />, label: 'Onboard Client' },
+    { href: '/admin/manage-documents', icon: <FileCog />, label: 'Manage Documents' },
+    { href: '/admin/manage-news', icon: <FilePlus />, label: 'Manage Articles' },
+    { href: '/admin/news-scraper', icon: <FileSearch />, label: 'News Scraper' },
+    { href: '/admin/client-messages', icon: <MessageSquare />, label: 'Client Messages', notification: hasNewMessages },
+  ];
+
   const NavGroup = ({
     title,
     icon,
@@ -159,14 +167,6 @@ export function Navigation() {
       </Collapsible>
     );
   };
-
-  const adminNav = [
-    { href: '/admin/onboard-client', icon: <UserPlus />, label: 'Onboard Client' },
-    { href: '/admin/manage-documents', icon: <FileCog />, label: 'Manage Documents' },
-    { href: '/admin/manage-news', icon: <FilePlus />, label: 'Manage Articles' },
-    { href: '/admin/news-scraper', icon: <FileSearch />, label: 'News Scraper' },
-    { href: '/admin/client-messages', icon: <MessageSquare />, label: 'Client Messages', notification: hasNewMessages },
-  ];
 
   const renderNavItems = (items: typeof mainNav) =>
     items.map((item) => (
