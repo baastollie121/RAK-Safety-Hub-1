@@ -1,27 +1,56 @@
-
 rules_version = '2';
 
 service firebase.storage {
+
+  // ----------------- HELPER FUNCTIONS (TOP LEVEL) -----------------
+  function isAuth() {
+    return request.auth != null;
+  }
+
+  function userId() {
+    return request.auth.uid;
+  }
+
+  function getUserData() {
+    return firestore.get(
+      /databases/(default)/documents/users/$(userId())
+    ).data;
+  }
+
+  function isAdminOf(companyId) {
+    return isAuth() &&
+      getUserData().isAdmin == true &&
+      getUserData().companyId == companyId;
+  }
+
+  function isUserInCompany(companyId) {
+    return isAuth() &&
+      getUserData().companyId == companyId;
+  }
+
   match /b/{bucket}/o {
-    
-    // Helper function to check for admin role
-    function isAdmin() {
-      return request.auth.token.role == 'admin';
+
+    // ALL FILES
+    match /{allPaths=**} {
+      allow read, write: if false; // Default: deny everything
     }
 
-    // Client-specific document folders
-    // A user can read/write to their own folder.
-    // An admin can read/write to ANY client's folder.
-    match /clients/{userId}/{allPaths=**} {
-      allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
+    // COMPANY-WIDE DOCUMENTS
+    match /companies/{companyId}/{filePath=**} {
+      // Admins can upload/download
+      allow read, write: if isAdminOf(companyId);
+
+      // Regular users can only read if they belong to the company
+      allow read: if isUserInCompany(companyId);
     }
-    
-    // General document library accessible to all clients.
-    // Any authenticated user can read documents.
-    // Only admins can upload or delete documents here.
-    match /documents/{allPaths=**} {
-      allow read: if request.auth != null;
-      allow write: if isAdmin();
+
+    // USER-SPECIFIC AI FILES (Grouped by email or UID)
+    match /ai/{companyId}/{userEmail}/{filePath=**} {
+      // Admin can access AI tools by company
+      allow read, write: if isAdminOf(companyId);
+
+      // User can only access their own AI tools
+      allow read, write: if isUserInCompany(companyId) && request.auth.token.email == userEmail;
     }
   }
 }

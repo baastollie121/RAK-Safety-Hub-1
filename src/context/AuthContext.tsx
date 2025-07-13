@@ -1,112 +1,118 @@
 
 'use client';
 
-import type { ReactNode } from 'react';
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import {
+  User as FirebaseUser,
+  onAuthStateChanged,
+  signInWithEmailAndPassword,
+  signOut as firebaseSignOut,
+} from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
+
 import { auth, db } from '@/lib/firebase';
 
-type User = {
+// Define the User type for your application
+export interface User {
   uid: string;
   email: string | null;
   role: 'admin' | 'client';
   firstName: string;
   lastName: string;
-};
+  companyId?: string; // Add companyId to the user type
+}
 
-type AuthContextType = {
+// Define the AuthContext state
+interface AuthContextType {
   user: User | null;
-  isAuthenticated: boolean;
-  isLoading: boolean;
+  loading: boolean;
   login: (email: string, pass: string) => Promise<boolean>;
-  logout: () => void;
-};
+  logout: () => Promise<void>;
+  isAuthenticated: boolean;
+}
 
+// Create the context with a default undefined value
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider = ({ children }: { children: ReactNode }) => {
+// AuthProvider component
+export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const router = useRouter();
-  const pathname = usePathname();
+  const [loading, setLoading] = useState(true);
+  const isAuthenticated = !!user;
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // User is signed in, get their custom data from Firestore
-        const idTokenResult = await firebaseUser.getIdTokenResult();
-        const userRole = idTokenResult.claims.role || 'client'; // Default to 'client'
-
+        // If a Firebase user is authenticated
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDocSnap = await getDoc(userDocRef);
 
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
+          
+          // Determine the user's role based on the 'isAdmin' field in Firestore
+          const role = userData.isAdmin === true || userData.role === 'admin' ? 'admin' : 'client';
+
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
-            role: userRole,
+            role: role,
             firstName: userData.firstName || 'User',
             lastName: userData.lastName || '',
+            companyId: userData.companyId, // Set companyId from Firestore
           });
         } else {
-            // Handle the primary admin case where a doc might not exist yet
-            if (userRole === 'admin') {
-                setUser({
-                    uid: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    role: 'admin',
-                    firstName: 'Admin',
-                    lastName: 'User'
-                });
-            } else {
-                 console.error("No user document found for UID:", firebaseUser.uid);
-                 await signOut(auth);
-                 setUser(null);
-            }
+          console.error(
+            'No user document found for UID:',
+            firebaseUser.uid,
+            "This user will not have access to protected resources."
+          );
+          await firebaseSignOut(auth);
+          setUser(null);
         }
       } else {
         // User is signed out
         setUser(null);
       }
-      setIsLoading(false);
+      setLoading(false);
     });
 
+    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
   
-  const login = async (email: string, pass: string): Promise<boolean> => {
-    setIsLoading(true);
+  const login = async (email: string, pass: string) => {
+    setLoading(true);
     try {
-      await signInWithEmailAndPassword(auth, email, pass);
-      // onAuthStateChanged will handle setting user state and routing.
-      return true;
+        await signInWithEmailAndPassword(auth, email, pass);
+        // onAuthStateChanged will handle setting the user state
+        return true;
     } catch (error) {
-      console.error('Firebase login error:', error);
-      setIsLoading(false);
-      return false;
+        console.error("Login failed:", error);
+        setLoading(false);
+        return false;
     }
-  };
+  }
 
   const logout = async () => {
-    setIsLoading(true);
-    await signOut(auth);
+    await firebaseSignOut(auth);
     setUser(null);
-    router.push('/login');
-    // After logout, onAuthStateChanged will set isLoading to false.
   };
-  
-  const isAuthenticated = !isLoading && !!user;
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );
-};
+}
 
+// Custom hook to use the auth context
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (context === undefined) {

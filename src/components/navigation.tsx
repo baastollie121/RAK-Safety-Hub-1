@@ -195,15 +195,6 @@ export function Navigation() {
         <SidebarMenu>{renderNavItems(mainNav)}</SidebarMenu>
       </SidebarGroup>
 
-      {user?.role === 'admin' && (
-        <>
-          <SidebarSeparator />
-          <SidebarGroup className="p-0">
-             <NavGroup title="Admin" icon={<UserCog className="size-4" />} items={adminNav} pathname={pathname} />
-          </SidebarGroup>
-        </>
-      )}
-
       <SidebarSeparator />
 
       <SidebarGroup className="p-0">
@@ -221,12 +212,32 @@ export function Navigation() {
       <SidebarGroup className="p-0">
          <NavGroup title="AI Generated Docs" icon={<FileArchive className="size-4" />} items={aiDocsNav} pathname={pathname} />
       </SidebarGroup>
+      
+      {user?.role === 'admin' && (
+        <>
+          <SidebarSeparator />
+          <SidebarGroup className="p-0">
+            <NavGroup
+              title="Admin"
+              icon={<UserCog className="size-4" />}
+              items={adminNav}
+              pathname={pathname}
+            />
+          </SidebarGroup>
+        </>
+      )}
 
       <SidebarSeparator />
       
       <SidebarGroup className="p-2 mt-auto">
         <SidebarMenu>
             {renderNavItems(supportNav)}
+            <SidebarMenuItem>
+              <SidebarMenuButton onClick={logout}>
+                <LogOut />
+                <span>Logout</span>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
         </SidebarMenu>
       </SidebarGroup>
     </>
