@@ -9,102 +9,6 @@ admin.initializeApp();
 const db = admin.firestore();
 const storage = getStorage();
 
-const CLIENT_FOLDERS = {
-  documents: {
-    safety: [
-      'Safety Manual',
-      'Safety Policies & Procedures',
-      'Risk Assessments (HIRA)',
-      'Safe Work Procedures (SWP)',
-      'Method Statements',
-      'Incident Reports & Investigations',
-      'Emergency Plans',
-      'Toolbox Talks & Meeting Minutes',
-      'Legal & Other Appointments',
-      'Registers & Checklists',
-      'Fall Protection & Working at Heights',
-      'Gap Assessments (ISO 45001, Client-specific)',
-      'Legal Compliance Audit Reports',
-      'Internal Audit Plan',
-      'Internal Audit Reports',
-    ],
-    environmental: [
-      'Environmental Manual',
-      'Environmental Policy',
-      'Impact Assessments',
-      'Waste Management Plans',
-      'Environmental Incident Reports',
-      'Environmental Inspection Checklist',
-    ],
-    quality: [
-      'Quality Manual',
-      'Quality Policy',
-      'Quality Procedures & Work Instructions',
-      'Audit Reports (Internal & External)',
-      'Non-conformance & Corrective Actions',
-      'Management Reviews',
-      'Client & Supplier',
-      'Quality Control Checklists',
-      'Tool & Equipment Inspection Logs',
-    ],
-    hr: [
-      'HR Policies & Procedures',
-      'General Appointments',
-      'Hiring Policy',
-      'Company Property Policy',
-      'Performance Management',
-      'Disciplinary & Grievance',
-      'Leave Request Forms',
-      'Employment Contracts & Agreements',
-      'Warning Templates',
-    ],
-  },
-};
-
-async function createFolderStructure(bucket: Bucket, basePath: string) {
-  for (const [docType, subSections] of Object.entries(
-    CLIENT_FOLDERS.documents
-  )) {
-    for (const subSection of subSections) {
-      // Create a placeholder file to establish the folder structure
-      const folderPath = `${basePath}/${docType}/${subSection}/.placeholder`;
-      const file = bucket.file(folderPath);
-      await file.save('');
-      logger.info(`Created placeholder for: ${folderPath}`);
-    }
-  }
-}
-
-export const setAdminClaim = onCall(async request => {
-  // Ensure the caller is an admin before proceeding
-  if (request.auth?.token.role !== 'admin') {
-    logger.error('Unauthorized attempt to set admin claim', {
-      uid: request.auth?.uid,
-    });
-    throw new HttpsError(
-      'permission-denied',
-      'Only admins can set other admins.'
-    );
-  }
-
-  const email = request.data.email;
-  if (!email) {
-    throw new HttpsError('invalid-argument', 'Email is required.');
-  }
-
-  try {
-    const user = await admin.auth().getUserByEmail(email);
-    await admin.auth().setCustomUserClaims(user.uid, {role: 'admin'});
-    return {message: `Success! ${email} has been made an admin.`};
-  } catch (error) {
-    logger.error('Error setting admin claim:', error);
-    throw new HttpsError(
-      'internal',
-      'An error occurred while setting the admin claim.'
-    );
-  }
-});
-
 export const createClientUser = onCall(async request => {
   if (request.auth?.token.role !== 'admin') {
     logger.error('Unauthorized user tried to call createClientUser', {
@@ -165,13 +69,11 @@ export const createClientUser = onCall(async request => {
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
     });
 
-    // Create a dedicated storage bucket folder structure for the client
-    const bucket = storage.bucket(); // Default bucket
-    const clientBasePath = `clients/${userRecord.uid}`;
-    await createFolderStructure(bucket, clientBasePath);
+    // The storage folder structure is implicitly created and secured by storage rules.
+    // No need to create placeholder files.
 
     logger.info(
-      `Successfully created user ${userRecord.uid} and their folder structure.`
+      `Successfully created user ${userRecord.uid}. Their folder structure is secured by rules.`
     );
     return {success: true, uid: userRecord.uid};
   } catch (error: any) {

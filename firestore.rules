@@ -1,41 +1,42 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper functions
+  
+    // Helper function to check for admin role
     function isAdmin() {
       return request.auth.token.role == 'admin';
     }
 
-    function isClient() {
-      return request.auth.token.role == 'client';
-    }
-
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    // Admins can read and write all documents
+    // Admins can read and write to all collections
     match /{document=**} {
       allow read, write: if isAdmin();
     }
     
     // Users collection rules
     match /users/{userId} {
-      // Clients can read their own profile data
-      allow get: if isOwner(userId);
-      // Admins can manage all user profiles (covered by admin rule above)
-    }
-
-    // Notifications collection
-    match /notifications/{notificationId} {
-        // Clients can read notifications intended for them
-        allow get: if isClient() && resource.data.clientUid == request.auth.uid;
-        allow list: if isClient();
-        allow update: if isClient() && isOwner(resource.data.clientUid); // For marking as read
+      // Any authenticated user can create their own document (for initial setup)
+      allow create: if request.auth != null;
+      // Users can only read their own document
+      allow read: if request.auth.uid == userId;
+      // Users can only update their own document
+      allow update: if request.auth.uid == userId;
+      // Only admins can delete user documents
+      allow delete: if isAdmin();
     }
     
-    // Add other collection rules here as needed
+    // Chats collection rules for support widget
+    match /chats/{userId}/{document=**} {
+       // A user can only access their own chat history.
+       allow read, write: if request.auth.uid == userId;
+    }
+
+    // Notifications for training expiry
+    match /notifications/{userId} {
+        allow read: if request.auth.uid == userId;
+        // Notifications are created by backend functions, not clients
+        allow write: if false;
+    }
   }
 }
