@@ -1,43 +1,22 @@
 rules_version = '2';
 
-// By default, allow all reads and writes if the user is authenticated.
-// This is not recommended for production apps.
-// service firebase.storage {
-//   match /b/{bucket}/o {
-//     match /{allPaths=**} {
-//       allow read, write: if request.auth != null;
-//     }
-//   }
-// }
-
 service firebase.storage {
   match /b/{bucket}/o {
-    // Helper function to check for admin role
-    function isAdmin() {
-      return request.auth.token.role == 'admin';
-    }
-
-    // Helper function to check for client role
-    function isClient() {
-      return request.auth.token.role == 'client';
-    }
-    
-    // Admins can read and write anything.
+    // Admins have full read/write access to all files.
     match /{allPaths=**} {
-      allow read, write: if isAdmin();
-    }
-    
-    // Rules for client documents
-    match /clients/{userId}/{path=**} {
-      // Clients can only access their own folder
-      allow read, write: if isClient() && request.auth.uid == userId;
+      allow read, write: if request.auth != null && request.auth.token.role == 'admin';
     }
 
-    // Rules for general company documents that admins upload
-    // and clients can only read.
-    match /documents/{category}/{subSection}/{fileName} {
-      allow read: if request.auth != null; // Allow any authenticated user to read
-      allow write: if isAdmin(); // Only admins can upload/delete
+    // Authenticated clients can only read files within their own directory.
+    // They cannot write or delete files.
+    match /clients/{userId}/{allPaths=**} {
+      allow read: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // General document library should be readable by all authenticated clients.
+    // This assumes a general library path outside of specific client folders.
+    match /documents/{allPaths=**} {
+        allow read: if request.auth != null;
     }
   }
 }
