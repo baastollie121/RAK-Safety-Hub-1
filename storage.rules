@@ -2,29 +2,32 @@ rules_version = '2';
 
 service firebase.storage {
   match /b/{bucket}/o {
-    
-    // Helper function to check if a user is an admin
+  
+    // Helper function to check for admin role
     function isAdmin() {
       return request.auth.token.role == 'admin';
     }
 
-    // Admins can read and write all files
+    // Helper function to check if the user is the owner of the client directory
+    function isClientOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
+    }
+
+    // Admins have full read/write access to everything in the bucket.
     match /{allPaths=**} {
       allow read, write: if isAdmin();
     }
     
-    // Client-specific files:
-    // Clients can read files within their own folder.
-    // They cannot write directly; uploads should be handled by a secure backend function.
+    // --- Client-specific folders ---
+    // Clients can read, write, and delete files only within their own dedicated folder.
+    // The path is structured as 'clients/{userId}/...'
     match /clients/{userId}/{allPaths=**} {
-      allow read: if request.auth.uid == userId;
-      allow write: if false; // Disallow direct client uploads for security
+      allow read, write: if isClientOwner(userId);
     }
     
-    // General documents (e.g., templates) can be read by any authenticated user
-    match /documents/{allPaths=**} {
-        allow read: if request.auth != null;
-        allow write: if isAdmin();
-    }
+    // --- Public read for specific assets if needed (example) ---
+    // match /public/{allPaths=**} {
+    //   allow read;
+    // }
   }
 }

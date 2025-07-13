@@ -2,43 +2,53 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
+  
     // Helper functions
     function isAdmin() {
       return request.auth.token.role == 'admin';
     }
 
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+    function isClientOwner(userId) {
+      return request.auth != null && request.auth.uid == userId;
     }
-
+    
     // Admins have full access to everything
     match /{document=**} {
       allow read, write: if isAdmin();
     }
-
-    // Users can read their own user document
+    
+    // --- USER Collection ---
+    // Clients can read their own user profile data
     match /users/{userId} {
-      allow read: if isOwner(userId);
-      // create/update rules are handled by cloud functions for security
+        allow read: if isClientOwner(userId);
+        // Allow admins to create/update users (covered by admin rule above)
     }
 
-    // Rules for chat/messaging
+    // --- CHATS Collection ---
+    // Clients can read and write to their own message threads
     match /chats/{userId}/{document=**} {
-        allow read, write: if isOwner(userId) || isAdmin();
+        allow read, write: if isClientOwner(userId);
     }
     
-    // Notifications can be read by the owner client, created by functions (or admins)
+    // --- NOTIFICATIONS Collection ---
+    // Clients can read notifications intended for them
     match /notifications/{notificationId} {
-        allow read: if request.auth.uid == resource.data.clientUid;
-        allow create: if isAdmin();
-        allow update: if isOwner(resource.data.clientUid); // For marking as read
+        allow read: if isClientOwner(resource.data.clientUid);
     }
-
-    // Any other collection is locked down for clients unless specified
-    // Example for a hypothetical "clientData" collection
-    match /clientData/{clientId}/{document=**} {
-        allow read, write: if isOwner(clientId);
+    
+    // --- ARTICLES (from localStorage) Collection ---
+    // This is managed on the client, so rules are for client access
+    match /newsArticles/{articleId} {
+        allow read: if request.auth != null; // All authenticated users can read news
+        // Write access is handled by admins through a cloud function
+    }
+    
+    // --- EMPLOYEE TRAINING (from localStorage) Collection ---
+    // Clients can read and write their own company's training data
+    match /employeeTraining/{recordId} {
+      allow read, write: if isClientOwner(resource.data.clientUid);
+      // Also allow write if creating a new record for their own company
+      allow create: if isClientOwner(request.resource.data.clientUid);
     }
   }
 }
