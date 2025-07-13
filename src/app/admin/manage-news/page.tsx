@@ -54,7 +54,7 @@ import {
     SelectTrigger,
     SelectValue,
 } from '@/components/ui/select';
-import { Plus, Edit, Trash2, Newspaper } from 'lucide-react';
+import { Plus, Edit, Trash2, Newspaper, Loader2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Article } from '@/lib/articles';
 import { articleCategories } from '@/lib/articles';
@@ -80,6 +80,7 @@ const fileToDataUri = (file: File): Promise<string> => {
 
 export default function ManageNewsPage() {
   const [articles, setArticles] = useState<Article[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingArticle, setEditingArticle] = useState<Article | null>(null);
   const { toast } = useToast();
@@ -95,13 +96,14 @@ export default function ManageNewsPage() {
         localStorage.removeItem('scrapedArticle');
         openDialog(null, scrapedData);
       }
-
     } catch (error) {
       console.error('Failed to load articles from localStorage', error);
       toast({ variant: 'destructive', title: 'Load Failed', description: 'Could not load news articles.' });
+    } finally {
+        setIsLoading(false);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [toast]);
+  }, []);
   
   const form = useForm<ArticleFormValues>({
     resolver: zodResolver(articleSchema),
@@ -134,6 +136,7 @@ export default function ManageNewsPage() {
   };
 
   const onSubmit = async (data: ArticleFormValues) => {
+    setIsLoading(true);
     let finalImageUrl: string | null = editingArticle?.imageUrl || data.imageUrl || null;
     
     if (data.image && data.image[0]) {
@@ -141,6 +144,7 @@ export default function ManageNewsPage() {
             finalImageUrl = await fileToDataUri(data.image[0]);
         } catch (error) {
             toast({ variant: 'destructive', title: 'Image Error', description: 'Could not process the image file.'});
+            setIsLoading(false);
             return;
         }
     }
@@ -167,6 +171,7 @@ export default function ManageNewsPage() {
     setArticles(updatedArticles);
     localStorage.setItem('newsArticles', JSON.stringify(updatedArticles));
     setIsDialogOpen(false);
+    setIsLoading(false);
   };
   
   return (
@@ -186,7 +191,9 @@ export default function ManageNewsPage() {
             <CardTitle>Published Articles</CardTitle>
         </CardHeader>
         <CardContent>
-            {articles.length > 0 ? (
+            {isLoading ? (
+                <div className="text-center py-12"><Loader2 className="animate-spin mx-auto"/></div>
+            ) : articles.length > 0 ? (
                 <ul className="space-y-4">
                     {articles.map(article => (
                         <li key={article.id} className="flex items-center justify-between p-3 border rounded-lg">
@@ -259,7 +266,7 @@ export default function ManageNewsPage() {
                         name="content"
                         render={({ field }) => (
                             <FormItem>
-                                <FormLabel>Content</FormLabel>
+                                <FormLabel>Content (Markdown supported)</FormLabel>
                                 <FormControl><Textarea placeholder="Write your article content here..." {...field} rows={10} /></FormControl>
                                 <FormMessage />
                             </FormItem>
@@ -320,8 +327,11 @@ export default function ManageNewsPage() {
                         </div>
                     )}
                     <DialogFooter>
-                        <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                        <Button type="submit">Save Article</Button>
+                        <DialogClose asChild><Button type="button" variant="outline" disabled={isLoading}>Cancel</Button></DialogClose>
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 animate-spin" />}
+                            Save Article
+                        </Button>
                     </DialogFooter>
                 </form>
             </Form>

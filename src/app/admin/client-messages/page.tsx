@@ -5,6 +5,8 @@ import { useState, useMemo, useRef, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, onSnapshot, doc, setDoc, addDoc, serverTimestamp, orderBy, limit } from 'firebase/firestore';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
@@ -23,19 +25,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Send, MessageSquare, Search, Plus } from 'lucide-react';
+import { Send, MessageSquare, Search, Plus, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format, formatDistanceToNow } from 'date-fns';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-
-// --- MOCK DATA ---
+// --- DATA TYPES ---
 interface Message {
     id: string;
     role: 'user' | 'admin';
     text: string;
-    timestamp: string;
+    timestamp: any; // Firestore timestamp object or ISO string
 }
 
 interface Conversation {
@@ -44,55 +45,17 @@ interface Conversation {
     userEmail: string;
     avatar: string;
     lastMessage: string;
-    lastMessageTimestamp: string;
+    lastMessageTimestamp: any; // Firestore timestamp object or ISO string
     unreadCount: number;
     messages: Message[];
 }
 
 interface Client {
-    id: string;
+    id: string; // UID
     name: string;
     email: string;
     avatar: string;
 }
-
-const mockConversationsData: Conversation[] = [
-    {
-        id: 'client-user',
-        userName: 'Ruanakoen',
-        userEmail: 'ruanakoen@gmail.com',
-        avatar: 'https://placehold.co/64x64.png',
-        lastMessage: 'Yes, I have a question about the HIRA generator.',
-        lastMessageTimestamp: new Date(Date.now() - 1000 * 60 * 3).toISOString(),
-        unreadCount: 1,
-        messages: [
-            { id: '1', role: 'admin', text: "Hi there! Welcome to RAK Safety Hub support. How can we help you today?", timestamp: new Date(Date.now() - 60000 * 5).toISOString() },
-            { id: '2', role: 'user', text: "Yes, I have a question about the HIRA generator.", timestamp: new Date(Date.now() - 60000 * 3).toISOString() },
-        ]
-    },
-    {
-        id: 'client-2',
-        userName: 'Test Client',
-        userEmail: 'test@example.com',
-        avatar: 'https://placehold.co/64x64.png',
-        lastMessage: 'Okay, thank you.',
-        lastMessageTimestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-        unreadCount: 0,
-        messages: [
-            { id: '4', role: 'user', text: 'I need help with my billing.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 25).toISOString() },
-            { id: '5', role: 'admin', text: 'I can help with that. What is your invoice number?', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24.5).toISOString() },
-            { id: '6', role: 'user', text: 'Okay, thank you.', timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() },
-        ]
-    }
-];
-
-// A list of all clients an admin can message, even if no conversation exists yet.
-const mockAllClients: Client[] = [
-    { id: 'client-user', name: 'Ruanakoen', email: 'ruanakoen@gmail.com', avatar: 'https://placehold.co/64x64.png' },
-    { id: 'client-2', name: 'Test Client', email: 'test@example.com', avatar: 'https://placehold.co/64x64.png' },
-    { id: 'client-3', name: 'New Client Inc.', email: 'new@client.com', avatar: 'https://placehold.co/64x64.png' },
-    { id: 'client-4', name: 'Innovate Corp', email: 'contact@innovate.com', avatar: 'https://placehold.co/64x64.png' },
-];
 
 const newMessageSchema = z.object({
   clientId: z.string().min(1, 'Please select a client.'),
@@ -100,10 +63,7 @@ const newMessageSchema = z.object({
 });
 type NewMessageFormValues = z.infer<typeof newMessageSchema>;
 
-// --- END MOCK DATA & SCHEMA ---
-
 // --- COMPONENTS ---
-
 const ConversationList = ({ conversations, onSelect, selectedId }: { conversations: Conversation[], onSelect: (id: string) => void, selectedId: string | null }) => {
     return (
         <ScrollArea className="h-full">
@@ -124,7 +84,9 @@ const ConversationList = ({ conversations, onSelect, selectedId }: { conversatio
                         <div className="flex-grow overflow-hidden">
                             <div className="flex justify-between items-center">
                                 <p className="font-semibold truncate">{convo.userName}</p>
-                                <p className="text-xs text-muted-foreground shrink-0">{formatDistanceToNow(new Date(convo.lastMessageTimestamp), { addSuffix: true })}</p>
+                                <p className="text-xs text-muted-foreground shrink-0">
+                                    {convo.lastMessageTimestamp ? formatDistanceToNow(new Date(convo.lastMessageTimestamp.toDate ? convo.lastMessageTimestamp.toDate() : convo.lastMessageTimestamp), { addSuffix: true }) : 'N/A'}
+                                </p>
                             </div>
                             <div className="flex justify-between items-start">
                                 <p className="text-sm text-muted-foreground truncate">{convo.lastMessage}</p>
@@ -145,8 +107,7 @@ const ConversationList = ({ conversations, onSelect, selectedId }: { conversatio
     )
 };
 
-
-const ChatView = ({ conversation, onSendMessage, adminName }: { conversation: Conversation, onSendMessage: (text: string) => void, adminName: string }) => {
+const ChatView = ({ conversation, onSendMessage, adminName, isLoading }: { conversation: Conversation, onSendMessage: (text: string) => void, adminName: string, isLoading: boolean }) => {
     const [input, setInput] = useState('');
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -158,7 +119,7 @@ const ChatView = ({ conversation, onSendMessage, adminName }: { conversation: Co
     }, [conversation.messages]);
     
     const handleSend = () => {
-        if (!input.trim()) return;
+        if (!input.trim() || isLoading) return;
         onSendMessage(input);
         setInput('');
     };
@@ -190,7 +151,7 @@ const ChatView = ({ conversation, onSendMessage, adminName }: { conversation: Co
                             )}>
                                 <p>{message.text}</p>
                                 <p className={cn("text-xs mt-1 text-right", message.role === 'admin' ? 'text-primary-foreground/70' : 'text-muted-foreground/70')}>
-                                    {format(new Date(message.timestamp), 'p')}
+                                    {message.timestamp ? format(new Date(message.timestamp.toDate ? message.timestamp.toDate() : message.timestamp), 'p') : ''}
                                 </p>
                             </div>
                              {message.role === 'admin' && <Avatar className="size-8"><AvatarFallback>{getInitials(adminName)}</AvatarFallback></Avatar>}
@@ -205,15 +166,16 @@ const ChatView = ({ conversation, onSendMessage, adminName }: { conversation: Co
                         value={input}
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                            e.preventDefault();
-                            handleSend();
-                        }
+                            if (e.key === 'Enter' && !e.shiftKey) {
+                                e.preventDefault();
+                                handleSend();
+                            }
                         }}
                         className="flex-grow"
+                        disabled={isLoading}
                     />
-                    <Button size="icon" onClick={handleSend} disabled={!input.trim()}>
-                        <Send />
+                    <Button size="icon" onClick={handleSend} disabled={!input.trim() || isLoading}>
+                        {isLoading ? <Loader2 className="animate-spin" /> : <Send />}
                     </Button>
                 </div>
             </div>
@@ -222,103 +184,174 @@ const ChatView = ({ conversation, onSendMessage, adminName }: { conversation: Co
 }
 
 export default function ClientMessagesPage() {
-    // In a real app, this would come from Firestore.
     const { user } = useAuth();
     const { toast } = useToast();
-    const [conversations, setConversations] = useState<Conversation[]>(mockConversationsData);
-    const [selectedConvoId, setSelectedConvoId] = useState<string | null>(mockConversationsData[0]?.id || null);
+    const [allClients, setAllClients] = useState<Client[]>([]);
+    const [conversations, setConversations] = useState<Conversation[]>([]);
+    const [selectedConvoId, setSelectedConvoId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [isNewMessageOpen, setIsNewMessageOpen] = useState(false);
-    
+    const [isLoading, setIsLoading] = useState(true);
+    const [isSending, setIsSending] = useState(false);
+
     const form = useForm<NewMessageFormValues>({
         resolver: zodResolver(newMessageSchema),
         defaultValues: { clientId: '', message: '' },
     });
 
-    const handleSelectConversation = (id: string) => {
-        setSelectedConvoId(id);
-        setConversations(convos => convos.map(c => c.id === id ? {...c, unreadCount: 0} : c));
-    };
-
-    const handleSendMessage = (text: string) => {
-        if (!selectedConvoId) return;
-        
-        const newMessage: Message = {
-            id: new Date().toISOString(),
-            role: 'admin',
-            text: text,
-            timestamp: new Date().toISOString()
+    useEffect(() => {
+        const fetchClients = async () => {
+            try {
+                const q = query(collection(db, 'users'), where('role', '==', 'client'));
+                const querySnapshot = await getDocs(q);
+                const clients = querySnapshot.docs.map(doc => ({
+                    id: doc.id,
+                    name: `${doc.data().firstName} ${doc.data().lastName}`,
+                    email: doc.data().email,
+                    avatar: `https://placehold.co/64x64.png?text=${doc.data().firstName.charAt(0)}${doc.data().lastName.charAt(0)}`
+                }));
+                setAllClients(clients);
+            } catch (error) {
+                console.error("Error fetching clients:", error);
+                toast({ variant: 'destructive', title: 'Error', description: 'Could not load client list.' });
+            }
         };
 
-        setConversations(convos => convos.map(c => {
-            if (c.id === selectedConvoId) {
-                return {
-                    ...c,
-                    messages: [...c.messages, newMessage],
-                    lastMessage: `You: ${text}`,
-                    lastMessageTimestamp: newMessage.timestamp,
-                }
-            }
-            return c;
-        }).sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()));
-    };
+        fetchClients();
+    }, [toast]);
 
-    const handleStartConversation = (data: NewMessageFormValues) => {
-        const { clientId, message } = data;
-        const now = new Date().toISOString();
-        
-        const newMessage: Message = { id: now, role: 'admin', text: message, timestamp: now };
-        
-        const existingConvo = conversations.find(c => c.id === clientId);
-
-        if (existingConvo) {
-            // Add message to existing conversation
-            setConversations(convos => convos.map(c => 
-                c.id === clientId 
-                ? { ...c, messages: [...c.messages, newMessage], lastMessage: `You: ${message}`, lastMessageTimestamp: now }
-                : c
-            ).sort((a,b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime()));
-        } else {
-            // Create a new conversation
-            const client = mockAllClients.find(c => c.id === clientId);
-            if (!client) {
-                toast({ variant: 'destructive', title: 'Error', description: 'Client not found.' });
-                return;
-            }
-            const newConversation: Conversation = {
-                id: client.id,
-                userName: client.name,
-                userEmail: client.email,
-                avatar: client.avatar,
-                lastMessage: `You: ${message}`,
-                lastMessageTimestamp: now,
-                unreadCount: 0,
-                messages: [newMessage],
-            };
-            setConversations(convos => [newConversation, ...convos]
-                .sort((a,b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime())
-            );
+    useEffect(() => {
+        if (allClients.length === 0) {
+            setIsLoading(false);
+            return;
         }
 
-        setSelectedConvoId(clientId);
-        setIsNewMessageOpen(false);
-        form.reset();
-        toast({ title: 'Success', description: 'Message sent.' });
+        const unsubscribes = allClients.map(client => {
+            const convoRef = doc(db, 'chats', client.id);
+            const messagesRef = collection(db, 'chats', client.id, 'messages');
+            const q = query(messagesRef, orderBy('timestamp', 'desc'), limit(1));
+
+            return onSnapshot(q, (querySnapshot) => {
+                let lastMessageData: Message | null = null;
+                if (!querySnapshot.empty) {
+                    const doc = querySnapshot.docs[0];
+                    lastMessageData = { id: doc.id, ...doc.data() } as Message;
+                }
+
+                setConversations(prev => {
+                    const existingConvo = prev.find(c => c.id === client.id);
+                    if (lastMessageData) {
+                        const newConvoData = {
+                            ...client,
+                            lastMessage: lastMessageData.text,
+                            lastMessageTimestamp: lastMessageData.timestamp,
+                            unreadCount: existingConvo?.unreadCount || 0, // Placeholder
+                            messages: existingConvo?.messages || [],
+                        };
+                        if (existingConvo) {
+                            return prev.map(c => c.id === client.id ? { ...c, ...newConvoData } : c);
+                        } else {
+                            return [...prev, newConvoData];
+                        }
+                    }
+                    return prev;
+                });
+                setIsLoading(false);
+            });
+        });
+
+        return () => unsubscribes.forEach(unsub => unsub());
+    }, [allClients]);
+
+    useEffect(() => {
+        if (!selectedConvoId) return;
+
+        const messagesRef = collection(db, 'chats', selectedConvoId, 'messages');
+        const q = query(messagesRef, orderBy('timestamp', 'asc'));
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedMessages: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Message));
+            setConversations(prev => prev.map(c => c.id === selectedConvoId ? { ...c, messages: fetchedMessages } : c));
+        });
+
+        return () => unsubscribe();
+    }, [selectedConvoId]);
+
+    const handleSendMessage = async (text: string) => {
+        if (!selectedConvoId || !user) return;
+        setIsSending(true);
+
+        const newMessage = {
+            role: 'admin',
+            text,
+            timestamp: serverTimestamp(),
+            read: true,
+            adminId: user.uid,
+        };
+
+        try {
+            const messagesRef = collection(db, 'chats', selectedConvoId, 'messages');
+            await addDoc(messagesRef, newMessage);
+        } catch (error) {
+            console.error("Error sending message:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Failed to send message.' });
+        } finally {
+            setIsSending(false);
+        }
+    };
+    
+    const handleStartConversation = async (data: NewMessageFormValues) => {
+        const { clientId, message } = data;
+        if (!user) return;
+        setIsSending(true);
+
+        const chatDocRef = doc(db, 'chats', clientId);
+        const messagesColRef = collection(db, 'chats', clientId, 'messages');
+
+        try {
+            // Ensure chat document exists (doesn't hurt if it does)
+            await setDoc(chatDocRef, { startedBy: user.uid, startedAt: serverTimestamp() }, { merge: true });
+
+            await addDoc(messagesColRef, {
+                role: 'admin',
+                text: message,
+                timestamp: serverTimestamp(),
+                read: true,
+                adminId: user.uid
+            });
+            
+            setSelectedConvoId(clientId);
+            setIsNewMessageOpen(false);
+            form.reset();
+            toast({ title: 'Success', description: 'Message sent.' });
+
+        } catch (error) {
+             console.error("Error starting conversation:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not start new conversation.' });
+        } finally {
+            setIsSending(false);
+        }
     };
 
-    const filteredConversations = useMemo(() => {
-        return conversations.filter(c => 
-            c.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            c.lastMessage.toLowerCase().includes(searchTerm.toLowerCase())
-        ).sort((a, b) => new Date(b.lastMessageTimestamp).getTime() - new Date(a.lastMessageTimestamp).getTime());
+    const sortedConversations = useMemo(() => {
+        return conversations
+            .filter(c => 
+                c.userName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.userEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                c.lastMessage.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+            .sort((a, b) => {
+                const timeA = a.lastMessageTimestamp?.toDate ? a.lastMessageTimestamp.toDate().getTime() : 0;
+                const timeB = b.lastMessageTimestamp?.toDate ? b.lastMessageTimestamp.toDate().getTime() : 0;
+                return timeB - timeA;
+            });
     }, [conversations, searchTerm]);
 
     const selectedConversation = useMemo(() => {
         return conversations.find(c => c.id === selectedConvoId);
     }, [conversations, selectedConvoId]);
     
-    const adminName = "Ruan K";
+    const adminName = user ? `${user.firstName} ${user.lastName}` : "Admin";
 
     return (
         <div className="h-full flex flex-col p-4">
@@ -352,7 +385,7 @@ export default function ClientMessagesPage() {
                                                             </SelectTrigger>
                                                         </FormControl>
                                                         <SelectContent>
-                                                            {mockAllClients.map(client => (
+                                                            {allClients.map(client => (
                                                                 <SelectItem key={client.id} value={client.id}>{client.name} ({client.email})</SelectItem>
                                                             ))}
                                                         </SelectContent>
@@ -375,8 +408,11 @@ export default function ClientMessagesPage() {
                                             )}
                                         />
                                         <DialogFooter>
-                                            <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
-                                            <Button type="submit">Send Message</Button>
+                                            <DialogClose asChild><Button type="button" variant="outline" disabled={isSending}>Cancel</Button></DialogClose>
+                                            <Button type="submit" disabled={isSending}>
+                                                {isSending && <Loader2 className="animate-spin mr-2" />}
+                                                Send Message
+                                            </Button>
                                         </DialogFooter>
                                     </form>
                                 </Form>
@@ -394,11 +430,15 @@ export default function ClientMessagesPage() {
                             />
                         </div>
                     </div>
-                    <ConversationList conversations={filteredConversations} onSelect={handleSelectConversation} selectedId={selectedConvoId} />
+                    {isLoading ? (
+                        <div className="flex items-center justify-center h-full"><Loader2 className="animate-spin" /></div>
+                    ) : (
+                        <ConversationList conversations={sortedConversations} onSelect={setSelectedConvoId} selectedId={selectedConvoId} />
+                    )}
                 </div>
                 <div className="md:col-span-1">
                     {selectedConversation ? (
-                        <ChatView conversation={selectedConversation} onSendMessage={handleSendMessage} adminName={adminName} />
+                        <ChatView conversation={selectedConversation} onSendMessage={handleSendMessage} adminName={adminName} isLoading={isSending} />
                     ) : (
                         <div className="h-full flex flex-col items-center justify-center text-center text-muted-foreground bg-muted/20">
                             <MessageSquare className="size-12 mb-4"/>

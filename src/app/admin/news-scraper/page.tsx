@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -147,7 +148,9 @@ export default function NewsScraperPage() {
                              />
                         )}
                         <h3 className="text-xl font-bold font-headline">{scrapedData.title}</h3>
-                        <p className="text-sm text-muted-foreground line-clamp-4">{scrapedData.content}</p>
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                            <p>{scrapedData.content}</p>
+                        </div>
                     </div>
                 )}
              </CardContent>
