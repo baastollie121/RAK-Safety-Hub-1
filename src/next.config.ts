@@ -13,9 +13,6 @@ const nextConfig: NextConfig = {
   // Enable strict mode for better React development
   reactStrictMode: true,
   
-  // Enable SWC minification for better performance
-  swcMinify: true,
-  
   // Optimize images
   images: {
     remotePatterns: [
@@ -53,11 +50,12 @@ const nextConfig: NextConfig = {
     contentDispositionType: 'attachment',
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
+
+  // Add packages that should be handled by the server
+  serverExternalPackages: ['genkit'],
   
   // Enable experimental features for better performance
   experimental: {
-    // Enable server components
-    serverComponentsExternalPackages: ['genkit'],
     // Optimize package imports
     optimizePackageImports: [
       '@radix-ui/react-accordion',
