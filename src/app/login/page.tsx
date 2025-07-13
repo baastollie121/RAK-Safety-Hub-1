@@ -30,14 +30,14 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-                <Logo />
-            </div>
-          <CardTitle className="font-headline text-2xl">RAK Safety Hub Login</CardTitle>
-          <CardDescription>Enter your credentials to access your account.</CardDescription>
-        </CardHeader>
         <form onSubmit={handleLogin}>
+          <CardHeader className="text-center">
+              <div className="flex justify-center mb-4">
+                  <Logo />
+              </div>
+            <CardTitle className="font-headline text-2xl">RAK Safety Hub Login</CardTitle>
+            <CardDescription>Enter your credentials to access your account.</CardDescription>
+          </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>

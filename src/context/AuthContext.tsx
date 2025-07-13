@@ -74,7 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             "This user will not have access to protected resources."
           );
           await firebaseSignOut(auth);
-          setUser(null);
+setUser(null);
         }
       } else {
         // User is signed out
@@ -93,8 +93,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         await signInWithEmailAndPassword(auth, email, pass);
         // onAuthStateChanged will handle setting the user state
         return true;
-    } catch (error) {
-        console.error("Login failed:", error);
+    } catch (error: any) {
+        console.error("Login failed:", error.message);
         setLoading(false);
         return false;
     }
