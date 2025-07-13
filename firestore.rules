@@ -3,40 +3,30 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
+    
     // Helper function to check for admin role
     function isAdmin() {
       return request.auth.token.role == 'admin';
     }
 
-    // Admins can read and write to all collections
+    // Helper function to check if the user is the owner of the document
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Admins can read/write anything, which is useful for management.
     match /{document=**} {
       allow read, write: if isAdmin();
     }
     
-    // Users collection rules
+    // Users can read their own user document
     match /users/{userId} {
-      // Any authenticated user can create their own document (for initial setup)
-      allow create: if request.auth != null;
-      // Users can only read their own document
-      allow read: if request.auth.uid == userId;
-      // Users can only update their own document
-      allow update: if request.auth.uid == userId;
-      // Only admins can delete user documents
-      allow delete: if isAdmin();
-    }
-    
-    // Chats collection rules for support widget
-    match /chats/{userId}/{document=**} {
-       // A user can only access their own chat history.
-       allow read, write: if request.auth.uid == userId;
+      allow read: if isOwner(userId);
     }
 
-    // Notifications for training expiry
-    match /notifications/{userId} {
-        allow read: if request.auth.uid == userId;
-        // Notifications are created by backend functions, not clients
-        allow write: if false;
+    // Rules for the chat/messaging system
+    match /chats/{userId}/{document=**} {
+      allow read, write: if isOwner(userId);
     }
   }
 }

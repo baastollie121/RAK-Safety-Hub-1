@@ -4,22 +4,21 @@ rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
     
+    // Helper function to check for admin role
     function isAdmin() {
       return request.auth.token.role == 'admin';
     }
-    
-    // Admins have full access to all files
-    match /{allPaths=**} {
-      allow read, write: if isAdmin();
-    }
 
     // Client-specific document folders
-    // Each client can read and write files ONLY within their own folder.
+    // A user can read/write to their own folder.
+    // An admin can read/write to ANY client's folder.
     match /clients/{userId}/{allPaths=**} {
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read, write: if (request.auth != null && request.auth.uid == userId) || isAdmin();
     }
     
-    // Document library for all users to read from
+    // General document library accessible to all clients.
+    // Any authenticated user can read documents.
+    // Only admins can upload or delete documents here.
     match /documents/{allPaths=**} {
       allow read: if request.auth != null;
       allow write: if isAdmin();
