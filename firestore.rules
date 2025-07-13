@@ -2,23 +2,34 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+
     // Helper function to check if the user is an admin
     function isAdmin() {
       return request.auth.token.role == 'admin';
     }
 
-    // Allow admins to read/write anything in the database
+    // Helper function to check if the user is the owner of the data
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    // Admins can read and write all documents
     match /{document=**} {
       allow read, write: if isAdmin();
     }
 
-    // Allow authenticated clients to read their own user document
-    // This rule is now covered by the one above for admins,
-    // but we'll keep it for clarity and for client-specific permissions.
+    // Rules for the 'users' collection
     match /users/{userId} {
-      allow read: if request.auth.uid == userId && !isAdmin();
-      // Clients should not be able to write to their own user document directly
-      allow write: if false; 
+      // Allow users to read their own profile
+      allow read: if isOwner(userId);
+      // Disallow clients from writing to their own profile to prevent role escalation
+      allow write: if false;
+    }
+
+    // Rules for the 'chats' collection
+    match /chats/{userId}/{document=**} {
+        // Allow users (clients or admins involved in the chat) to read/write to their own chat documents
+        allow read, write: if isOwner(userId);
     }
   }
 }
