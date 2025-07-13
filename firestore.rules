@@ -2,21 +2,23 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-
-    // Helper function to check for admin role
+    // Helper function to check if the user is an admin
     function isAdmin() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+      return request.auth.token.role == 'admin';
     }
 
-    // Users can only read and update their own document
-    match /users/{userId} {
-      allow read, update: if request.auth.uid == userId || isAdmin();
-      allow create: if isAdmin(); // Only admins can create new users
-    }
-    
-    // Default to locked down
+    // Allow admins to read/write anything in the database
     match /{document=**} {
       allow read, write: if isAdmin();
+    }
+
+    // Allow authenticated clients to read their own user document
+    // This rule is now covered by the one above for admins,
+    // but we'll keep it for clarity and for client-specific permissions.
+    match /users/{userId} {
+      allow read: if request.auth.uid == userId && !isAdmin();
+      // Clients should not be able to write to their own user document directly
+      allow write: if false; 
     }
   }
 }
