@@ -61,67 +61,70 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className="w-full max-w-sm">
-        <form onSubmit={handleLogin}>
-          <CardHeader className="text-center">
-              <div className="flex justify-center mb-4">
-                  <Logo />
-              </div>
-            <CardTitle className="font-headline text-2xl">RAK Safety Hub Login</CardTitle>
-            <CardDescription>Enter your credentials to access your account.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="admin@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className={errors.email ? 'border-destructive' : ''}
-              />
-              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  className={errors.password ? 'border-destructive pr-10' : 'pr-10'}
-                />
-                <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon"
-                    className="absolute inset-y-0 right-0 h-full px-3"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={showPassword ? "Hide password" : "Show password"}
-                >
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-900 to-slate-800 p-4">
+      <Card className="w-full max-w-sm relative overflow-hidden bg-card/80 backdrop-blur-sm border-primary/20 shadow-primary/10 shadow-2xl">
+         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/10 opacity-50"></div>
+         <div className="relative">
+            <form onSubmit={handleLogin}>
+              <CardHeader className="text-center">
+                  <div className="flex justify-center mb-4">
+                      <Logo />
+                  </div>
+                <CardTitle className="font-headline text-2xl">RAK Safety Hub Login</CardTitle>
+                <CardDescription>Enter your credentials to access your account.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="admin@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className={errors.email ? 'border-destructive' : ''}
+                  />
+                  {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password">Password</Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      className={errors.password ? 'border-destructive pr-10' : 'pr-10'}
+                    />
+                    <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="absolute inset-y-0 right-0 h-full px-3"
+                        onClick={() => setShowPassword(!showPassword)}
+                        aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                        {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+                </div>
+                <div className="flex items-center space-x-2">
+                    <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(!!checked)} />
+                    <Label htmlFor="remember-me" className="text-sm font-normal">Remember me</Label>
+                </div>
+              </CardContent>
+              <CardFooter>
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {isLoading ? 'Logging in...' : 'Login'}
                 </Button>
-              </div>
-              {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
-            </div>
-            <div className="flex items-center space-x-2">
-                <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(!!checked)} />
-                <Label htmlFor="remember-me" className="text-sm font-normal">Remember me</Label>
-            </div>
-          </CardContent>
-          <CardFooter>
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isLoading ? 'Logging in...' : 'Login'}
-            </Button>
-          </CardFooter>
-        </form>
+              </CardFooter>
+            </form>
+         </div>
       </Card>
     </div>
   );
