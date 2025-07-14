@@ -52,15 +52,15 @@ function AppSkeleton() {
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, loading } = useAuth();
 
   useEffect(() => {
-    if (!isLoading && !isAuthenticated && pathname !== '/login') {
+    if (!loading && !isAuthenticated && pathname !== '/login') {
       router.push('/login');
     }
-  }, [isLoading, isAuthenticated, pathname, router]);
+  }, [loading, isAuthenticated, pathname, router]);
 
-  if (isLoading) {
+  if (loading) {
     return <AppSkeleton />;
   }
   

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import jsPDF from 'jspdf';
@@ -34,11 +34,14 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Loader2, Download, CalendarIcon, WandSparkles, FileArchive, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { generateMethodStatement } from '@/ai/flows/method-statement-generator';
+import { generateMethodStatement, GenerateMethodStatementOutput } from '@/ai/flows/method-statement-generator';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
-import type { GenerateMethodStatementOutput } from '@/ai/flows/method-statement-generator';
+
+const procedureStepSchema = z.object({
+  value: z.string().min(1, "Step description cannot be empty."),
+});
 
 const formSchema = z.object({
   companyName: z.string().min(1, 'Company Name is required.'),
@@ -50,7 +53,7 @@ const formSchema = z.object({
   hazards: z.string().min(1, 'Identified Hazards are required.'),
   ppe: z.string().min(1, 'Personal Protective Equipment (PPE) is required.'),
   equipment: z.string().min(1, 'Equipment & Resources are required.'),
-  procedure: z.array(z.string().min(1, "Step description cannot be empty.")).min(1, "At least one procedure step is required."),
+  procedure: z.array(procedureStepSchema).min(1, "At least one procedure step is required."),
   training: z.string().min(1, 'Training & Competency requirements are required.'),
   monitoring: z.string().min(1, 'Supervision & Monitoring procedures are required.'),
   emergencyProcedures: z.string().min(1, 'Emergency Procedures are required.'),
@@ -88,7 +91,7 @@ export default function MethodStatementPage() {
       hazards: '',
       ppe: '',
       equipment: '',
-      procedure: [''],
+      procedure: [{ value: '' }],
       training: '',
       monitoring: '',
       emergencyProcedures: '',
@@ -107,6 +110,7 @@ export default function MethodStatementPage() {
       const submissionData = {
         ...data,
         reviewDate: format(data.reviewDate, 'PPP'),
+        procedure: data.procedure.map(p => p.value),
       };
       const response = await generateMethodStatement(submissionData);
       setResult(response);
@@ -191,7 +195,7 @@ export default function MethodStatementPage() {
     }
   };
 
-  const formSection = (name: keyof FormValues, label: string, placeholder: string, isTextarea = true, rows = 3) => (
+  const formSection = (name: keyof FormValues, label: string, placeholder: string, isTextarea = true) => (
       <FormField
           control={form.control}
           name={name as any}
@@ -200,7 +204,7 @@ export default function MethodStatementPage() {
                   <FormLabel>{label}</FormLabel>
                   <FormControl>
                     {isTextarea ? (
-                      <Textarea placeholder={placeholder} {...field} rows={rows} />
+                      <Textarea placeholder={placeholder} {...field} />
                     ) : (
                       <Input placeholder={placeholder} {...field} />
                     )}
@@ -270,15 +274,15 @@ export default function MethodStatementPage() {
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  {formSection('scope', 'Scope of Work', 'e.g., This procedure covers the lifting, placement, and securing of three HVAC units onto the roof of the main warehouse building...', 5)}
-                  {formSection('hazards', 'Identified Hazards (from HIRA/JHA)', 'e.g., Working at heights, suspended loads, manual handling, electrical connections, adverse weather.', 5)}
-                  {formSection('ppe', 'Personal Protective Equipment (PPE)', 'e.g., Hard hat, safety glasses, steel-toed boots, high-visibility vest, fall arrest harness, and appropriate gloves.', 5)}
-                   {formSection('equipment', 'Equipment & Resources', 'e.g., 100-ton mobile crane, certified lifting slings and shackles, hand tools, taglines, communication radios.', 5)}
+                  {formSection('scope', 'Scope of Work', 'e.g., This procedure covers the lifting, placement, and securing of three HVAC units onto the roof of the main warehouse building...')}
+                  {formSection('hazards', 'Identified Hazards (from HIRA/JHA)', 'e.g., Working at heights, suspended loads, manual handling, electrical connections, adverse weather.')}
+                  {formSection('ppe', 'Personal Protective Equipment (PPE)', 'e.g., Hard hat, safety glasses, steel-toed boots, high-visibility vest, fall arrest harness, and appropriate gloves.')}
+                   {formSection('equipment', 'Equipment & Resources', 'e.g., 100-ton mobile crane, certified lifting slings and shackles, hand tools, taglines, communication radios.')}
                 </div>
                  <div className="space-y-4">
-                  {formSection('training', 'Training & Competency', 'e.g., All personnel must have valid site induction. Crane operator must be certified. Riggers and signalers must be competent. All staff trained on this method statement.', 5)}
-                  {formSection('monitoring', 'Supervision & Monitoring', 'e.g., A full-time supervisor will oversee the lift. A pre-lift safety briefing will be conducted. Wind speed will be monitored continuously.', 5)}
-                  {formSection('emergencyProcedures', 'Emergency Procedures', 'e.g., In case of lift failure, clear the area immediately. For medical emergencies, contact the site first aider and call emergency services. The assembly point is...', 5)}
+                  {formSection('training', 'Training & Competency', 'e.g., All personnel must have valid site induction. Crane operator must be certified. Riggers and signalers must be competent. All staff trained on this method statement.')}
+                  {formSection('monitoring', 'Supervision & Monitoring', 'e.g., A full-time supervisor will oversee the lift. A pre-lift safety briefing will be conducted. Wind speed will be monitored continuously.')}
+                  {formSection('emergencyProcedures', 'Emergency Procedures', 'e.g., In case of lift failure, clear the area immediately. For medical emergencies, contact the site first aider and call emergency services. The assembly point is...')}
                 </div>
               </CardContent>
           </Card>
@@ -295,7 +299,7 @@ export default function MethodStatementPage() {
                          <FormField
                           key={field.id}
                           control={form.control}
-                          name={`procedure.${index}`}
+                          name={`procedure.${index}.value`}
                           render={({ field }) => (
                               <FormItem>
                                   <div className="flex items-start gap-2">
@@ -313,7 +317,7 @@ export default function MethodStatementPage() {
                           />
                       ))}
                   </div>
-                  <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append("")}>
+                  <Button type="button" variant="outline" size="sm" className="mt-4" onClick={() => append({ value: "" })}>
                       <PlusCircle className="mr-2 size-4" /> Add Step
                   </Button>
                   {form.formState.errors.procedure && <p className="text-destructive text-sm mt-2">{form.formState.errors.procedure.root?.message}</p>}

@@ -2,7 +2,7 @@
 // This is a temporary script to create a user in Firebase Authentication.
 // We will delete this file after the user is created.
 import { initializeApp, getApps, getApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, doc, setDoc } from "firebase/firestore";
 
 // Your web app's Firebase configuration
@@ -20,33 +20,34 @@ const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-async function createUser() {
-  const email = 'admin@example.com';
-  const password = 'password123';
+async function createAdminUserDocument() {
+  const email = 'rukoen@gmail.com';
+  const password = '50700Koen*'; // Use the password from users.json
 
   try {
-    // Step 1: Create the user in Firebase Authentication
-    const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+    // Step 1: Sign in to get the user's UID. We assume the user already exists in Auth.
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
     const user = userCredential.user;
-    console.log('Successfully created user in Firebase Auth:', user.uid);
+    console.log('Successfully signed in user to get UID:', user.uid);
 
-    // Step 2: Create a corresponding document in Firestore
+    // Step 2: Create the corresponding document in Firestore with admin privileges.
+    // This will overwrite any existing document for this UID.
     await setDoc(doc(db, "users", user.uid), {
       email: user.email,
       companyId: "rak-safety-admin",
       companyName: "RAK Safety",
-      isAdmin: true,
+      isAdmin: true, // Assign admin role
       role: "admin",
       createdAt: new Date(),
       updatedAt: new Date(),
-      firstName: "Admin",
-      lastName: "User"
+      firstName: "Rukoen", // Example name
+      lastName: "Admin"
     });
-    console.log('Successfully created user document in Firestore.');
+    console.log('Successfully created/updated user document in Firestore with admin privileges.');
 
   } catch (error) {
-    console.error('Error creating user:', error);
+    console.error('Error creating admin user document:', error);
   }
 }
 
-createUser();
+createAdminUserDocument();

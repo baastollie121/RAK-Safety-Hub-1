@@ -242,7 +242,10 @@ export default function ClientMessagesPage() {
                     const existingConvo = prev.find(c => c.id === client.id);
                     if (lastMessageData) {
                         const newConvoData = {
-                            ...client,
+                            id: client.id,
+                            userName: client.name,
+                            userEmail: client.email,
+                            avatar: client.avatar,
                             lastMessage: lastMessageData.text,
                             lastMessageTimestamp: lastMessageData.timestamp,
                             unreadCount: existingConvo?.unreadCount || 0, // Placeholder

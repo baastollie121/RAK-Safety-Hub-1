@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -8,23 +9,52 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
+import { Eye, EyeOff, Loader2 } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { z } from 'zod';
+
+const loginSchema = z.object({
+  email: z.string().email({ message: "Invalid email address." }),
+  password: z.string().min(6, { message: "Password must be at least 6 characters." }),
+});
 
 export default function LoginPage() {
   const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
+  const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    const success = await login(email, password);
+    setErrors({});
+    setIsLoading(true);
+
+    const validation = loginSchema.safeParse({ email, password });
+    if (!validation.success) {
+      const fieldErrors: { email?: string; password?: string } = {};
+      for (const issue of validation.error.issues) {
+        if (issue.path[0] === 'email') fieldErrors.email = issue.message;
+        if (issue.path[0] === 'password') fieldErrors.password = issue.message;
+      }
+      setErrors(fieldErrors);
+      setIsLoading(false);
+      return;
+    }
+
+    const success = await login(email, password, rememberMe);
     if (!success) {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
         description: 'Invalid email or password.',
       });
+      setErrors({ email: ' ', password: ' ' }); // Add space to trigger error state without message
     }
+    setIsLoading(false);
   };
 
   return (
@@ -48,23 +78,44 @@ export default function LoginPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
+                className={errors.email ? 'border-destructive' : ''}
               />
+              {errors.email && <p className="text-xs text-destructive">{errors.email}</p>}
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  className={errors.password ? 'border-destructive pr-10' : 'pr-10'}
+                />
+                <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute inset-y-0 right-0 h-full px-3"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? "Hide password" : "Show password"}
+                >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
+            </div>
+            <div className="flex items-center space-x-2">
+                <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(!!checked)} />
+                <Label htmlFor="remember-me" className="text-sm font-normal">Remember me</Label>
             </div>
           </CardContent>
           <CardFooter>
-            <Button type="submit" className="w-full">
-              Login
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isLoading ? 'Logging in...' : 'Login'}
             </Button>
           </CardFooter>
         </form>

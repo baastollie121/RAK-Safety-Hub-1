@@ -18,12 +18,16 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { Download, File, Star, Search } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Download, File, Star, Search, Briefcase, Leaf, Award, Users, Trash2, FileArchive, DownloadCloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { getStorage, ref, getDownloadURL } from "firebase/storage";
 
 interface Doc {
   id: string;
   name: string;
+  path: string; // Firebase storage path
   fileType: string;
   fileSize: string;
   lastModified: string;
@@ -34,78 +38,22 @@ interface DocCategory {
 }
 
 const safetyDocs: DocCategory = {
-  "Safety Manual": [{ id: 'sm1', name: 'Company Safety Manual v1.2', fileType: 'PDF', fileSize: '2.4 MB', lastModified: '2024-05-15' }],
+  "Safety Manual": [{ id: 'sm1', name: 'Company Safety Manual v1.2', path: 'documents/safety/manual.pdf', fileType: 'PDF', fileSize: '2.4 MB', lastModified: '2024-05-15' }],
   "Safety Policies & Procedures": [
-    { id: 'spp1', name: 'General Safety Policy', fileType: 'PDF', fileSize: '350 KB', lastModified: '2023-11-20' },
-    { id: 'spp2', name: 'Working from Home Policy', fileType: 'Word', fileSize: '120 KB', lastModified: '2024-01-30' },
+    { id: 'spp1', name: 'General Safety Policy', path: 'documents/safety/policy.pdf', fileType: 'PDF', fileSize: '350 KB', lastModified: '2023-11-20' },
   ],
-  "Risk Assessments (HIRA)": [
-      { id: 'hira1', name: 'General Office Risk Assessment', fileType: 'Excel', fileSize: '88 KB', lastModified: '2024-06-01' },
-      { id: 'hira2', name: 'Construction Site HIRA Template', fileType: 'PDF', fileSize: '450 KB', lastModified: '2023-09-05' }
-  ],
-  "Safe Work Procedures (SWP)": [
-      { id: 'swp1', name: 'Manual Handling SWP', fileType: 'PDF', fileSize: '210 KB', lastModified: '2024-02-11' },
-      { id: 'swp2', name: 'Lockout/Tagout SWP', fileType: 'PDF', fileSize: '315 KB', lastModified: '2024-03-22' }
-  ],
-  "Method Statements": [{ id: 'ms1', name: 'Installation of HV Equipment', fileType: 'Word', fileSize: '680 KB', lastModified: '2024-04-18' }],
-  "Incident Reports & Investigations": [
-      { id: 'ir1', name: 'Incident Report Form', fileType: 'PDF', fileSize: '150 KB', lastModified: '2023-05-01' },
-      { id: 'ir2', name: 'Investigation Template', fileType: 'Word', fileSize: '95 KB', lastModified: '2023-05-02' }
-  ],
-  "Emergency Plans": [
-      { id: 'ep1', name: 'Fire Evacuation Plan', fileType: 'PDF', fileSize: '1.2 MB', lastModified: '2024-01-10' },
-      { id: 'ep2', name: 'Medical Emergency Response', fileType: 'PDF', fileSize: '850 KB', lastModified: '2024-01-12' }
-  ],
-  "Toolbox Talks & Meeting Minutes": [{ id: 'tt1', name: 'Weekly Safety Meeting Record', fileType: 'Excel', fileSize: '55 KB', lastModified: '2024-07-01' }],
-  "Legal & Other Appointments": [{ id: 'la1', name: 'CEO Appointment Letter', fileType: 'PDF', fileSize: '90 KB', lastModified: '2022-01-01' }],
-  "Registers & Checklists": [
-      { id: 'rc1', name: 'First Aid Box Register', fileType: 'Excel', fileSize: '45 KB', lastModified: '2024-07-01' },
-      { id: 'rc2', name: 'Fire Extinguisher Checklist', fileType: 'PDF', fileSize: '180 KB', lastModified: '2024-06-28' }
-  ],
-  "Fall Protection & Working at Heights": [{ id: 'fp1', name: 'Fall Protection Plan', fileType: 'PDF', fileSize: '950 KB', lastModified: '2024-03-01' }],
-  "Gap Assessments (ISO 45001, Client-specific)": [{ id: 'ga1', name: 'ISO 45001 Gap Assessment Checklist', fileType: 'Excel', fileSize: '250 KB', lastModified: '2023-10-15' }],
-  "Legal Compliance Audit Reports": [{ id: 'lcar1', name: 'OHS Act Compliance Audit Report 2023', fileType: 'PDF', fileSize: '3.1 MB', lastModified: '2023-12-01' }],
-  "Internal Audit Plan": [{ id: 'iap1', name: 'Internal Audit Schedule 2024', fileType: 'Word', fileSize: '75 KB', lastModified: '2024-02-01' }],
-  "Internal Audit Reports": [{ id: 'iar1', name: 'Q1 Internal Audit Report', fileType: 'PDF', fileSize: '450 KB', lastModified: '2024-04-05' }],
 };
 
 const environmentalDocs: DocCategory = {
-  "Environmental Manual": [{ id: 'em1', name: 'Environmental Management Manual', fileType: 'PDF', fileSize: '1.8 MB', lastModified: '2023-08-20' }],
-  "Environmental Policy": [{ id: 'epolicy1', name: 'Company Environmental Policy', fileType: 'PDF', fileSize: '200 KB', lastModified: '2023-01-15' }],
-  "Impact Assessments": [{ id: 'ia1', name: 'New Development EIA Report', fileType: 'PDF', fileSize: '5.5 MB', lastModified: '2022-11-30' }],
-  "Waste Management Plans": [{ id: 'wmp1', name: 'Hazardous Waste Management Plan', fileType: 'Word', fileSize: '400 KB', lastModified: '2024-02-28' }],
-  "Environmental Incident Reports": [{ id: 'eir1', name: 'Chemical Spill Report Form', fileType: 'PDF', fileSize: '130 KB', lastModified: '2023-04-10' }],
-  "Environmental Inspection Checklist": [{ id: 'eic1', name: 'Site Environmental Checklist', fileType: 'Excel', fileSize: '60 KB', lastModified: '2024-06-15' }],
+  "Environmental Manual": [{ id: 'em1', name: 'Environmental Management Manual', path: 'documents/environmental/manual.pdf', fileType: 'PDF', fileSize: '1.8 MB', lastModified: '2023-08-20' }],
 };
 
 const qualityDocs: DocCategory = {
-  "Quality Manual": [{ id: 'qm1', name: 'ISO 9001 Quality Manual', fileType: 'PDF', fileSize: '2.1 MB', lastModified: '2023-07-01' }],
-  "Quality Policy": [{ id: 'qpolicy1', name: 'Company Quality Policy', fileType: 'PDF', fileSize: '180 KB', lastModified: '2023-01-15' }],
-  "Quality Procedures & Work Instructions": [{ id: 'qpwi1', name: 'Document Control Procedure', fileType: 'Word', fileSize: '300 KB', lastModified: '2023-02-10' }],
-  "Audit Reports (Internal & External)": [{ id: 'qar1', name: 'External Audit Report 2023', fileType: 'PDF', fileSize: '1.5 MB', lastModified: '2023-11-05' }],
-  "Non-conformance & Corrective Actions": [{ id: 'ncr1', name: 'NCR Form', fileType: 'Excel', fileSize: '90 KB', lastModified: '2023-03-01' }],
-  "Management Reviews": [{ id: 'mr1', name: 'Management Review Meeting Minutes', fileType: 'PDF', fileSize: '600 KB', lastModified: '2024-05-20' }],
-  "Client & Supplier": [{ id: 'cs1', name: 'Supplier Evaluation Form', fileType: 'Word', fileSize: '150 KB', lastModified: '2024-01-10' }],
-  "Quality Control Checklists": [{ id: 'qcc1', name: 'Final Product Inspection Checklist', fileType: 'PDF', fileSize: '220 KB', lastModified: '2024-06-18' }],
-  "Tool & Equipment Inspection Logs": [{ id: 'teil1', name: 'Crane Inspection Log', fileType: 'Excel', fileSize: '120 KB', lastModified: '2024-07-01' }],
+  "Quality Manual": [{ id: 'qm1', name: 'ISO 9001 Quality Manual', path: 'documents/quality/manual.pdf', fileType: 'PDF', fileSize: '2.1 MB', lastModified: '2023-07-01' }],
 };
 
 const hrDocs: DocCategory = {
-  "HR Policies & Procedures": [{ id: 'hrpp1', name: 'Employee Handbook', fileType: 'PDF', fileSize: '1.1 MB', lastModified: '2024-01-01' }],
-  "General Appointments": [{ id: 'hrga1', name: 'Appointment Letter Template', fileType: 'Word', fileSize: '80 KB', lastModified: '2023-01-10' }],
-  "Hiring Policy": [{ id: 'hrhp1', name: 'Recruitment and Selection Policy', fileType: 'PDF', fileSize: '250 KB', lastModified: '2023-02-15' }],
-  "Company Property Policy": [{ id: 'hrcpp1', name: 'Asset Usage Policy', fileType: 'PDF', fileSize: '180 KB', lastModified: '2023-03-20' }],
-  "Performance Management": [{ id: 'hrpm1', name: 'Performance Review Form', fileType: 'Word', fileSize: '110 KB', lastModified: '2024-06-01' }],
-  "Disciplinary & Grievance": [
-    { id: 'hrdg1', name: 'Disciplinary Code', fileType: 'PDF', fileSize: '350 KB', lastModified: '2023-04-01' },
-    { id: 'hrdg2', name: 'Grievance Form', fileType: 'Word', fileSize: '70 KB', lastModified: '2023-04-01' }
-  ],
-  "Leave Request Forms": [{ id: 'hrlr1', name: 'Annual Leave Request Form', fileType: 'PDF', fileSize: '60 KB', lastModified: '2023-01-01' }],
-  "Employment Contracts & Agreements": [{ id: 'hrec1', name: 'Permanent Employment Contract Template', fileType: 'Word', fileSize: '150 KB', lastModified: '2023-01-10' }],
-  "Warning Templates": [
-    { id: 'hrwt1', name: 'Verbal Warning Template', fileType: 'Word', fileSize: '50 KB', lastModified: '2023-02-01' },
-    { id: 'hrwt2', name: 'Written Warning Template', fileType: 'Word', fileSize: '55 KB', lastModified: '2023-02-01' }
-  ],
+  "HR Policies & Procedures": [{ id: 'hrpp1', name: 'Employee Handbook', path: 'documents/hr/handbook.pdf', fileType: 'PDF', fileSize: '1.1 MB', lastModified: '2024-01-01' }],
 };
 
 const allDocsList: Doc[] = [
@@ -115,11 +63,21 @@ const allDocsList: Doc[] = [
   ...Object.values(hrDocs).flat(),
 ];
 
+const allCategories = {
+    'All Documents': allDocsList,
+    'Safety': Object.values(safetyDocs).flat(),
+    'Environmental': Object.values(environmentalDocs).flat(),
+    'Quality': Object.values(qualityDocs).flat(),
+    'HR': Object.values(hrDocs).flat(),
+}
+
 export default function DocumentsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [favorites, setFavorites] = useState<string[]>([]);
   const [isMounted, setIsMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState('safety');
+  const [activeTab, setActiveTab] = useState('All Documents');
+  const [sortOrder, setSortOrder] = useState<'name' | 'date'>('name');
+  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
 
   useEffect(() => {
     setIsMounted(true);
@@ -144,51 +102,65 @@ export default function DocumentsPage() {
         : [...prev, docId]
     );
   };
-
-  const handleDownload = (doc: Doc) => {
-    const fileContent = `This is a placeholder for the document: ${doc.name}\n\nFile Type: ${doc.fileType}\nFile Size: ${doc.fileSize}\nLast Modified: ${doc.lastModified}`;
-    const blob = new Blob([fileContent], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `${doc.name.replace(/\s+/g, '_')}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+  
+  const toggleSelection = (docId: string) => {
+    setSelectedDocs(prev => prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId]);
+  }
+  
+  const handleDownload = async (doc: Doc) => {
+    const storage = getStorage();
+    const docRef = ref(storage, doc.path);
+    try {
+        const url = await getDownloadURL(docRef);
+        const link = document.createElement('a');
+        link.href = url;
+        link.target = "_blank"; // Open in new tab to download
+        link.download = doc.name;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch(error) {
+        console.error("Download error:", error);
+        alert("Could not download file. Please check permissions or contact support.");
+    }
   };
 
-  const favoriteDocs = useMemo(() => {
-    return allDocsList.filter(doc => favorites.includes(doc.id))
-      .sort((a,b) => a.name.localeCompare(b.name));
-  }, [favorites]);
-  
-  const filterDocs = (category: DocCategory): [DocCategory, number] => {
-    if (!searchTerm) return [category, Object.values(category).flat().length];
+  const filteredAndSortedDocs = useMemo(() => {
+    let docs = activeTab === 'All Documents' ? allDocsList : allCategories[activeTab as keyof typeof allCategories];
 
-    let count = 0;
-    const filteredCategory: DocCategory = {};
-    for (const subSection in category) {
-      const matchingDocs = category[subSection].filter(doc => 
-        doc.name.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      if (matchingDocs.length > 0) {
-        filteredCategory[subSection] = matchingDocs;
-        count += matchingDocs.length;
-      }
+    if (searchTerm) {
+        docs = docs.filter(doc => doc.name.toLowerCase().includes(searchTerm.toLowerCase()));
     }
-    return [filteredCategory, count];
+    
+    docs.sort((a, b) => {
+        if (sortOrder === 'name') {
+            return a.name.localeCompare(b.name);
+        } else {
+            return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
+        }
+    });
+
+    return docs;
+  }, [activeTab, searchTerm, sortOrder]);
+  
+  const toggleSelectAll = () => {
+      if(selectedDocs.length === filteredAndSortedDocs.length) {
+          setSelectedDocs([]);
+      } else {
+          setSelectedDocs(filteredAndSortedDocs.map(d => d.id));
+      }
   }
 
-  const [filteredSafetyDocs, safetyCount] = filterDocs(safetyDocs);
-  const [filteredEnvDocs, envCount] = filterDocs(environmentalDocs);
-  const [filteredQualityDocs, qualityCount] = filterDocs(qualityDocs);
-  const [filteredHrDocs, hrCount] = filterDocs(hrDocs);
-
   const DocumentRow = ({ doc }: { doc: Doc }) => (
-     <li className="flex items-center justify-between group py-1">
-        <div className="flex items-center gap-2">
-            <Button variant="ghost" size="icon" className="size-7" onClick={() => toggleFavorite(doc.id)}>
+     <li className="flex items-center justify-between group py-1 pr-2 rounded-md hover:bg-muted/50 transition-colors">
+        <div className="flex items-center gap-1">
+            <Checkbox
+                aria-label={`Select document ${doc.name}`}
+                checked={selectedDocs.includes(doc.id)}
+                onCheckedChange={() => toggleSelection(doc.id)}
+                className="mx-2"
+            />
+            <Button variant="ghost" size="icon" className="w-7 h-7" aria-label={favorites.includes(doc.id) ? "Remove from favorites" : "Add to favorites"} onClick={() => toggleFavorite(doc.id)}>
                 <Star className={cn("size-4 text-muted-foreground transition-colors", favorites.includes(doc.id) && "fill-yellow-400 text-yellow-400")} />
             </Button>
             <TooltipProvider>
@@ -196,7 +168,7 @@ export default function DocumentsPage() {
                     <TooltipTrigger asChild>
                         <div className="flex items-center gap-2 cursor-default">
                             <File className="size-4 text-muted-foreground" />
-                            <span>{doc.name}</span>
+                            <span className="text-sm sm:text-base">{doc.name}</span>
                         </div>
                     </TooltipTrigger>
                     <TooltipContent>
@@ -209,27 +181,31 @@ export default function DocumentsPage() {
                 </Tooltip>
             </TooltipProvider>
         </div>
-        <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)}>
-            <Download className="mr-2 size-4" />
-            Download
+        <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)} aria-label={`Download ${doc.name}`}>
+            <DownloadCloud className="mr-2 size-4" />
+            <span className="hidden sm:inline">Download</span>
         </Button>
     </li>
   )
 
-  const DocumentList = ({ category }: { category: DocCategory }) => (
-      <Accordion type="multiple" className="w-full">
-        {Object.entries(category).map(([subSection, docs]) => (
-          <AccordionItem value={subSection} key={subSection}>
-            <AccordionTrigger>{subSection} ({docs.length})</AccordionTrigger>
-            <AccordionContent>
-              <ul className="space-y-1 pl-4">
-                {docs.map((doc) => <DocumentRow key={doc.id} doc={doc} />)}
-              </ul>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
-    );
+  const BulkActionsToolbar = () => (
+      <div className="flex items-center justify-between p-2 border rounded-lg bg-card mb-4">
+          <div className="flex items-center gap-2">
+              <Checkbox
+                  id="select-all"
+                  aria-label="Select all documents"
+                  checked={selectedDocs.length > 0 && selectedDocs.length === filteredAndSortedDocs.length}
+                  onCheckedChange={toggleSelectAll}
+                />
+              <Label htmlFor="select-all" className="font-semibold text-sm">{selectedDocs.length} selected</Label>
+          </div>
+          <div className="flex items-center gap-2">
+              <Button variant="outline" size="sm" disabled={selectedDocs.length === 0}><Download className="mr-2 size-4"/>Download ZIP</Button>
+              <Button variant="outline" size="sm" disabled={selectedDocs.length === 0}><FileArchive className="mr-2 size-4"/>Archive</Button>
+              <Button variant="destructive" size="sm" disabled={selectedDocs.length === 0}><Trash2 className="mr-2 size-4"/>Delete</Button>
+          </div>
+      </div>
+  )
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -244,110 +220,53 @@ export default function DocumentsPage() {
         </CardContent>
       </Card>
 
-      <Card className="mb-6">
-          <CardContent className="p-4">
-               <div className="relative">
+       <Card className="mb-6">
+          <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
+               <div className="relative flex-grow">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input 
-                    placeholder="Search all documents..."
+                    placeholder="Search documents..."
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     className="pl-10 h-11 text-base"
                 />
             </div>
+            <Select value={sortOrder} onValueChange={(value: 'name' | 'date') => setSortOrder(value)}>
+                <SelectTrigger className="w-full sm:w-[180px] h-11">
+                    <SelectValue placeholder="Sort by..." />
+                </SelectTrigger>
+                <SelectContent>
+                    <SelectItem value="name">Sort by Name</SelectItem>
+                    <SelectItem value="date">Sort by Date</SelectItem>
+                </SelectContent>
+            </Select>
           </CardContent>
       </Card>
       
-      {favorites.length > 0 && (
-         <Card className="mb-6">
-            <CardHeader>
-                <CardTitle className="font-headline flex items-center gap-2">
-                    <Star className="text-yellow-400 fill-yellow-400"/> My Pinned Documents
-                </CardTitle>
-                <CardDescription>Quick access to your most used documents.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                 <ul className="space-y-1">
-                    {favoriteDocs.map(doc => <DocumentRow key={doc.id} doc={doc} />)}
-                </ul>
-            </CardContent>
-         </Card>
-      )}
-
-      <Tabs defaultValue="safety" onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
-          <TabsTrigger
-            value="safety"
-            className={cn(
-              activeTab === 'safety' && 'neon-glow-yellow-animated'
-            )}
-          >
-            Safety ({safetyCount})
-          </TabsTrigger>
-          <TabsTrigger
-            value="environmental"
-            className={cn(
-              activeTab === 'environmental' && 'neon-glow-green-animated'
-            )}
-          >
-            Environmental ({envCount})
-          </TabsTrigger>
-          <TabsTrigger
-            value="quality"
-            className={cn(
-              activeTab === 'quality' && 'neon-glow-blue-animated'
-            )}
-          >
-            Quality ({qualityCount})
-          </TabsTrigger>
-          <TabsTrigger
-            value="hr"
-            className={cn(
-              activeTab === 'hr' && 'neon-glow-red-animated'
-            )}
-          >
-            HR ({hrCount})
-          </TabsTrigger>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
+          <TabsTrigger value="All Documents">All</TabsTrigger>
+          <TabsTrigger value="Safety"><Briefcase className="mr-2 size-4" />Safety</TabsTrigger>
+          <TabsTrigger value="Environmental"><Leaf className="mr-2 size-4"/>Environmental</TabsTrigger>
+          <TabsTrigger value="Quality"><Award className="mr-2 size-4"/>Quality</TabsTrigger>
+          <TabsTrigger value="HR"><Users className="mr-2 size-4"/>HR</TabsTrigger>
         </TabsList>
-        <TabsContent value="safety">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">Safety Documents</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {safetyCount > 0 ? <DocumentList category={filteredSafetyDocs} /> : <p className="text-muted-foreground text-center p-8">No safety documents match your search.</p>}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="environmental">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">Environmental Documents</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {envCount > 0 ? <DocumentList category={filteredEnvDocs} /> : <p className="text-muted-foreground text-center p-8">No environmental documents match your search.</p>}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="quality">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">Quality Documents</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {qualityCount > 0 ? <DocumentList category={filteredQualityDocs} /> : <p className="text-muted-foreground text-center p-8">No quality documents match your search.</p>}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="hr">
-          <Card>
-            <CardHeader>
-              <CardTitle className="font-headline">HR Documents</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {hrCount > 0 ? <DocumentList category={filteredHrDocs} /> : <p className="text-muted-foreground text-center p-8">No HR documents match your search.</p>}
-            </CardContent>
-          </Card>
+        <TabsContent value={activeTab} className="pt-4">
+             <Card>
+                <CardHeader>
+                    <CardTitle className="font-headline">{activeTab}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                    <BulkActionsToolbar />
+                    {filteredAndSortedDocs.length > 0 ? (
+                        <ul className="space-y-1">
+                            {filteredAndSortedDocs.map(doc => <DocumentRow key={doc.id} doc={doc} />)}
+                        </ul>
+                    ) : (
+                        <p className="text-muted-foreground text-center p-8">No documents found.</p>
+                    )}
+                </CardContent>
+            </Card>
         </TabsContent>
       </Tabs>
     </div>

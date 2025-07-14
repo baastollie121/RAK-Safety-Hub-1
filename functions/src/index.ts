@@ -2,7 +2,7 @@
 'use server';
 import {onCall, HttpsError} from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
-import {getStorage, Bucket} from 'firebase-admin/storage';
+import {getStorage} from 'firebase-admin/storage';
 import * as logger from 'firebase-functions/logger';
 
 admin.initializeApp();

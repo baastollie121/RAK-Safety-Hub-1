@@ -51,6 +51,7 @@ export default function SafetyConsultantPage() {
   const [analysisResult, setAnalysisResult] = useState<string | null>(null);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
+  const inputBoxRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     try {
@@ -63,6 +64,7 @@ export default function SafetyConsultantPage() {
     } catch(e) {
         setMessages([{ id: 'initial-bot-message-error', role: 'bot', content: 'Hello! I am Winston, your AI Safety Consultant. How can I assist you today?' }]);
     }
+    inputBoxRef.current?.focus();
   }, []);
 
   useEffect(() => {
@@ -77,6 +79,7 @@ export default function SafetyConsultantPage() {
 
 
   const handleSendMessage = async (messageText?: string) => {
+    if (isBotTyping) return;
     const textToSend = messageText || input;
     if (!textToSend.trim()) return;
 
@@ -116,8 +119,8 @@ export default function SafetyConsultantPage() {
         }
     } catch (error) {
       console.error('Error with AI Safety Consultant:', error);
-      const errorMessageContent = "I'm sorry, but I encountered an error. Please try again.";
-      setMessages(prev => prev.map(m => m.id === botMessageId ? { ...m, content: errorMessageContent } : m));
+      const fallbackBotMessage = "I couldn't process that. Try rephrasing your question or upload a document for review.";
+      setMessages(prev => prev.map(m => m.id === botMessageId ? { ...m, content: fallbackBotMessage } : m));
       toast({
         variant: 'destructive',
         title: 'Error',
@@ -159,7 +162,7 @@ export default function SafetyConsultantPage() {
   };
 
   const handleConfirmSave = () => {
-    // In a real application, you would save the document embedding to a vector store here.
+    // TODO: Save analysisResult to vector store for semantic search
     toast({ title: 'Success', description: "Document added to Winston's core memory." });
     setIsUploadDialogOpen(false);
     setFileToUpload(null);
@@ -248,6 +251,7 @@ export default function SafetyConsultantPage() {
            <div className="p-4 border-t">
             <div className="flex w-full items-center space-x-2">
               <Textarea
+                ref={inputBoxRef}
                 placeholder="Ask Winston a safety question..."
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -283,6 +287,7 @@ export default function SafetyConsultantPage() {
               <Input
                 id="core-memory-file"
                 type="file"
+                accept=".pdf,.doc,.docx,.txt"
                 onChange={(e) => setFileToUpload(e.target.files ? e.target.files[0] : null)}
               />
             </div>

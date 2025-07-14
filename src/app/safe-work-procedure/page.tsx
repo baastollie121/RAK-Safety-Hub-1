@@ -2,7 +2,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
+import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import jsPDF from 'jspdf';
@@ -35,10 +35,14 @@ import {
 import { Calendar } from '@/components/ui/calendar';
 import { Loader2, Download, CalendarIcon, WandSparkles, FileArchive, PlusCircle, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { generateSafeWorkProcedure } from '@/ai/flows/safe-work-procedure-generator';
+import { generateSafeWorkProcedure, GenerateSafeWorkProcedureOutput } from '@/ai/flows/safe-work-procedure-generator';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+
+const procedureStepSchema = z.object({
+  value: z.string().min(1, "Step description cannot be empty."),
+});
 
 const formSchema = z.object({
   taskTitle: z.string().min(1, 'Task / Operation Title is required.'),
@@ -48,16 +52,11 @@ const formSchema = z.object({
   scope: z.string().min(1, 'Scope & Application is required.'),
   hazards: z.string().min(1, 'Identified Hazards are required.'),
   ppe: z.string().min(1, 'Personal Protective Equipment (PPE) is required.'),
-  procedure: z.array(z.string().min(1, "Step description cannot be empty.")).min(1, "At least one procedure step is required."),
+  procedure: z.array(procedureStepSchema).min(1, "At least one procedure step is required."),
   emergencyProcedures: z.string().min(1, 'Emergency Procedures are required.'),
 });
 
 type SwpFormValues = z.infer<typeof formSchema>;
-
-const swpOutputSchema = z.object({
-  swpDocument: z.string(),
-});
-type GenerateSafeWorkProcedureOutput = z.infer<typeof swpOutputSchema>;
 
 interface SavedSwp {
     id: string;
@@ -86,7 +85,7 @@ export default function SafeWorkProcedurePage() {
       scope: '',
       hazards: '',
       ppe: '',
-      procedure: [''],
+      procedure: [{ value: '' }],
       emergencyProcedures: '',
     },
   });
@@ -103,6 +102,7 @@ export default function SafeWorkProcedurePage() {
       const submissionData = {
         ...data,
         reviewDate: format(data.reviewDate, 'PPP'),
+        procedure: data.procedure.map(p => p.value),
       };
       const response = await generateSafeWorkProcedure(submissionData);
       setResult(response);
@@ -186,7 +186,7 @@ export default function SafeWorkProcedurePage() {
     }
   };
 
-  const formSection = (name: keyof SwpFormValues, label: string, placeholder: string, isTextarea = true, rows = 4) => (
+  const formSection = (name: keyof SwpFormValues, label: string, placeholder: string, isTextarea = true) => (
       <FormField
           control={form.control}
           name={name as any}
@@ -195,7 +195,7 @@ export default function SafeWorkProcedurePage() {
                   <FormLabel>{label}</FormLabel>
                   <FormControl>
                     {isTextarea ? (
-                      <Textarea placeholder={placeholder} {...field} rows={rows} />
+                      <Textarea placeholder={placeholder} {...field} />
                     ) : (
                       <Input placeholder={placeholder} {...field} />
                     )}
@@ -274,7 +274,7 @@ export default function SafeWorkProcedurePage() {
                            <FormField
                             key={field.id}
                             control={form.control}
-                            name={`procedure.${index}`}
+                            name={`procedure.${index}.value`}
                             render={({ field }) => (
                                 <FormItem>
                                     <div className="flex items-center gap-2">
@@ -292,7 +292,7 @@ export default function SafeWorkProcedurePage() {
                             />
                         ))}
                     </div>
-                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append("")}>
+                    <Button type="button" variant="outline" size="sm" className="mt-2" onClick={() => append({ value: "" })}>
                         <PlusCircle className="mr-2 size-4" /> Add Step
                     </Button>
                 </div>
