@@ -44,7 +44,7 @@ interface AllDocs {
   hr: DocCategory;
 }
 
-const docStructure = {
+const docStructure: { [key in keyof AllDocs]: string[] } = {
   safety: [
     'Policies & Plans',
     'Risk Assesments',
@@ -107,45 +107,26 @@ export default function DocumentsPage() {
     const fetchDocs = async () => {
       setIsLoading(true);
       try {
+        // Initialize an empty structure for all documents
         const newDocs: AllDocs = { safety: {}, environmental: {}, quality: {}, hr: {} };
-        const storage = getStorage();
-
-        // Initialize all subsections
-        for (const [cat, subSections] of Object.entries(docStructure)) {
-            for (const sub of subSections) {
-                if (!newDocs[cat as keyof AllDocs]) {
-                    newDocs[cat as keyof AllDocs] = {};
-                }
-                 newDocs[cat as keyof AllDocs][sub] = [];
+        for (const category of Object.keys(docStructure) as Array<keyof AllDocs>) {
+            for (const subSection of docStructure[category]) {
+                newDocs[category][subSection] = [];
             }
         }
 
-        // Fetch from Firebase Storage
-        for (const [cat, subSections] of Object.entries(docStructure)) {
-            // Exclude sections managed by documents.json
-            const firebaseSubSections = subSections.filter(sub => !sectionToCategoryMap.hasOwnProperty(sub));
-            for (const sub of firebaseSubSections) {
-                try {
-                    const listRef = ref(storage, `documents/${cat}/${sub}`);
-                    const res = await listAll(listRef);
-                    const files = res.items.map((itemRef) => ({
-                    id: itemRef.fullPath,
-                    name: itemRef.name,
-                    path: itemRef.fullPath,
-                    isExternal: false,
-                    }));
-                    newDocs[cat as keyof AllDocs][sub] = files;
-                } catch(e) { console.warn(`Could not fetch for ${cat}/${sub}`)}
-            }
-        }
-        
-        // Fetch from documents.json
+        // Add the external OHS Act Manual manually to the 'Policies & Plans' section
+        newDocs.safety['Policies & Plans'].push({
+          id: 'external-ohs-manual',
+          name: 'OHS Act Manual',
+          path: 'https://u7t73lof0p.ufs.sh/f/TqKtlDfGZP7BfWqqdioppQAEZ2iVrfBNJ6ChDRk59n7HMedI',
+          isExternal: true,
+        });
+
+        // Load documents from the JSON file and place them in the correct category/subsection
         documentsData.forEach(doc => {
             const category = sectionToCategoryMap[doc.documentSection];
-            if (category) {
-                if (!newDocs[category][doc.documentSection]) {
-                    newDocs[category][doc.documentSection] = [];
-                }
+            if (category && newDocs[category] && newDocs[category][doc.documentSection]) {
                 newDocs[category][doc.documentSection].push({
                     id: doc.id,
                     name: doc.displayName,
@@ -155,20 +136,9 @@ export default function DocumentsPage() {
             }
         });
 
-
-        // Add the external OHS Act Manual manually
-        if (newDocs.safety['Policies & Plans']) {
-          newDocs.safety['Policies & Plans'].unshift({
-            id: 'external-ohs-manual',
-            name: 'OHS Act Manual',
-            path: 'https://u7t73lof0p.ufs.sh/f/TqKtlDfGZP7BfWqqdioppQAEZ2iVrfBNJ6ChDRk59n7HMedI',
-            isExternal: true,
-          });
-        }
-
         setDocs(newDocs);
       } catch (error) {
-        console.error('Error fetching documents:', error);
+        console.error('Error processing documents:', error);
         toast({ variant: 'destructive', title: 'Fetch Failed', description: 'Could not load documents.' });
       } finally {
         setIsLoading(false);
@@ -187,6 +157,8 @@ export default function DocumentsPage() {
       return;
     }
 
+    // This part is for Firebase Storage files, which are not being used for the central library currently.
+    // Kept for future use.
     try {
       const storage = getStorage();
       const url = await getDownloadURL(ref(storage, doc.path));
@@ -298,3 +270,5 @@ export default function DocumentsPage() {
     </div>
   );
 }
+
+    
