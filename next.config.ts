@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   
   // Add packages that should be handled by the server
-  serverExternalPackages: ['genkit'],
+  serverExternalPackages: ['genkit', 'jspdf', 'html2canvas'],
   
   // Optimize images
   images: {
