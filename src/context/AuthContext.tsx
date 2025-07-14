@@ -5,7 +5,7 @@ import {
   User as FirebaseUser,
   onAuthStateChanged,
   signInWithEmailAndPassword,
-  signOut as firebaseSignOut,
+  signOut as firebaseSignout,
   setPersistence,
   browserSessionPersistence,
   browserLocalPersistence
@@ -54,26 +54,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        const userDocRef = doc(db, 'users', firebaseUser.uid);
-        const userDocSnap = await getDoc(userDocRef);
+        try {
+            const userDocRef = doc(db, 'users', firebaseUser.uid);
+            const userDocSnap = await getDoc(userDocRef);
 
-        if (userDocSnap.exists()) {
-          const userData = userDocSnap.data();
-          const role = userData.role === 'admin' ? 'admin' : 'client';
-          
-          setUser({
-            uid: firebaseUser.uid,
-            email: firebaseUser.email,
-            role: role,
-            firstName: userData.firstName || 'User',
-            lastName: userData.lastName || '',
-            companyName: userData.companyName || '',
-          });
-
-        } else {
-          console.error('No user document found for UID:', firebaseUser.uid);
-          await firebaseSignOut(auth);
-          setUser(null);
+            if (userDocSnap.exists()) {
+                const userData = userDocSnap.data();
+                const role = userData.role === 'admin' ? 'admin' : 'client';
+                
+                setUser({
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    role: role,
+                    firstName: userData.firstName || 'User',
+                    lastName: userData.lastName || '',
+                    companyName: userData.companyName || '',
+                });
+            } else {
+                console.error('No user document found for UID:', firebaseUser.uid);
+                await firebaseSignout(auth);
+                setUser(null);
+            }
+        } catch (error) {
+            console.error("Error fetching user data:", error);
+            await firebaseSignout(auth);
+            setUser(null);
         }
       } else {
         setUser(null);
@@ -87,9 +92,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (email: string, pass: string, rememberMe = false) => {
     setLoading(true);
     try {
-        await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
+        const persistence = rememberMe ? browserLocalPersistence : browserSessionPersistence;
+        await setPersistence(auth, persistence);
         await signInWithEmailAndPassword(auth, email, pass);
-        // onAuthStateChanged will handle setting the user state and routing.
+        // onAuthStateChanged will handle setting the user state.
+        // The router.push will be handled by the consuming component (e.g., LoginPage).
         return true;
     } catch (error: any) {
         console.error("Login failed:", error.message);
@@ -99,9 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const logout = async () => {
-    await firebaseSignOut(auth);
-    setUser(null);
-    router.push('/login');
+    await firebaseSignout(auth);
+    setUser(null); // Clear local user state
+    router.push('/login'); // Redirect to login page
   };
 
   return (

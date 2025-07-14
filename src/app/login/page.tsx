@@ -12,6 +12,7 @@ import { Logo } from '@/components/logo';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { z } from 'zod';
+import { useRouter } from 'next/navigation';
 
 const loginSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
@@ -20,6 +21,7 @@ const loginSchema = z.object({
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [rememberMe, setRememberMe] = useState(false);
@@ -45,8 +47,10 @@ export default function LoginPage() {
       return;
     }
 
-    const success = await login(email, password);
-    if (!success) {
+    const success = await login(email, password, rememberMe);
+    if (success) {
+        router.push('/');
+    } else {
       toast({
         variant: 'destructive',
         title: 'Login Failed',

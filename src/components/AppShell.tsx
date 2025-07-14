@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect } from 'react';
@@ -69,6 +70,8 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }
 
   if (!isAuthenticated) {
+    // This state can happen briefly before the redirect effect kicks in.
+    // Showing a skeleton here prevents a flicker of the main UI.
     return <AppSkeleton />;
   }
 

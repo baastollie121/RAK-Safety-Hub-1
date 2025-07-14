@@ -53,7 +53,7 @@ import {
 export function Navigation() {
   const pathname = usePathname();
   const { user, logout } = useAuth();
-  const [hasNewMessages, setHasNewMessages] = useState(true);
+  const [hasNewMessages, setHasNewMessages] = useState(true); // Mocked for now
   const [hasUnreadNews, setHasUnreadNews] = useState(false);
 
   useEffect(() => {
@@ -66,6 +66,7 @@ export function Navigation() {
 
     checkNews();
     
+    // Listen for changes from other tabs
     window.addEventListener('storage', checkNews);
 
     return () => {
@@ -229,7 +230,16 @@ export function Navigation() {
       
       <SidebarGroup className="p-2 mt-auto">
         <SidebarMenu>
-            {renderNavItems(supportNav)}
+            {supportNav.map((item) => (
+                 <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton asChild isActive={pathname === item.href} tooltip={{children: item.label}}>
+                         <Link href={item.href}>
+                            {item.icon}
+                            <span>{item.label}</span>
+                         </Link>
+                    </SidebarMenuButton>
+                 </SidebarMenuItem>
+            ))}
             <SidebarMenuItem>
               <SidebarMenuButton onClick={logout}>
                 <LogOut />
