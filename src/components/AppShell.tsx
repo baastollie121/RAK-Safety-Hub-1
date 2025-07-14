@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useEffect } from 'react';
@@ -81,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <SidebarHeader className="p-0">
           <div className="relative">
              <Image 
-                src="https://i.ibb.co/L5B0BwB/factory-banner.png" 
+                src="https://i.postimg.cc/wvHVPCDR/lx8l1i-2.jpg" 
                 alt="Factory banner"
                 width={300}
                 height={120}
