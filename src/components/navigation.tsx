@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation';
 import {
   Activity,
   Bot,
+  BrainCircuit,
   CalendarCog,
   FileArchive,
   FileCheck2,
@@ -113,6 +114,7 @@ export function Navigation() {
   const adminNav = [
     { href: '/admin/onboard-client', icon: <UserPlus />, label: 'Onboard Client' },
     { href: '/admin/manage-documents', icon: <FileCog />, label: 'Manage Documents' },
+    { href: '/admin/manage-core-memory', icon: <BrainCircuit />, label: 'Manage AI Memory' },
     { href: '/admin/manage-news', icon: <FilePlus />, label: 'Manage Articles' },
     { href: '/admin/news-scraper', icon: <FileSearch />, label: 'News Scraper' },
     { href: '/admin/client-messages', icon: <MessageSquare />, label: 'Client Messages', notification: hasNewMessages },
