@@ -133,74 +133,72 @@ export default function HazardHunterPage() {
           </CardFooter>
         </Card>
 
-        <div className={cn(analysisResult && 'neon-gradient-card')}>
-            <Card className="h-full">
-            <CardHeader>
-                <CardTitle className="font-headline">2. Analysis Results</CardTitle>
-                <CardDescription>
-                Identified hazards and safety assessment will be shown below.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isLoading && (
-                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground space-y-4 py-12">
-                    <Loader2 className="size-8 animate-spin text-primary" />
-                    <p className="font-semibold">Winston is inspecting the image...</p>
-                    <p>This may take a moment.</p>
-                </div>
-                )}
-                {error && (
-                    <Alert variant="destructive">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Analysis Error</AlertTitle>
-                        <AlertDescription>{error}</AlertDescription>
-                    </Alert>
-                )}
-                {!isLoading && !analysisResult && !error && (
-                <div className="text-center text-muted-foreground py-12">
-                    <p>Results will appear here after analysis.</p>
-                </div>
-                )}
-                {analysisResult && (
-                <div className="space-y-6">
-                    <div>
-                    <h3 className="font-semibold mb-2 font-headline">Overall Safety Assessment</h3>
-                    <Alert className={cn({
-                        'neon-glow-red-animated': analysisResult.identifiedHazards.length > 0,
-                        'neon-glow-green-animated': analysisResult.identifiedHazards.length === 0,
-                    })}>
-                        {analysisResult.identifiedHazards.length > 0 ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" /> }
-                        <AlertTitle>{analysisResult.identifiedHazards.length > 0 ? "Potential Risks Detected" : "Looks Good"}</AlertTitle>
-                        <AlertDescription>
-                        {analysisResult.overallSafetyAssessment}
-                        </AlertDescription>
-                    </Alert>
-                    </div>
-                    <div>
-                    <h3 className="font-semibold mb-4 font-headline">Identified Hazards</h3>
-                    {analysisResult.identifiedHazards.length > 0 ? (
-                        <ul className="space-y-4">
-                        {analysisResult.identifiedHazards.map((hazard, index) => (
-                            <li key={index} className="p-3 bg-muted/50 rounded-md">
-                            <p className="font-medium">{hazard}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                                <Progress value={(analysisResult.confidenceScores[index] || 0) * 100} className="h-2 w-full" />
-                                <span className="text-xs font-mono text-muted-foreground w-12 text-right">
-                                {((analysisResult.confidenceScores[index] || 0) * 100).toFixed(0)}%
-                                </span>
-                            </div>
-                            </li>
-                        ))}
-                        </ul>
-                    ) : (
-                        <p className="text-sm text-muted-foreground">No specific hazards were identified by the AI.</p>
-                    )}
-                    </div>
-                </div>
-                )}
-            </CardContent>
-            </Card>
-        </div>
+        <Card className="h-full">
+          <CardHeader>
+              <CardTitle className="font-headline">2. Analysis Results</CardTitle>
+              <CardDescription>
+              Identified hazards and safety assessment will be shown below.
+              </CardDescription>
+          </CardHeader>
+          <CardContent>
+              {isLoading && (
+              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground space-y-4 py-12">
+                  <Loader2 className="size-8 animate-spin text-primary" />
+                  <p className="font-semibold">Winston is inspecting the image...</p>
+                  <p>This may take a moment.</p>
+              </div>
+              )}
+              {error && (
+                  <Alert variant="destructive">
+                      <AlertTriangle className="h-4 w-4" />
+                      <AlertTitle>Analysis Error</AlertTitle>
+                      <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+              )}
+              {!isLoading && !analysisResult && !error && (
+              <div className="text-center text-muted-foreground py-12">
+                  <p>Results will appear here after analysis.</p>
+              </div>
+              )}
+              {analysisResult && (
+              <div className="space-y-6">
+                  <div>
+                  <h3 className="font-semibold mb-2 font-headline">Overall Safety Assessment</h3>
+                  <Alert className={cn({
+                      'neon-glow-red-animated': analysisResult.identifiedHazards.length > 0,
+                      'neon-glow-green-animated': analysisResult.identifiedHazards.length === 0,
+                  })}>
+                      {analysisResult.identifiedHazards.length > 0 ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" /> }
+                      <AlertTitle>{analysisResult.identifiedHazards.length > 0 ? "Potential Risks Detected" : "Looks Good"}</AlertTitle>
+                      <AlertDescription>
+                      {analysisResult.overallSafetyAssessment}
+                      </AlertDescription>
+                  </Alert>
+                  </div>
+                  <div>
+                  <h3 className="font-semibold mb-4 font-headline">Identified Hazards</h3>
+                  {analysisResult.identifiedHazards.length > 0 ? (
+                      <ul className="space-y-4">
+                      {analysisResult.identifiedHazards.map((hazard, index) => (
+                          <li key={index} className="p-3 bg-muted/50 rounded-md">
+                          <p className="font-medium">{hazard}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                              <Progress value={(analysisResult.confidenceScores[index] || 0) * 100} className="h-2 w-full" />
+                              <span className="text-xs font-mono text-muted-foreground w-12 text-right">
+                              {((analysisResult.confidenceScores[index] || 0) * 100).toFixed(0)}%
+                              </span>
+                          </div>
+                          </li>
+                      ))}
+                      </ul>
+                  ) : (
+                      <p className="text-sm text-muted-foreground">No specific hazards were identified by the AI.</p>
+                  )}
+                  </div>
+              </div>
+              )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
