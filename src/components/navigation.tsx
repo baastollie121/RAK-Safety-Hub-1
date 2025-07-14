@@ -35,6 +35,7 @@ import {
   FilePlus,
 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
+import { cn } from '@/lib/utils';
 
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -150,6 +151,9 @@ export function Navigation() {
                   tooltip={{
                     children: item.label,
                   }}
+                   className={cn({
+                    'neon-glow-blue-animated': item.href === '/safety-consultant' && pathname.startsWith(item.href)
+                  })}
                 >
                   <Link href={item.href}>
                     {item.icon}
@@ -176,6 +180,9 @@ export function Navigation() {
           tooltip={{
             children: item.label,
           }}
+          className={cn({
+            'neon-glow-blue-animated': item.href === '/safety-consultant' && pathname.startsWith(item.href)
+          })}
         >
           <Link href={item.href}>
             {item.icon}
