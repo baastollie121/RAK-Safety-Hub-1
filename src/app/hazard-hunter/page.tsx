@@ -165,7 +165,10 @@ export default function HazardHunterPage() {
                 <div className="space-y-6">
                     <div>
                     <h3 className="font-semibold mb-2 font-headline">Overall Safety Assessment</h3>
-                    <Alert className={cn(analysisResult.identifiedHazards.length > 0 ? 'neon-glow-red-animated' : 'neon-glow-green-animated')}>
+                    <Alert className={cn({
+                        'neon-glow-red-animated': analysisResult.identifiedHazards.length > 0,
+                        'neon-glow-green-animated': analysisResult.identifiedHazards.length === 0,
+                    })}>
                         {analysisResult.identifiedHazards.length > 0 ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" /> }
                         <AlertTitle>{analysisResult.identifiedHazards.length > 0 ? "Potential Risks Detected" : "Looks Good"}</AlertTitle>
                         <AlertDescription>
