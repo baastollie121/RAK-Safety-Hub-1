@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
+import Image from 'next/image';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import {
@@ -77,10 +78,18 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarHeader className="bg-black">
-          <div className="flex items-center gap-2 p-2">
-            
-            <div className="ml-auto">
+        <SidebarHeader className="p-0">
+          <div className="relative">
+             <Image 
+                src="https://i.ibb.co/L5B0BwB/factory-banner.png" 
+                alt="Factory banner"
+                width={300}
+                height={120}
+                className="w-full h-auto object-cover"
+                data-ai-hint="factory industry"
+                priority
+              />
+            <div className="absolute top-2 right-2">
               <SidebarTrigger />
             </div>
           </div>
