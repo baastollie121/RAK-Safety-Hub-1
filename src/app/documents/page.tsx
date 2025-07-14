@@ -10,28 +10,26 @@ import {
 } from '@/components/ui/accordion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, File, Star, Search, Briefcase, Leaf, Award, Users, Trash2, FileArchive, DownloadCloud } from 'lucide-react';
-import { cn } from '@/lib/utils';
-import { getStorage, ref, getDownloadURL, listAll } from "firebase/storage";
+  Download,
+  File,
+  Search,
+  Briefcase,
+  Leaf,
+  Award,
+  Users,
+  DownloadCloud,
+} from 'lucide-react';
+import { getStorage, ref, getDownloadURL, listAll } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '@/components/ui/skeleton';
-
+import documentsData from '../../../documents.json'; // Import the JSON data
 
 interface Doc {
   id: string;
   name: string;
-  path: string; // Firebase storage path
+  path: string; // Firebase storage path or external URL
+  isExternal: boolean;
 }
 
 interface DocCategory {
@@ -46,29 +44,57 @@ interface AllDocs {
 }
 
 const docStructure = {
-    safety: [
-        'Policies & Plans',
-        'Risk Assesments',
-        'Method Statements',
-        'Safe Work Procedures',
-        'Checklists'
-    ],
-    environmental: [
-        'Environmental Manual', 'Environmental Policy', 'Impact Assessments',
-        'Waste Management Plans', 'Environmental Incident Reports', 'Environmental Inspection Checklist'
-    ],
-    quality: [
-        'Quality Manual', 'Quality Policy', 'Quality Procedures & Work Instructions',
-        'Audit Reports (Internal & External)', 'Non-conformance & Corrective Actions',
-        'Management Reviews', 'Client & Supplier', 'Quality Control Checklists',
-        'Tool & Equipment Inspection Logs'
-    ],
-    hr: [
-        'HR Policies & Procedures', 'General Appointments', 'Hiring Policy',
-        'Company Property Policy', 'Performance Management', 'Disciplinary & Grievance',
-        'Leave Request Forms', 'Employment Contracts & Agreements', 'Warning Templates'
-    ]
+  safety: [
+    'Policies & Plans',
+    'Risk Assesments',
+    'Method Statements',
+    'Safe Work Procedures',
+    'Checklists',
+    'general-documents',
+    'hira-reports',
+    'she-plans',
+  ],
+  environmental: [
+    'Environmental Manual',
+    'Environmental Policy',
+    'Impact Assessments',
+    'Waste Management Plans',
+    'Environmental Incident Reports',
+    'Environmental Inspection Checklist',
+  ],
+  quality: [
+    'Quality Manual',
+    'Quality Policy',
+    'Quality Procedures & Work Instructions',
+    'Audit Reports (Internal & External)',
+    'Non-conformance & Corrective Actions',
+    'Management Reviews',
+    'Client & Supplier',
+    'Quality Control Checklists',
+    'Tool & Equipment Inspection Logs',
+  ],
+  hr: [
+    'HR Policies & Procedures',
+    'General Appointments',
+    'Hiring Policy',
+    'Company Property Policy',
+    'Performance Management',
+    'Disciplinary & Grievance',
+    'Leave Request Forms',
+    'Employment Contracts & Agreements',
+    'Warning Templates',
+  ],
 };
+
+const sectionToCategoryMap: { [key: string]: keyof AllDocs } = {
+    'hira-reports': 'safety',
+    'method-statements': 'safety',
+    'risk-assessments': 'safety',
+    'she-plans': 'safety',
+    'safe-work-procedures': 'safety',
+    'general-documents': 'safety',
+};
+
 
 export default function DocumentsPage() {
   const [docs, setDocs] = useState<AllDocs | null>(null);
@@ -83,51 +109,81 @@ export default function DocumentsPage() {
         const newDocs: AllDocs = { safety: {}, environmental: {}, quality: {}, hr: {} };
         const storage = getStorage();
 
+        // Initialize all subsections
         for (const [cat, subSections] of Object.entries(docStructure)) {
-          for (const sub of subSections) {
-            const listRef = ref(storage, `documents/${cat}/${sub}`);
-            const res = await listAll(listRef);
-            const files = res.items.map(itemRef => ({
-              id: itemRef.fullPath,
-              name: itemRef.name,
-              path: itemRef.fullPath,
-            }));
-            if (!newDocs[cat as keyof AllDocs]) {
-              newDocs[cat as keyof AllDocs] = {};
+            for (const sub of subSections) {
+                if (!newDocs[cat as keyof AllDocs]) {
+                    newDocs[cat as keyof AllDocs] = {};
+                }
+                 newDocs[cat as keyof AllDocs][sub] = [];
             }
-            newDocs[cat as keyof AllDocs][sub] = files;
-          }
+        }
+
+        // Fetch from Firebase Storage
+        for (const [cat, subSections] of Object.entries(docStructure)) {
+            // Exclude sections managed by documents.json
+            const firebaseSubSections = subSections.filter(sub => !sectionToCategoryMap.hasOwnProperty(sub));
+            for (const sub of firebaseSubSections) {
+                try {
+                    const listRef = ref(storage, `documents/${cat}/${sub}`);
+                    const res = await listAll(listRef);
+                    const files = res.items.map((itemRef) => ({
+                    id: itemRef.fullPath,
+                    name: itemRef.name,
+                    path: itemRef.fullPath,
+                    isExternal: false,
+                    }));
+                    newDocs[cat as keyof AllDocs][sub] = files;
+                } catch(e) { console.warn(`Could not fetch for ${cat}/${sub}`)}
+            }
         }
         
+        // Fetch from documents.json
+        documentsData.forEach(doc => {
+            const category = sectionToCategoryMap[doc.documentSection];
+            if (category) {
+                if (!newDocs[category][doc.documentSection]) {
+                    newDocs[category][doc.documentSection] = [];
+                }
+                newDocs[category][doc.documentSection].push({
+                    id: doc.id,
+                    name: doc.displayName,
+                    path: doc.documentUrl,
+                    isExternal: true
+                });
+            }
+        });
+
+
         // Add the external OHS Act Manual manually
         if (newDocs.safety['Policies & Plans']) {
-            newDocs.safety['Policies & Plans'].unshift({
-                id: 'external-ohs-manual',
-                name: 'OHS Act Manual',
-                path: 'https://u7t73lof0p.ufs.sh/f/TqKtlDfGZP7BfWqqdioppQAEZ2iVrfBNJ6ChDRk59n7HMedI',
-            });
+          newDocs.safety['Policies & Plans'].unshift({
+            id: 'external-ohs-manual',
+            name: 'OHS Act Manual',
+            path: 'https://u7t73lof0p.ufs.sh/f/TqKtlDfGZP7BfWqqdioppQAEZ2iVrfBNJ6ChDRk59n7HMedI',
+            isExternal: true,
+          });
         }
-        
+
         setDocs(newDocs);
       } catch (error) {
-        console.error("Error fetching documents:", error);
-        toast({ variant: 'destructive', title: "Fetch Failed", description: "Could not load documents." });
+        console.error('Error fetching documents:', error);
+        toast({ variant: 'destructive', title: 'Fetch Failed', description: 'Could not load documents.' });
       } finally {
         setIsLoading(false);
       }
     };
 
     fetchDocs();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [toast]);
 
   const handleDownload = async (doc: Doc) => {
     setIsDownloading(doc.id);
-    // Check if it's the external file
-    if (doc.id === 'external-ohs-manual') {
-        window.open(doc.path, '_blank');
-        setIsDownloading(null);
-        return;
+
+    if (doc.isExternal) {
+      window.open(doc.path, '_blank');
+      setIsDownloading(null);
+      return;
     }
 
     try {
@@ -135,7 +191,7 @@ export default function DocumentsPage() {
       const url = await getDownloadURL(ref(storage, doc.path));
       const link = document.createElement('a');
       link.href = url;
-      link.target = "_blank";
+      link.target = '_blank';
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -163,6 +219,11 @@ export default function DocumentsPage() {
       </Button>
     </li>
   );
+  
+  const getSectionDisplayName = (key: string) => {
+    return key.replace(/(-)/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  }
+
 
   const renderDocList = (categoryKey: keyof AllDocs, title: string) => (
     <Card>
@@ -186,9 +247,11 @@ export default function DocumentsPage() {
           <p>No categories found.</p>
         ) : (
           <Accordion type="multiple" className="w-full">
-            {Object.entries(docs[categoryKey]).map(([subSection, docList]) => (
+            {Object.entries(docs[categoryKey])
+            .filter(([, docList]) => docList.length > 0)
+            .map(([subSection, docList]) => (
               <AccordionItem value={subSection} key={subSection}>
-                <AccordionTrigger>{subSection} ({docList.length})</AccordionTrigger>
+                <AccordionTrigger>{getSectionDisplayName(subSection)} ({docList.length})</AccordionTrigger>
                 <AccordionContent>
                   <ul className="space-y-1 pl-4">
                     {docList.length > 0 ? (
