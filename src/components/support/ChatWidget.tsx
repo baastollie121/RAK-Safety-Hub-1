@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
@@ -10,68 +11,99 @@ import { Logo } from '@/components/logo';
 import { Send, X, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
+import { db } from '@/lib/firebase';
+import { collection, query, onSnapshot, addDoc, serverTimestamp, orderBy, doc, setDoc } from 'firebase/firestore';
+
 
 interface Message {
   id: string;
   role: 'user' | 'admin';
   text: string;
-  timestamp: string;
+  timestamp: any; // Can be a Firestore Timestamp or a string
 }
-
-// Mock chat history
-const mockHistory: Message[] = [
-    { id: '1', role: 'admin', text: "Hi there! Welcome to RAK Safety Hub support. How can we help you today?", timestamp: new Date(Date.now() - 60000 * 5).toISOString() },
-];
 
 
 export function ChatWidget() {
     const { user } = useAuth();
     const [isOpen, setIsOpen] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [messages, setMessages] = useState<Message[]>(mockHistory);
+    const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const scrollAreaRef = useRef<HTMLDivElement>(null);
+    const [isSending, setIsSending] = useState(false);
+
+    useEffect(() => {
+        if (!isOpen || !user) return;
+
+        setIsLoading(true);
+        const messagesRef = collection(db, 'chats', user.uid, 'messages');
+        const q = query(messagesRef, orderBy('timestamp', 'asc'));
+
+        const unsubscribe = onSnapshot(q, (querySnapshot) => {
+            const fetchedMessages: Message[] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() as Omit<Message, 'id'> }));
+            setMessages(fetchedMessages);
+            setIsLoading(false);
+
+            // Auto-scroll on new message
+             setTimeout(() => {
+                const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
+                if (viewport) {
+                  viewport.scrollTop = viewport.scrollHeight;
+                }
+            }, 100);
+        });
+
+        return () => unsubscribe();
+
+    }, [isOpen, user]);
 
     useEffect(() => {
         if (isOpen && scrollAreaRef.current) {
             setTimeout(() => {
-                const scrollEl = scrollAreaRef.current?.querySelector('div > div');
-                if (scrollEl) {
-                  scrollEl.scrollTop = scrollEl.scrollHeight;
+                const viewport = scrollAreaRef.current?.querySelector('div[data-radix-scroll-area-viewport]');
+                if (viewport) {
+                  viewport.scrollTop = viewport.scrollHeight;
                 }
             }, 100)
         }
-    }, [isOpen, messages]);
+    }, [isOpen]);
 
 
-    const handleSendMessage = () => {
-        if (!input.trim() || !user) return;
+    const handleSendMessage = async () => {
+        if (!input.trim() || !user || isSending) return;
+        setIsSending(true);
         
-        const newMessage: Message = {
-            id: new Date().toISOString(),
+        const newMessage = {
             role: 'user',
             text: input,
-            timestamp: new Date().toISOString(),
+            timestamp: serverTimestamp(),
+            read: false, // Mark as unread for the admin
         };
 
-        // In a real app, you'd save this to Firestore.
-        // `await addDoc(collection(db, 'chats', user.uid, 'messages'), newMessage)`
-        setMessages(prev => [...prev, newMessage]);
-        setInput('');
+        try {
+            // Ensure the parent chat document exists
+            const chatDocRef = doc(db, 'chats', user.uid);
+            await setDoc(chatDocRef, { 
+                userName: `${user.firstName} ${user.lastName}`, 
+                userEmail: user.email, 
+                lastActivity: serverTimestamp() 
+            }, { merge: true });
 
-        // Simulate admin reply
-        setIsLoading(true);
-        setTimeout(() => {
-             const adminReply: Message = {
-                id: new Date().toISOString() + '2',
-                role: 'admin',
-                text: "Thanks for reaching out! An agent will be with you shortly.",
-                timestamp: new Date().toISOString(),
-            };
-             setMessages(prev => [...prev, adminReply]);
-             setIsLoading(false);
-        }, 1500);
+            const messagesRef = collection(db, 'chats', user.uid, 'messages');
+            await addDoc(messagesRef, newMessage);
+            
+            setInput('');
+        } catch (error) {
+            console.error("Error sending message:", error);
+            // Optionally show a toast to the user
+        } finally {
+            setIsSending(false);
+        }
     };
+
+    const getInitials = (name: string) => {
+        return name.split(' ').map((n) => n[0]).join('').slice(0, 2).toUpperCase();
+    }
 
     return (
         <>
@@ -104,28 +136,27 @@ export function ChatWidget() {
                     </CardHeader>
                     <ScrollArea className="flex-grow bg-muted/30" viewportRef={scrollAreaRef as any}>
                          <div className="p-4 space-y-4">
+                            {isLoading && <div className="text-center p-8"><Loader2 className="animate-spin mx-auto"/></div>}
+                            {!isLoading && messages.length === 0 && (
+                                <div className="text-center p-8 text-muted-foreground">
+                                    <p>Send a message to start a conversation with our support team.</p>
+                                </div>
+                            )}
                             {messages.map(message => (
                                 <div key={message.id} className={cn("flex items-end gap-2", message.role === 'user' ? 'justify-end' : 'justify-start')}>
                                     {message.role === 'admin' && <div className="size-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold shrink-0 text-sm">R</div>}
                                     <div className={cn(
-                                        "rounded-lg p-3 max-w-xs break-words text-sm",
-                                        message.role === 'user' ? "bg-primary text-primary-foreground rounded-br-none" : "bg-muted rounded-bl-none"
+                                        "rounded-lg p-3 max-w-xs break-words text-sm shadow",
+                                        message.role === 'user' ? "bg-primary text-primary-foreground rounded-br-none" : "bg-card rounded-bl-none"
                                     )}>
                                         <p>{message.text}</p>
-                                        <p className={cn("text-xs mt-1", message.role === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground/70')}>
-                                            {format(new Date(message.timestamp), 'p')}
+                                        <p className={cn("text-xs mt-1 text-right", message.role === 'user' ? 'text-primary-foreground/70' : 'text-muted-foreground/70')}>
+                                            {message.timestamp?.toDate ? format(message.timestamp.toDate(), 'p') : ''}
                                         </p>
                                     </div>
+                                    {message.role === 'user' && user && <div className="size-8 rounded-full bg-secondary flex items-center justify-center text-secondary-foreground font-bold shrink-0 text-sm">{getInitials(user.firstName)}</div>}
                                 </div>
                             ))}
-                            {isLoading && (
-                                <div className="flex items-end gap-2 justify-start">
-                                    <div className="size-8 rounded-full bg-primary flex items-center justify-center text-primary-foreground font-bold shrink-0 text-sm">R</div>
-                                    <div className="rounded-lg p-3 max-w-xs break-words text-sm bg-muted rounded-bl-none">
-                                        <Loader2 className="animate-spin" />
-                                    </div>
-                                </div>
-                            )}
                          </div>
                     </ScrollArea>
                     <CardFooter className="p-2 border-t">
@@ -142,9 +173,10 @@ export function ChatWidget() {
                                 }}
                                 rows={1}
                                 className="flex-grow resize-none"
+                                disabled={isSending}
                             />
-                            <Button size="icon" onClick={handleSendMessage} disabled={isLoading || !input.trim()}>
-                                <Send />
+                            <Button size="icon" onClick={handleSendMessage} disabled={isSending || !input.trim()}>
+                                {isSending ? <Loader2 className="animate-spin"/> : <Send />}
                             </Button>
                         </div>
                     </CardFooter>
