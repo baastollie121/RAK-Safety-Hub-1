@@ -54,9 +54,8 @@ export default function LoginPage() {
       toast({
         variant: 'destructive',
         title: 'Login Failed',
-        description: 'Invalid email or password.',
+        description: 'Invalid email or password. Please try again.',
       });
-      setErrors({ email: ' ', password: ' ' }); // Add space to trigger error state without message
     }
     setIsLoading(false);
   };
