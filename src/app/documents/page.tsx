@@ -40,10 +40,11 @@ interface DocCategory {
 }
 
 const safetyDocs: DocCategory = {
-  "Safety Manual": [{ id: 'sm1', name: 'OHS Act Manual', path: 'https://u7t73lof0p.ufs.sh/f/TqKtlDfGZP7BfWqqdioppQAEZ2iVrfBNJ6ChDRk59n7HMedI', fileType: 'PDF', fileSize: 'N/A', lastModified: '2024-07-18', isExternal: true }],
-  "Safety Policies & Procedures": [
-    { id: 'spp1', name: 'General Safety Policy', path: 'documents/safety/policy.pdf', fileType: 'PDF', fileSize: '350 KB', lastModified: '2023-11-20' },
-  ],
+  "Policies and Plans": [{ id: 'sm1', name: 'OHS Act Manual', path: 'https://u7t73lof0p.ufs.sh/f/TqKtlDfGZP7BfWqqdioppQAEZ2iVrfBNJ6ChDRk59n7HMedI', fileType: 'PDF', fileSize: 'N/A', lastModified: '2024-07-18', isExternal: true }],
+  "Risk Assesments": [],
+  "Method Statements": [],
+  "Safe Work Procedures": [],
+  "Checklists": [],
 };
 
 const environmentalDocs: DocCategory = {

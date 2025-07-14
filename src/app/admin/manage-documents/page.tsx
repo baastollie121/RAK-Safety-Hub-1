@@ -58,12 +58,11 @@ interface AllDocs {
 
 const docStructure = {
     safety: [
-        'Safety Manual', 'Safety Policies & Procedures', 'Risk Assessments (HIRA)',
-        'Safe Work Procedures (SWP)', 'Method Statements', 'Incident Reports & Investigations',
-        'Emergency Plans', 'Toolbox Talks & Meeting Minutes', 'Legal & Other Appointments',
-        'Registers & Checklists', 'Fall Protection & Working at Heights',
-        'Gap Assessments (ISO 45001, Client-specific)', 'Legal Compliance Audit Reports',
-        'Internal Audit Plan', 'Internal Audit Reports'
+        'Policies and Plans',
+        'Risk Assesments',
+        'Method Statements',
+        'Safe Work Procedures',
+        'Checklists'
     ],
     environmental: [
         'Environmental Manual', 'Environmental Policy', 'Impact Assessments',
