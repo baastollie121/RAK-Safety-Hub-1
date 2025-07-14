@@ -1,17 +1,18 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import Image from 'next/image';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, Loader2, AlertTriangle, ShieldCheck, ScanSearch } from "lucide-react";
+import { Upload, Loader2, AlertTriangle, ShieldCheck, ScanSearch, Download } from "lucide-react";
 import { aiHazardHunter, type AiHazardHunterOutput } from '@/ai/flows/ai-hazard-hunter';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Progress } from '@/components/ui/progress';
-import { cn } from '@/lib/utils';
+import { useDownloadPdf } from '@/hooks/use-download-pdf';
+import { format } from 'date-fns';
 
 export default function HazardHunterPage() {
   const { toast } = useToast();
@@ -20,6 +21,13 @@ export default function HazardHunterPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<AiHazardHunterOutput | null>(null);
   const [error, setError] = useState<string | null>(null);
+  
+  const reportRef = useRef<HTMLDivElement>(null);
+  const { isDownloading, handleDownload } = useDownloadPdf({
+      reportRef,
+      fileName: `AI-Hazard-Hunter-Report-${format(new Date(), 'yyyy-MM-dd')}`
+  });
+
 
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -161,43 +169,57 @@ export default function HazardHunterPage() {
               </div>
               )}
               {analysisResult && (
-              <div className="space-y-6">
+              <div ref={reportRef} className="space-y-6 bg-background p-4 -m-4">
                   <div>
-                  <h3 className="font-semibold mb-2 font-headline">Overall Safety Assessment</h3>
-                  <Alert className={cn({
-                      'neon-glow-red-animated': analysisResult.identifiedHazards.length > 0,
-                      'neon-glow-green-animated': analysisResult.identifiedHazards.length === 0,
-                  })}>
-                      {analysisResult.identifiedHazards.length > 0 ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4" /> }
-                      <AlertTitle>{analysisResult.identifiedHazards.length > 0 ? "Potential Risks Detected" : "Looks Good"}</AlertTitle>
-                      <AlertDescription>
-                      {analysisResult.overallSafetyAssessment}
-                      </AlertDescription>
-                  </Alert>
+                    <h3 className="font-semibold mb-2 font-headline">Overall Safety Assessment</h3>
+                    <Alert variant={analysisResult.identifiedHazards.length > 0 ? "destructive" : "default"} className={analysisResult.identifiedHazards.length === 0 ? "border-green-500/50" : ""}>
+                        {analysisResult.identifiedHazards.length > 0 ? <AlertTriangle className="h-4 w-4" /> : <ShieldCheck className="h-4 w-4 text-green-500" /> }
+                        <AlertTitle>{analysisResult.identifiedHazards.length > 0 ? "Potential Risks Detected" : "Looks Good"}</AlertTitle>
+                        <AlertDescription>
+                        {analysisResult.overallSafetyAssessment}
+                        </AlertDescription>
+                    </Alert>
                   </div>
                   <div>
-                  <h3 className="font-semibold mb-4 font-headline">Identified Hazards</h3>
-                  {analysisResult.identifiedHazards.length > 0 ? (
-                      <ul className="space-y-4">
-                      {analysisResult.identifiedHazards.map((hazard, index) => (
-                          <li key={index} className="p-3 bg-muted/50 rounded-md">
-                          <p className="font-medium">{hazard}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                              <Progress value={(analysisResult.confidenceScores[index] || 0) * 100} className="h-2 w-full" />
-                              <span className="text-xs font-mono text-muted-foreground w-12 text-right">
-                              {((analysisResult.confidenceScores[index] || 0) * 100).toFixed(0)}%
-                              </span>
-                          </div>
-                          </li>
-                      ))}
-                      </ul>
-                  ) : (
-                      <p className="text-sm text-muted-foreground">No specific hazards were identified by the AI.</p>
-                  )}
+                    <h3 className="font-semibold mb-4 font-headline">Identified Hazards</h3>
+                    {analysisResult.identifiedHazards.length > 0 ? (
+                        <ul className="space-y-4">
+                        {analysisResult.identifiedHazards.map((hazard, index) => (
+                            <li key={index} className="p-3 bg-muted/50 rounded-md">
+                            <p className="font-medium">{hazard}</p>
+                            <div className="flex items-center gap-2 mt-1">
+                                <Progress value={(analysisResult.confidenceScores[index] || 0) * 100} className="h-2 w-full" />
+                                <span className="text-xs font-mono text-muted-foreground w-12 text-right">
+                                {((analysisResult.confidenceScores[index] || 0) * 100).toFixed(0)}%
+                                </span>
+                            </div>
+                            </li>
+                        ))}
+                        </ul>
+                    ) : (
+                        <p className="text-sm text-muted-foreground">No specific hazards were identified by the AI.</p>
+                    )}
                   </div>
               </div>
               )}
           </CardContent>
+           {analysisResult && (
+             <CardFooter>
+                 <Button onClick={handleDownload} disabled={isDownloading} className="w-full">
+                      {isDownloading ? (
+                          <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Saving...
+                          </>
+                      ) : (
+                          <>
+                              <Download className="mr-2 h-4 w-4" />
+                              Save as PDF
+                          </>
+                      )}
+                  </Button>
+            </CardFooter>
+            )}
         </Card>
       </div>
     </div>
