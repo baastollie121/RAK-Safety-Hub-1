@@ -2,30 +2,104 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-  
-    // Helper functions
-    function isAdmin() {
-      return request.auth.token.role == 'admin' || request.auth.token.email == 'admin@example.com';
-    }
-    
-    function isOwner(userId) {
-      return request.auth.uid == userId;
+
+    // ---------- Helper Functions ----------
+    function isAuth() {
+      return request.auth != null;
     }
 
-    // Admins can do anything
+    function userId() {
+      return request.auth.uid;
+    }
+
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(userId())).data;
+    }
+
+    function isAdmin() {
+      return isAuth() && getUserData().isAdmin == true;
+    }
+
+    function isUserInCompany(companyId) {
+      return isAuth() && getUserData().companyId == companyId;
+    }
+
+    // ---------- USERS ----------
+    match /users/{uid} {
+      allow read, write: if isAuth() && userId() == uid;
+    }
+
+    // ---------- AI CONSULTANT HISTORY ----------
+    match /users/{uid}/ai_consultant_history/{convoId} {
+      allow read, write: if isAuth() && userId() == uid;
+    }
+
+    // ---------- COMPANIES ----------
+    match /companies/{companyId} {
+      allow read: if isUserInCompany(companyId);
+      allow write: if isAdmin();
+    }
+
+    // ---------- DOCUMENTS ----------
+    match /documents/{docId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ---------- NEWS ----------
+    match /news/{articleId} {
+      allow read: if isAuth();
+      allow write: if isAdmin();
+    }
+
+    // ---------- MESSAGES ----------
+    match /messages/{messageId} {
+      allow create: if isAuth();
+      allow read, update: if isAdmin();
+    }
+
+    // ---------- EMPLOYEES ----------
+    match /employees/{employeeId} {
+      allow read, update, delete: if isUserInCompany(
+        get(/databases/$(database)/documents/employees/$(employeeId)).data.companyId
+      );
+      allow create: if isUserInCompany(request.resource.data.companyId);
+
+      // Certifications subcollection
+      match /certifications/{certId} {
+        allow read, create, update, delete: if isUserInCompany(
+          get(/databases/$(database)/documents/employees/$(employeeId)).data.companyId
+        );
+      }
+    }
+
+    // ---------- ASSETS ----------
+    match /assets/{assetId} {
+      allow read, update, delete: if isUserInCompany(
+        get(/databases/$(database)/documents/assets/$(assetId)).data.companyId
+      );
+      allow create: if isUserInCompany(request.resource.data.companyId);
+    }
+
+    // ---------- VEHICLES ----------
+    match /vehicles/{vehicleId} {
+      allow read, update, delete: if isUserInCompany(
+        get(/databases/$(database)/documents/vehicles/$(vehicleId)).data.companyId
+      );
+      allow create: if isUserInCompany(request.resource.data.companyId);
+    }
+
+    // ---------- SITES ----------
+    match /sites/{siteId} {
+      allow read, update, delete: if isUserInCompany(
+        get(/databases/$(database)/documents/sites/$(siteId)).data.companyId
+      );
+      allow create: if isUserInCompany(request.resource.data.companyId);
+    }
+
+    // ---------- Fallback (DENY ALL UNHANDLED) ----------
     match /{document=**} {
-      allow read, write: if isAdmin();
-    }
-    
-    // Users can read their own profile
-    match /users/{userId} {
-      allow read: if isOwner(userId);
-      // allow write is handled by admin rule above
-    }
-    
-    // Users can read/write to their own chat document
-    match /chats/{userId}/{document=**} {
-      allow read, write: if isOwner(userId);
+      allow read, write: if false;
     }
   }
 }
