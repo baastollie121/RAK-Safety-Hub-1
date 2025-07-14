@@ -5,8 +5,6 @@ import { useState, useRef } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import ReactMarkdown from 'react-markdown';
 import { format } from 'date-fns';
 import {
@@ -457,6 +455,9 @@ export default function HIRAGeneratorPage() {
     setIsDownloadingPdf(true);
     
     try {
+        const { default: jsPDF } = await import('jspdf');
+        const { default: html2canvas } = await import('html2canvas');
+
         const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true, backgroundColor: null });
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
