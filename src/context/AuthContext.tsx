@@ -6,6 +6,9 @@ import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   signOut as firebaseSignOut,
+  setPersistence,
+  browserSessionPersistence,
+  browserLocalPersistence
 } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 import {
@@ -17,6 +20,7 @@ import {
 } from 'react';
 
 import { auth, db } from '@/lib/firebase';
+import { useRouter } from 'next/navigation';
 
 // Define the User type for your application
 export interface User {
@@ -25,14 +29,14 @@ export interface User {
   role: 'admin' | 'client';
   firstName: string;
   lastName: string;
-  companyId?: string; // Add companyId to the user type
+  companyName?: string;
 }
 
 // Define the AuthContext state
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, pass: string) => Promise<boolean>;
+  login: (email: string, pass: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => Promise<void>;
   isAuthenticated: boolean;
 }
@@ -45,57 +49,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const isAuthenticated = !!user;
+  const router = useRouter();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        // If a Firebase user is authenticated
         const userDocRef = doc(db, 'users', firebaseUser.uid);
         const userDocSnap = await getDoc(userDocRef);
 
         if (userDocSnap.exists()) {
           const userData = userDocSnap.data();
+          const role = userData.role === 'admin' ? 'admin' : 'client';
           
-          // Determine the user's role based on the 'isAdmin' field in Firestore
-          const role = userData.isAdmin === true || userData.role === 'admin' ? 'admin' : 'client';
-
           setUser({
             uid: firebaseUser.uid,
             email: firebaseUser.email,
             role: role,
             firstName: userData.firstName || 'User',
             lastName: userData.lastName || '',
-            companyId: userData.companyId, // Set companyId from Firestore
+            companyName: userData.companyName || '',
           });
+
         } else {
-          console.error(
-            'No user document found for UID:',
-            firebaseUser.uid,
-            "This user will not have access to protected resources."
-          );
+          console.error('No user document found for UID:', firebaseUser.uid);
           await firebaseSignOut(auth);
-setUser(null);
+          setUser(null);
         }
       } else {
-        // User is signed out
         setUser(null);
       }
       setLoading(false);
     });
 
-    // Cleanup subscription on unmount
     return () => unsubscribe();
   }, []);
   
-  const login = async (email: string, pass: string) => {
+  const login = async (email: string, pass: string, rememberMe = false) => {
     setLoading(true);
     try {
+        await setPersistence(auth, rememberMe ? browserLocalPersistence : browserSessionPersistence);
         await signInWithEmailAndPassword(auth, email, pass);
-        // onAuthStateChanged will handle setting the user state, so we just return true
+        // onAuthStateChanged will handle setting the user state and routing.
         return true;
     } catch (error: any) {
         console.error("Login failed:", error.message);
-        setLoading(false); // Make sure to stop loading on failure
+        setLoading(false);
         return false;
     }
   }
@@ -103,6 +101,7 @@ setUser(null);
   const logout = async () => {
     await firebaseSignOut(auth);
     setUser(null);
+    router.push('/login');
   };
 
   return (

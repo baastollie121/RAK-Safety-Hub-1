@@ -57,7 +57,6 @@ export function Navigation() {
   const [hasUnreadNews, setHasUnreadNews] = useState(false);
 
   useEffect(() => {
-    // Check for unread news on initial load and when path changes
     const checkNews = () => {
         if (user?.role === 'client') {
             const unread = localStorage.getItem('hasUnreadNews') === 'true';
@@ -67,7 +66,6 @@ export function Navigation() {
 
     checkNews();
     
-    // Listen for storage events to update notification in real-time
     window.addEventListener('storage', checkNews);
 
     return () => {

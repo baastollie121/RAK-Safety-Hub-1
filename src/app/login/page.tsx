@@ -45,7 +45,7 @@ export default function LoginPage() {
       return;
     }
 
-    const success = await login(email, password, rememberMe);
+    const success = await login(email, password);
     if (!success) {
       toast({
         variant: 'destructive',
