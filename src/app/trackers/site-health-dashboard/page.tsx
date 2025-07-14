@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useMemo } from 'react';
@@ -196,12 +197,17 @@ export default function SiteHealthDashboardPage() {
                                 {assetsNeedingAttention.map(asset => (
                                     <li key={asset.id} className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50">
                                         <span>{asset.name}</span>
-                                        <Badge variant={asset.status === 'Needs Repair' ? 'default' : 'destructive'} className={cn({'bg-yellow-500/20 text-yellow-300 border-yellow-500/30': asset.status === 'Needs Repair', 'bg-red-500/20 text-red-300 border-red-500/30': asset.status === 'Out of Service'})}>{asset.status}</Badge>
+                                        <Badge variant={asset.status === 'Needs Repair' ? 'default' : 'destructive'} className={cn({
+                                                'neon-glow-yellow-animated': asset.status === 'Needs Repair', 
+                                                'neon-glow-red-animated': asset.status === 'Out of Service'
+                                            })}>{asset.status}</Badge>
                                     </li>
                                 ))}
                             </ul>
                         ) : (
-                            <div className="text-sm text-muted-foreground flex items-center gap-2 p-2"><ShieldCheck className="size-4 text-green-400"/>All equipment is operational.</div>
+                             <div className="text-sm flex items-center gap-2 p-2 rounded-md neon-glow-green-animated">
+                                <ShieldCheck className="size-4"/>All equipment is operational.
+                            </div>
                         )}
                     </div>
                      <div>
@@ -214,7 +220,10 @@ export default function SiteHealthDashboardPage() {
                                     return (
                                         <li key={training.id} className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50">
                                             <span>{training.name} - {training.course}</span>
-                                            <Badge variant={isExpired ? 'destructive' : 'default'} className={cn({'bg-red-500/20 text-red-300 border-red-500/30': isExpired, 'bg-yellow-500/20 text-yellow-300 border-yellow-500/30': !isExpired})}>
+                                            <Badge variant={isExpired ? 'destructive' : 'default'} className={cn({
+                                                'neon-glow-red-animated': isExpired,
+                                                'neon-glow-yellow-animated': !isExpired
+                                            })}>
                                                 {isExpired ? `Expired ${-days}d ago` : `Expires in ${days}d`}
                                             </Badge>
                                         </li>
@@ -222,7 +231,9 @@ export default function SiteHealthDashboardPage() {
                                 })}
                             </ul>
                         ) : (
-                            <div className="text-sm text-muted-foreground flex items-center gap-2 p-2"><UserCheck className="size-4 text-green-400"/>All trainings are up-to-date.</div>
+                             <div className="text-sm flex items-center gap-2 p-2 rounded-md neon-glow-green-animated">
+                                <UserCheck className="size-4"/>All trainings are up-to-date.
+                            </div>
                         )}
                     </div>
                 </div>
