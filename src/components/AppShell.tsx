@@ -14,7 +14,6 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar";
 import { Header } from "@/components/Header";
-import { Logo } from "@/components/logo";
 import { Navigation } from "@/components/navigation";
 import { Skeleton } from './ui/skeleton';
 import { ChatWidget } from '@/components/support/ChatWidget';
@@ -80,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <Sidebar>
         <SidebarHeader className="bg-black">
           <div className="flex items-center gap-2 p-2">
-            <Logo />
+            
             <div className="ml-auto">
               <SidebarTrigger />
             </div>
