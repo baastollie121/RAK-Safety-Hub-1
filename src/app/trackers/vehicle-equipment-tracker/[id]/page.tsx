@@ -15,7 +15,7 @@ import {
   CardTitle,
   CardFooter,
 } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -64,6 +64,7 @@ import {
 } from '@/lib/vehicles';
 import VehicleDiagram from '@/components/vehicle/vehicle-diagram';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 const reportDamageSchema = z.object({
   partId: z.string().min(1, 'Please select a part from the diagram.'),
