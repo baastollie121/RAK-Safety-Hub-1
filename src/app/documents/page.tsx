@@ -27,10 +27,11 @@ import { getStorage, ref, getDownloadURL } from "firebase/storage";
 interface Doc {
   id: string;
   name: string;
-  path: string; // Firebase storage path
+  path: string; // Firebase storage path or external URL
   fileType: string;
   fileSize: string;
   lastModified: string;
+  isExternal?: boolean;
 }
 
 interface DocCategory {
@@ -38,7 +39,7 @@ interface DocCategory {
 }
 
 const safetyDocs: DocCategory = {
-  "Safety Manual": [{ id: 'sm1', name: 'Company Safety Manual v1.2', path: 'documents/safety/manual.pdf', fileType: 'PDF', fileSize: '2.4 MB', lastModified: '2024-05-15' }],
+  "Safety Manual": [{ id: 'sm1', name: 'OHS Act Manual', path: 'https://u7t73lof0p.ufs.sh/f/TqKtlDfGZP7BfWqqdioppQAEZ2iVrfBNJ6ChDRk59n7HMedI', fileType: 'PDF', fileSize: 'N/A', lastModified: '2024-07-18', isExternal: true }],
   "Safety Policies & Procedures": [
     { id: 'spp1', name: 'General Safety Policy', path: 'documents/safety/policy.pdf', fileType: 'PDF', fileSize: '350 KB', lastModified: '2023-11-20' },
   ],
@@ -108,6 +109,12 @@ export default function DocumentsPage() {
   }
   
   const handleDownload = async (doc: Doc) => {
+    // If it's an external URL, just open it.
+    if (doc.isExternal) {
+        window.open(doc.path, '_blank');
+        return;
+    }
+
     const storage = getStorage();
     const docRef = ref(storage, doc.path);
     try {
