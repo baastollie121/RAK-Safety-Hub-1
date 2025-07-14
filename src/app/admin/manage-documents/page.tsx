@@ -8,7 +8,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
   Dialog,
@@ -35,16 +35,14 @@ import { Label } from '@/components/ui/label';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Upload, Trash2, File, Loader2, Download } from 'lucide-react';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { storage } from '@/lib/firebase';
 import { ref, deleteObject, uploadBytes, getDownloadURL, listAll } from 'firebase/storage';
+import { cn } from '@/lib/utils';
 
 interface Doc {
   id: string; // Will use the full storage path as ID for uniqueness
   name: string;
-  fileType: string;
-  fileSize: string;
-  downloadURL: string;
+  path: string;
 }
 
 interface DocCategory {
@@ -84,18 +82,11 @@ const docStructure = {
     ]
 };
 
-const formatFileSize = (bytes: number) => {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
-}
-
 export default function ManageDocumentsPage() {
   const [docs, setDocs] = useState<AllDocs | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState<string | null>(null);
   const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
   const [uploadTarget, setUploadTarget] = useState<{ category: keyof AllDocs; subSection: string } | null>(null);
   const [fileToUpload, setFileToUpload] = useState<File | null>(null);
@@ -110,19 +101,10 @@ export default function ManageDocumentsPage() {
             for (const sub of subSections) {
                 const listRef = ref(storage, `documents/${cat}/${sub}`);
                 const res = await listAll(listRef);
-                const files = await Promise.all(res.items.map(async itemRef => {
-                    const metadata = await getDownloadURL(itemRef).then(url => ({
-                        url,
-                        size: -1 // Storage API v9 doesn't give size in getMetadata easily, handle differently
-                    }));
-                    const downloadURL = await getDownloadURL(itemRef);
-                    return {
-                        id: itemRef.fullPath,
-                        name: itemRef.name,
-                        fileType: itemRef.name.split('.').pop()?.toUpperCase() || 'File',
-                        fileSize: '', // Cannot get size easily
-                        downloadURL,
-                    };
+                const files = res.items.map(itemRef => ({
+                    id: itemRef.fullPath,
+                    name: itemRef.name,
+                    path: itemRef.fullPath,
                 }));
                  if (!newDocs[cat as keyof AllDocs]) {
                     newDocs[cat as keyof AllDocs] = {};
@@ -159,6 +141,24 @@ export default function ManageDocumentsPage() {
     } catch (error) {
         console.error("Error deleting file from Firebase Storage:", error);
         toast({ variant: 'destructive', title: "Deletion Failed", description: "Could not remove the file from storage." });
+    }
+  };
+  
+  const handleDownload = async (doc: Doc) => {
+    setIsDownloading(doc.id);
+    try {
+      const url = await getDownloadURL(ref(storage, doc.path));
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = "_blank"; // Or use link.download
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error getting download URL:', error);
+      toast({ variant: 'destructive', title: 'Download Failed', description: 'Could not get the file.'});
+    } finally {
+      setIsDownloading(null);
     }
   };
 
@@ -211,35 +211,50 @@ export default function ManageDocumentsPage() {
                     <ul className="space-y-2 pl-4">
                         {docList.map((doc) => (
                         <li key={doc.id} className="flex items-center justify-between group">
-                            <a href={doc.downloadURL} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 hover:underline">
+                            <div className="flex items-center gap-2">
                                 <File className="size-4 text-muted-foreground" />
                                 <span>{doc.name}</span>
-                            </a>
-                            <AlertDialog>
-                            <AlertDialogTrigger asChild>
+                            </div>
+                            <div className='flex items-center gap-2'>
                                 <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    className="text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
+                                  variant="ghost"
+                                  size="sm"
+                                  disabled={isDownloading === doc.id}
+                                  onClick={() => handleDownload(doc)}
                                 >
-                                    <Trash2 className="size-4" />
+                                  {isDownloading === doc.id ? (
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <Download className="mr-2 h-4 w-4" />
+                                  )}
+                                  Download
                                 </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete the document &quot;{doc.name}&quot;.
-                                </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={() => handleDelete(doc.id, doc.name)}>
-                                    Yes, delete document
-                                </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                            </AlertDialog>
+                                <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="text-destructive hover:bg-destructive/10 opacity-0 group-hover:opacity-100"
+                                    >
+                                        <Trash2 className="size-4" />
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the document &quot;{doc.name}&quot;.
+                                    </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(doc.id, doc.name)}>
+                                        Yes, delete document
+                                    </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                                </AlertDialog>
+                            </div>
                         </li>
                         ))}
                         {docList.length === 0 && (
