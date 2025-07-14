@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useState } from 'react';
@@ -24,6 +23,8 @@ export default function ManageDocumentsPage() {
     { value: 'she-plans', label: 'SHE Plans' },
     { value: 'safe-work-procedures', label: 'Safe Work Procedures' },
     { value: 'general-documents', label: 'General Documents' },
+    { value: 'plans-policies', label: 'Plans & Policies' },
+    { value: 'appointments', label: 'Appointments' },
   ];
 
   const handleSubmit = async (e: React.FormEvent) => {
