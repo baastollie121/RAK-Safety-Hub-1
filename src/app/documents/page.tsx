@@ -47,7 +47,7 @@ interface AllDocs {
 
 const docStructure = {
     safety: [
-        'Policies and Plans',
+        'Policies & Plans',
         'Risk Assesments',
         'Method Statements',
         'Safe Work Procedures',
@@ -100,8 +100,8 @@ export default function DocumentsPage() {
         }
         
         // Add the external OHS Act Manual manually
-        if (newDocs.safety['Policies and Plans']) {
-            newDocs.safety['Policies and Plans'].unshift({
+        if (newDocs.safety['Policies & Plans']) {
+            newDocs.safety['Policies & Plans'].unshift({
                 id: 'external-ohs-manual',
                 name: 'OHS Act Manual',
                 path: 'https://u7t73lof0p.ufs.sh/f/TqKtlDfGZP7BfWqqdioppQAEZ2iVrfBNJ6ChDRk59n7HMedI',
