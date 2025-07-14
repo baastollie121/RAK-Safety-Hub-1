@@ -11,8 +11,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
   Tooltip,
   TooltipContent,
@@ -21,200 +19,191 @@ import {
 } from '@/components/ui/tooltip';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Download, File, Star, Search, Briefcase, Leaf, Award, Users, Trash2, FileArchive, DownloadCloud } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { getStorage, ref, getDownloadURL } from "firebase/storage";
+import { getStorage, ref, getDownloadURL, listAll } from "firebase/storage";
+import { useToast } from '@/hooks/use-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+
 
 interface Doc {
   id: string;
   name: string;
-  path: string; // Firebase storage path or external URL
-  fileType: string;
-  fileSize: string;
-  lastModified: string;
-  isExternal?: boolean;
+  path: string; // Firebase storage path
 }
 
 interface DocCategory {
   [subSection: string]: Doc[];
 }
 
-const safetyDocs: DocCategory = {
-  "Policies and Plans": [{ id: 'sm1', name: 'OHS Act Manual', path: 'https://u7t73lof0p.ufs.sh/f/TqKtlDfGZP7BfWqqdioppQAEZ2iVrfBNJ6ChDRk59n7HMedI', fileType: 'PDF', fileSize: 'N/A', lastModified: '2024-07-18', isExternal: true }],
-  "Risk Assesments": [],
-  "Method Statements": [],
-  "Safe Work Procedures": [],
-  "Checklists": [],
-};
-
-const environmentalDocs: DocCategory = {
-  "Environmental Manual": [{ id: 'em1', name: 'Environmental Management Manual', path: 'documents/environmental/manual.pdf', fileType: 'PDF', fileSize: '1.8 MB', lastModified: '2023-08-20' }],
-};
-
-const qualityDocs: DocCategory = {
-  "Quality Manual": [{ id: 'qm1', name: 'ISO 9001 Quality Manual', path: 'documents/quality/manual.pdf', fileType: 'PDF', fileSize: '2.1 MB', lastModified: '2023-07-01' }],
-};
-
-const hrDocs: DocCategory = {
-  "HR Policies & Procedures": [{ id: 'hrpp1', name: 'Employee Handbook', path: 'documents/hr/handbook.pdf', fileType: 'PDF', fileSize: '1.1 MB', lastModified: '2024-01-01' }],
-};
-
-const allDocsList: Doc[] = [
-  ...Object.values(safetyDocs).flat(),
-  ...Object.values(environmentalDocs).flat(),
-  ...Object.values(qualityDocs).flat(),
-  ...Object.values(hrDocs).flat(),
-];
-
-const allCategories = {
-    'All Documents': allDocsList,
-    'Safety': Object.values(safetyDocs).flat(),
-    'Environmental': Object.values(environmentalDocs).flat(),
-    'Quality': Object.values(qualityDocs).flat(),
-    'HR': Object.values(hrDocs).flat(),
+interface AllDocs {
+  safety: DocCategory;
+  environmental: DocCategory;
+  quality: DocCategory;
+  hr: DocCategory;
 }
 
+const docStructure = {
+    safety: [
+        'Policies and Plans',
+        'Risk Assesments',
+        'Method Statements',
+        'Safe Work Procedures',
+        'Checklists'
+    ],
+    environmental: [
+        'Environmental Manual', 'Environmental Policy', 'Impact Assessments',
+        'Waste Management Plans', 'Environmental Incident Reports', 'Environmental Inspection Checklist'
+    ],
+    quality: [
+        'Quality Manual', 'Quality Policy', 'Quality Procedures & Work Instructions',
+        'Audit Reports (Internal & External)', 'Non-conformance & Corrective Actions',
+        'Management Reviews', 'Client & Supplier', 'Quality Control Checklists',
+        'Tool & Equipment Inspection Logs'
+    ],
+    hr: [
+        'HR Policies & Procedures', 'General Appointments', 'Hiring Policy',
+        'Company Property Policy', 'Performance Management', 'Disciplinary & Grievance',
+        'Leave Request Forms', 'Employment Contracts & Agreements', 'Warning Templates'
+    ]
+};
+
 export default function DocumentsPage() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [favorites, setFavorites] = useState<string[]>([]);
-  const [isMounted, setIsMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState('All Documents');
-  const [sortOrder, setSortOrder] = useState<'name' | 'date'>('name');
-  const [selectedDocs, setSelectedDocs] = useState<string[]>([]);
+  const [docs, setDocs] = useState<AllDocs | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isDownloading, setIsDownloading] = useState<string | null>(null);
+  const { toast } = useToast();
 
   useEffect(() => {
-    setIsMounted(true);
-    try {
-      const storedFavorites = JSON.parse(localStorage.getItem('documentFavorites') || '[]');
-      setFavorites(storedFavorites);
-    } catch (error) {
-      console.error("Failed to parse favorites from localStorage", error);
-    }
+    const fetchDocs = async () => {
+      setIsLoading(true);
+      try {
+        const newDocs: AllDocs = { safety: {}, environmental: {}, quality: {}, hr: {} };
+        const storage = getStorage();
+
+        for (const [cat, subSections] of Object.entries(docStructure)) {
+          for (const sub of subSections) {
+            const listRef = ref(storage, `documents/${cat}/${sub}`);
+            const res = await listAll(listRef);
+            const files = res.items.map(itemRef => ({
+              id: itemRef.fullPath,
+              name: itemRef.name,
+              path: itemRef.fullPath,
+            }));
+            if (!newDocs[cat as keyof AllDocs]) {
+              newDocs[cat as keyof AllDocs] = {};
+            }
+            newDocs[cat as keyof AllDocs][sub] = files;
+          }
+        }
+        
+        // Add the external OHS Act Manual manually
+        if (newDocs.safety['Policies and Plans']) {
+            newDocs.safety['Policies and Plans'].unshift({
+                id: 'external-ohs-manual',
+                name: 'OHS Act Manual',
+                path: 'https://u7t73lof0p.ufs.sh/f/TqKtlDfGZP7BfWqqdioppQAEZ2iVrfBNJ6ChDRk59n7HMedI',
+            });
+        }
+        
+        setDocs(newDocs);
+      } catch (error) {
+        console.error("Error fetching documents:", error);
+        toast({ variant: 'destructive', title: "Fetch Failed", description: "Could not load documents." });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDocs();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  useEffect(() => {
-    if (isMounted) {
-      localStorage.setItem('documentFavorites', JSON.stringify(favorites));
-    }
-  }, [favorites, isMounted]);
-
-  const toggleFavorite = (docId: string) => {
-    setFavorites((prev) =>
-      prev.includes(docId)
-        ? prev.filter((id) => id !== docId)
-        : [...prev, docId]
-    );
-  };
-  
-  const toggleSelection = (docId: string) => {
-    setSelectedDocs(prev => prev.includes(docId) ? prev.filter(id => id !== docId) : [...prev, docId]);
-  }
-  
   const handleDownload = async (doc: Doc) => {
-    // If it's an external URL, just open it.
-    if (doc.isExternal) {
+    setIsDownloading(doc.id);
+    // Check if it's the external file
+    if (doc.id === 'external-ohs-manual') {
         window.open(doc.path, '_blank');
+        setIsDownloading(null);
         return;
     }
 
-    const storage = getStorage();
-    const docRef = ref(storage, doc.path);
     try {
-        const url = await getDownloadURL(docRef);
-        const link = document.createElement('a');
-        link.href = url;
-        link.target = "_blank"; // Open in new tab to download
-        link.download = doc.name;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    } catch(error) {
-        console.error("Download error:", error);
-        alert("Could not download file. Please check permissions or contact support.");
+      const storage = getStorage();
+      const url = await getDownloadURL(ref(storage, doc.path));
+      const link = document.createElement('a');
+      link.href = url;
+      link.target = "_blank";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } catch (error) {
+      console.error('Error getting download URL:', error);
+      toast({ variant: 'destructive', title: 'Download Failed', description: 'Could not get the file.' });
+    } finally {
+      setIsDownloading(null);
     }
   };
 
-  const filteredAndSortedDocs = useMemo(() => {
-    let docs = activeTab === 'All Documents' ? allDocsList : allCategories[activeTab as keyof typeof allCategories];
-
-    if (searchTerm) {
-        docs = docs.filter(doc => doc.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    }
-    
-    docs.sort((a, b) => {
-        if (sortOrder === 'name') {
-            return a.name.localeCompare(b.name);
-        } else {
-            return new Date(b.lastModified).getTime() - new Date(a.lastModified).getTime();
-        }
-    });
-
-    return docs;
-  }, [activeTab, searchTerm, sortOrder]);
-  
-  const toggleSelectAll = () => {
-      if(selectedDocs.length === filteredAndSortedDocs.length) {
-          setSelectedDocs([]);
-      } else {
-          setSelectedDocs(filteredAndSortedDocs.map(d => d.id));
-      }
-  }
-
   const DocumentRow = ({ doc }: { doc: Doc }) => (
-     <li className="flex items-center justify-between group py-1 pr-2 rounded-md hover:bg-muted/50 transition-colors">
-        <div className="flex items-center gap-1">
-            <Checkbox
-                aria-label={`Select document ${doc.name}`}
-                checked={selectedDocs.includes(doc.id)}
-                onCheckedChange={() => toggleSelection(doc.id)}
-                className="mx-2"
-            />
-            <Button variant="ghost" size="icon" className="w-7 h-7" aria-label={favorites.includes(doc.id) ? "Remove from favorites" : "Add to favorites"} onClick={() => toggleFavorite(doc.id)}>
-                <Star className={cn("size-4 text-muted-foreground transition-colors", favorites.includes(doc.id) && "fill-yellow-400 text-yellow-400")} />
-            </Button>
-            <TooltipProvider>
-                <Tooltip>
-                    <TooltipTrigger asChild>
-                        <div className="flex items-center gap-2 cursor-default">
-                            <File className="size-4 text-muted-foreground" />
-                            <span className="text-sm sm:text-base">{doc.name}</span>
-                        </div>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                       <div className="text-sm space-y-1 p-1">
-                            <p><strong>File Type:</strong> {doc.fileType}</p>
-                            <p><strong>File Size:</strong> {doc.fileSize}</p>
-                            <p><strong>Last Modified:</strong> {doc.lastModified}</p>
-                       </div>
-                    </TooltipContent>
-                </Tooltip>
-            </TooltipProvider>
-        </div>
-        <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)} aria-label={`Download ${doc.name}`}>
-            <DownloadCloud className="mr-2 size-4" />
-            <span className="hidden sm:inline">Download</span>
-        </Button>
-    </li>
-  )
-
-  const BulkActionsToolbar = () => (
-      <div className="flex items-center justify-between p-2 border rounded-lg bg-card mb-4">
-          <div className="flex items-center gap-2">
-              <Checkbox
-                  id="select-all"
-                  aria-label="Select all documents"
-                  checked={selectedDocs.length > 0 && selectedDocs.length === filteredAndSortedDocs.length}
-                  onCheckedChange={toggleSelectAll}
-                />
-              <Label htmlFor="select-all" className="font-semibold text-sm">{selectedDocs.length} selected</Label>
-          </div>
-          <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" disabled={selectedDocs.length === 0}><Download className="mr-2 size-4"/>Download ZIP</Button>
-              <Button variant="outline" size="sm" disabled={selectedDocs.length === 0}><FileArchive className="mr-2 size-4"/>Archive</Button>
-              <Button variant="destructive" size="sm" disabled={selectedDocs.length === 0}><Trash2 className="mr-2 size-4"/>Delete</Button>
-          </div>
+    <li className="flex items-center justify-between group py-2 pr-2 rounded-md hover:bg-muted/50 transition-colors">
+      <div className="flex items-center gap-2">
+        <File className="size-4 text-muted-foreground" />
+        <span className="text-sm">{doc.name}</span>
       </div>
-  )
+      <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)} disabled={isDownloading === doc.id}>
+        {isDownloading === doc.id ? (
+          <DownloadCloud className="mr-2 size-4 animate-pulse" />
+        ) : (
+          <DownloadCloud className="mr-2 size-4" />
+        )}
+        <span className="hidden sm:inline">Download</span>
+      </Button>
+    </li>
+  );
+
+  const renderDocList = (categoryKey: keyof AllDocs, title: string) => (
+    <Card>
+      <CardHeader>
+        <CardTitle className="font-headline flex items-center gap-2">
+          {categoryKey === 'safety' && <Briefcase />}
+          {categoryKey === 'environmental' && <Leaf />}
+          {categoryKey === 'quality' && <Award />}
+          {categoryKey === 'hr' && <Users />}
+          {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        {isLoading ? (
+          <div className="space-y-4">
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+            <Skeleton className="h-12 w-full" />
+          </div>
+        ) : !docs || !docs[categoryKey] ? (
+          <p>No categories found.</p>
+        ) : (
+          <Accordion type="multiple" className="w-full">
+            {Object.entries(docs[categoryKey]).map(([subSection, docList]) => (
+              <AccordionItem value={subSection} key={subSection}>
+                <AccordionTrigger>{subSection} ({docList.length})</AccordionTrigger>
+                <AccordionContent>
+                  <ul className="space-y-1 pl-4">
+                    {docList.length > 0 ? (
+                      docList.map((doc) => <DocumentRow key={doc.id} doc={doc} />)
+                    ) : (
+                      <li className="text-sm text-muted-foreground py-4">No documents in this section.</li>
+                    )}
+                  </ul>
+                </AccordionContent>
+              </AccordionItem>
+            ))}
+          </Accordion>
+        )}
+      </CardContent>
+    </Card>
+  );
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -229,54 +218,17 @@ export default function DocumentsPage() {
         </CardContent>
       </Card>
 
-       <Card className="mb-6">
-          <CardContent className="p-4 flex flex-col sm:flex-row gap-4">
-               <div className="relative flex-grow">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input 
-                    placeholder="Search documents..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 h-11 text-base"
-                />
-            </div>
-            <Select value={sortOrder} onValueChange={(value: 'name' | 'date') => setSortOrder(value)}>
-                <SelectTrigger className="w-full sm:w-[180px] h-11">
-                    <SelectValue placeholder="Sort by..." />
-                </SelectTrigger>
-                <SelectContent>
-                    <SelectItem value="name">Sort by Name</SelectItem>
-                    <SelectItem value="date">Sort by Date</SelectItem>
-                </SelectContent>
-            </Select>
-          </CardContent>
-      </Card>
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 md:grid-cols-5">
-          <TabsTrigger value="All Documents">All</TabsTrigger>
-          <TabsTrigger value="Safety"><Briefcase className="mr-2 size-4" />Safety</TabsTrigger>
-          <TabsTrigger value="Environmental"><Leaf className="mr-2 size-4"/>Environmental</TabsTrigger>
-          <TabsTrigger value="Quality"><Award className="mr-2 size-4"/>Quality</TabsTrigger>
-          <TabsTrigger value="HR"><Users className="mr-2 size-4"/>HR</TabsTrigger>
+      <Tabs defaultValue="safety" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4">
+          <TabsTrigger value="safety">Safety</TabsTrigger>
+          <TabsTrigger value="environmental">Environmental</TabsTrigger>
+          <TabsTrigger value="quality">Quality</TabsTrigger>
+          <TabsTrigger value="hr">HR</TabsTrigger>
         </TabsList>
-        <TabsContent value={activeTab} className="pt-4">
-             <Card>
-                <CardHeader>
-                    <CardTitle className="font-headline">{activeTab}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <BulkActionsToolbar />
-                    {filteredAndSortedDocs.length > 0 ? (
-                        <ul className="space-y-1">
-                            {filteredAndSortedDocs.map(doc => <DocumentRow key={doc.id} doc={doc} />)}
-                        </ul>
-                    ) : (
-                        <p className="text-muted-foreground text-center p-8">No documents found.</p>
-                    )}
-                </CardContent>
-            </Card>
-        </TabsContent>
+        <TabsContent value="safety" className="pt-6">{renderDocList('safety', 'Safety Documents')}</TabsContent>
+        <TabsContent value="environmental" className="pt-6">{renderDocList('environmental', 'Environmental Documents')}</TabsContent>
+        <TabsContent value="quality" className="pt-6">{renderDocList('quality', 'Quality Documents')}</TabsContent>
+        <TabsContent value="hr" className="pt-6">{renderDocList('hr', 'HR Documents')}</TabsContent>
       </Tabs>
     </div>
   );
