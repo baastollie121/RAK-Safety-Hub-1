@@ -1,4 +1,3 @@
-
 'use client';
 
 import { useMemo } from 'react';
@@ -18,7 +17,7 @@ import {
 } from '@/components/ui/chart';
 import type { ChartConfig } from '@/components/ui/chart';
 import { Badge } from '@/components/ui/badge';
-import { List, Wrench, ShieldCheck, UserCheck, UserX, CalendarClock } from 'lucide-react';
+import { Wrench, ShieldCheck, UserCheck, UserX, CalendarClock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { differenceInDays, parseISO } from 'date-fns';
 
@@ -45,21 +44,6 @@ const mockTrainings = [
   { id: 6, name: 'Emily Brown', course: 'Forklift License', expiry: '2024-05-10' }, // Expired
 ];
 
-// HIRA Risk Data (derived from mock HIRA reports)
-const mockHiraRisks = [
-    { level: 'High', count: 2 },
-    { level: 'Medium', count: 8 },
-    { level: 'Low', count: 15 },
-];
-
-// Recent Activity Data
-const mockActivities = [
-    { id: 1, text: "Angle Grinder marked as 'Needs Repair'.", timestamp: '2 hours ago' },
-    { id: 2, text: "New HIRA generated for 'Warehouse Stocking'.", timestamp: '1 day ago' },
-    { id: 3, text: "Jane Smith's 'Working at Heights' training is expiring soon.", timestamp: '2 days ago' },
-    { id: 4, text: "Peter Jones's 'Fire Fighting' training has expired.", timestamp: '3 days ago' },
-    { id: 5, text: "Forklift marked 'Out of Service'.", timestamp: '5 days ago' },
-];
 
 // --- Component Logic ---
 
@@ -102,17 +86,6 @@ export default function SiteHealthDashboardPage() {
     ];
   }, []);
 
-  const overallSafetyScore = useMemo(() => {
-    const assetScore = ((assetStatusData.find(d => d.name === 'Operational')?.value || 0) / mockAssets.length) * 100;
-    const trainingScore = ((trainingStatusData.find(d => d.name === 'Compliant')?.value || 0) / mockTrainings.length) * 100;
-    const totalRisks = mockHiraRisks.reduce((acc, r) => acc + r.count, 0);
-    const highRisks = mockHiraRisks.find(r => r.level === 'High')?.count || 0;
-    const riskScore = totalRisks > 0 ? (1 - (highRisks / totalRisks)) * 100 : 100;
-
-    // Weighted average
-    return Math.round((assetScore * 0.4) + (trainingScore * 0.4) + (riskScore * 0.2));
-  }, [assetStatusData, trainingStatusData]);
-
   const assetsNeedingAttention = useMemo(() => {
     return mockAssets.filter(a => a.status === 'Needs Repair' || a.status === 'Out of Service');
   }, []);
@@ -148,32 +121,7 @@ export default function SiteHealthDashboardPage() {
         <p className="text-muted-foreground">An overview of your site's safety and compliance status.</p>
       </header>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* Main Score Card - Spanning 3 cols on large screens */}
-        <Card className="lg:col-span-3">
-          <CardHeader>
-            <CardTitle>Overall Site Safety Score</CardTitle>
-            <CardDescription>A weighted score based on equipment status, training compliance, and unresolved high-risks.</CardDescription>
-          </CardHeader>
-          <CardContent className="flex items-center justify-center p-6">
-            <div className="flex flex-col items-center gap-2">
-              <div 
-                className={cn(
-                    "text-7xl font-bold font-headline tracking-tighter",
-                    overallSafetyScore >= 80 && "text-green-400",
-                    overallSafetyScore < 80 && overallSafetyScore >= 50 && "text-yellow-400",
-                    overallSafetyScore < 50 && "text-red-400"
-                )}
-              >
-                {overallSafetyScore}%
-              </div>
-              <p className="text-muted-foreground">
-                {overallSafetyScore >= 80 ? 'Excellent Standing' : overallSafetyScore >= 50 ? 'Needs Attention' : 'Critical Action Required'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         {/* Asset & Equipment Health */}
         <Card>
           <CardHeader>
@@ -233,28 +181,6 @@ export default function SiteHealthDashboardPage() {
             </CardFooter>
         </Card>
         
-        {/* Risk Overview */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Risk Management Overview</CardTitle>
-            <CardDescription>Summary of residual risks from all HIRAs.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid grid-cols-3 gap-4 text-center">
-            {mockHiraRisks.map(risk => (
-                 <div key={risk.level} className="flex flex-col items-center justify-center rounded-lg border p-4">
-                    <div className={cn("text-3xl font-bold font-headline", {
-                        'text-red-400': risk.level === 'High',
-                        'text-yellow-400': risk.level === 'Medium',
-                        'text-green-400': risk.level === 'Low',
-                    })}>
-                        {risk.count}
-                    </div>
-                    <p className="text-sm font-medium text-muted-foreground">{risk.level} Risk</p>
-                 </div>
-            ))}
-          </CardContent>
-        </Card>
-
         {/* Attention Lists */}
         <Card className="lg:col-span-2">
             <CardHeader>
@@ -302,33 +228,6 @@ export default function SiteHealthDashboardPage() {
                 </div>
             </CardContent>
         </Card>
-
-        {/* Recent Activity */}
-        <Card>
-            <CardHeader>
-                <CardTitle>Recent Activity</CardTitle>
-                <CardDescription>A log of recent safety-related events.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <ul className="space-y-3">
-                    {mockActivities.map(activity => (
-                        <li key={activity.id} className="flex items-start gap-3">
-                             <div className="mt-1 size-4 flex items-center justify-center">
-                                {activity.text.includes('Repair') || activity.text.includes('Service') ? <Wrench className="size-4 text-yellow-400"/> :
-                                 activity.text.includes('expired') ? <UserX className="size-4 text-red-400"/> :
-                                 activity.text.includes('expiring') ? <CalendarClock className="size-4 text-yellow-400"/> :
-                                 <List className="size-4 text-muted-foreground"/>}
-                             </div>
-                             <div>
-                                <p className="text-sm">{activity.text}</p>
-                                <p className="text-xs text-muted-foreground">{activity.timestamp}</p>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
-            </CardContent>
-        </Card>
-
       </div>
     </div>
   );
