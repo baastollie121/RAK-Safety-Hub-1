@@ -20,11 +20,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} dark`}> {/* Apply font variables and retain dark class */}
-      <head>
-        {/* Old font links removed as next/font handles them */}
-      </head>
-      <body className="font-body antialiased"> {/* Ensure font-body class still works with Tailwind */} 
+    <html lang="en" className={`${inter.variable} ${spaceGrotesk.variable} dark`}>
+      <head />
+      <body className="font-body antialiased">
         <AuthProvider>
           <AppShell>{children}</AppShell>
         </AuthProvider>
