@@ -5,24 +5,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Send, Upload, Loader2, Bot, User, RefreshCcw } from "lucide-react";
-import { analyzeDocument } from '@/ai/flows/document-analyzer';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Send, Loader2, Bot, User, RefreshCcw } from "lucide-react";
+import { Alert } from '@/components/ui/alert';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import Link from 'next/link';
 
 interface Message {
   id: string;
@@ -43,12 +32,6 @@ export default function SafetyConsultantPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [isBotTyping, setIsBotTyping] = useState(false);
-
-  // State for the admin "core memory" upload feature
-  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
-  const [fileToUpload, setFileToUpload] = useState<File | null>(null);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState<string | null>(null);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
   const inputBoxRef = useRef<HTMLTextAreaElement>(null);
@@ -119,7 +102,7 @@ export default function SafetyConsultantPage() {
         }
     } catch (error) {
       console.error('Error with AI Safety Consultant:', error);
-      const fallbackBotMessage = "I couldn't process that. Try rephrasing your question or upload a document for review.";
+      const fallbackBotMessage = "I couldn't process that. Try rephrasing your question or, if you're an admin, add a relevant document to my Core Memory.";
       setMessages(prev => prev.map(m => m.id === botMessageId ? { ...m, content: fallbackBotMessage } : m));
       toast({
         variant: 'destructive',
@@ -130,51 +113,6 @@ export default function SafetyConsultantPage() {
       setIsBotTyping(false);
     }
   };
-
-  const fileToDataUri = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
-
-  const handleAnalyzeDocument = async () => {
-    if (!fileToUpload) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Please select a file to analyze.' });
-      return;
-    }
-
-    setIsAnalyzing(true);
-    setAnalysisResult(null);
-
-    try {
-      const documentDataUri = await fileToDataUri(fileToUpload);
-      const result = await analyzeDocument({ documentDataUri });
-      setAnalysisResult(result.summary);
-    } catch (error) {
-      console.error('Error analyzing document:', error);
-      toast({ variant: 'destructive', title: 'Analysis Failed', description: 'Could not analyze the document.' });
-    } finally {
-      setIsAnalyzing(false);
-    }
-  };
-
-  const handleConfirmSave = () => {
-    // TODO: Save analysisResult to vector store for semantic search
-    toast({ title: 'Success', description: "Document added to Winston's core memory." });
-    setIsUploadDialogOpen(false);
-    setFileToUpload(null);
-    setAnalysisResult(null);
-  };
-  
-  const openUploadDialog = () => {
-    setFileToUpload(null);
-    setAnalysisResult(null);
-    setIsAnalyzing(false);
-    setIsUploadDialogOpen(true);
-  }
 
   const startNewChat = () => {
     localStorage.removeItem('safety-consultant-chat');
@@ -195,8 +133,8 @@ export default function SafetyConsultantPage() {
                     <RefreshCcw className="mr-2 size-4" /> New Chat
                 </Button>
                 {user?.role === 'admin' && (
-                    <Button size="sm" onClick={openUploadDialog}>
-                        <Upload className="mr-2" /> Core Memory
+                    <Button size="sm" asChild>
+                       <Link href="/admin/manage-core-memory">Manage Core Memory</Link>
                     </Button>
                 )}
             </div>
@@ -272,62 +210,6 @@ export default function SafetyConsultantPage() {
           </div>
         </div>
       </div>
-
-      <Dialog open={isUploadDialogOpen} onOpenChange={setIsUploadDialogOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Upload to Core Memory</DialogTitle>
-            <DialogDescription>
-              Upload a document for Winston to learn from. This will be added to its core knowledge base.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="core-memory-file">Document File</Label>
-              <Input
-                id="core-memory-file"
-                type="file"
-                accept=".pdf,.doc,.docx,.txt"
-                onChange={(e) => setFileToUpload(e.target.files ? e.target.files[0] : null)}
-              />
-            </div>
-            {isAnalyzing && (
-              <div className="flex items-center justify-center gap-2 text-muted-foreground">
-                <Loader2 className="animate-spin" />
-                <span>Analyzing document...</span>
-              </div>
-            )}
-            {analysisResult && (
-              <Alert>
-                <AlertTitle className="font-headline">Analysis Complete</AlertTitle>
-                <AlertDescription className="max-h-60 overflow-y-auto">
-                    <p className="font-semibold mb-2">Here's what Winston learned:</p>
-                    {analysisResult}
-                </AlertDescription>
-              </Alert>
-            )}
-          </div>
-          <DialogFooter>
-            {analysisResult ? (
-                <>
-                    <DialogClose asChild>
-                        <Button type="button" variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handleConfirmSave}>Confirm & Save</Button>
-                </>
-            ) : (
-                <>
-                    <DialogClose asChild>
-                        <Button type="button" variant="outline">Cancel</Button>
-                    </DialogClose>
-                    <Button onClick={handleAnalyzeDocument} disabled={!fileToUpload || isAnalyzing}>
-                        Analyze Document
-                    </Button>
-                </>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
