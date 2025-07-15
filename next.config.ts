@@ -13,9 +13,6 @@ const nextConfig: NextConfig = {
   // Enable strict mode for better React development
   reactStrictMode: true,
   
-  // Add packages that should be handled by the server
-  serverExternalPackages: ['genkit', 'jspdf', 'html2canvas'],
-  
   // Optimize images
   images: {
     remotePatterns: [
@@ -49,7 +46,7 @@ const nextConfig: NextConfig = {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com', // Google profile images
         port: '',
-pathname: '/**',
+        pathname: '/**',
       },
     ],
     // Image optimization settings
@@ -62,6 +59,8 @@ pathname: '/**',
   
   // Enable experimental features for better performance
   experimental: {
+    // Tell Next.js not to bundle these packages on the server.
+    serverComponentsExternalPackages: ['jspdf', 'html2canvas'],
     // Optimize package imports
     optimizePackageImports: [
       '@radix-ui/react-accordion',

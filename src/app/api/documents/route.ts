@@ -7,10 +7,10 @@ const documentsFilePath = path.resolve(process.cwd(), 'documents.json');
 
 export async function POST(request: Request) {
   try {
-    const { documentUrl, displayName, documentSection } = await request.json();
+    const { documentUrl, displayName, documentSection, userId, companyName } = await request.json();
 
-    if (!documentUrl || !displayName || !documentSection) {
-      return NextResponse.json({ message: 'Missing required fields' }, { status: 400 });
+    if (!documentUrl || !displayName || !documentSection || !userId || !companyName) {
+      return NextResponse.json({ message: 'Missing required fields (documentUrl, displayName, documentSection, userId, companyName)' }, { status: 400 });
     }
 
     let documents = [];
@@ -32,6 +32,8 @@ export async function POST(request: Request) {
       documentUrl,
       displayName,
       documentSection,
+      userId,        // New: Store the user ID
+      companyName,   // New: Store the company name
       createdAt: new Date().toISOString(),
     };
 
