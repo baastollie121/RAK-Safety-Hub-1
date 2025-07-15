@@ -46,44 +46,30 @@ interface AllDocs {
 
 const docStructure: { [key in keyof AllDocs]: string[] } = {
   safety: [
-    'Policies & Plans',
-    'Risk Assesments',
-    'Method Statements',
-    'Safe Work Procedures',
-    'Checklists',
-    'general-documents',
-    'hira-reports',
-    'she-plans',
+    'Safety Manual', 'Safety Policies & Procedures', 'Risk Assessments (HIRA)',
+    'Safe Work Procedures (SWP)', 'Method Statements', 'Incident Reports & Investigations',
+    'Emergency Plans', 'Toolbox Talks & Meeting Minutes', 'Legal & Other Appointments',
+    'Registers & Checklists', 'Fall Protection & Working at Heights',
+    'Gap Assessments (ISO 45001, Client-specific)', 'Legal Compliance Audit Reports',
+    'Internal Audit Plan', 'Internal Audit Reports',
+    // Dynamic sections from documents.json
+    'hira-reports', 'method-statements', 'risk-assessments', 'she-plans', 
+    'safe-work-procedures', 'general-documents', 'plans-policies', 'appointments'
   ],
   environmental: [
-    'Environmental Manual',
-    'Environmental Policy',
-    'Impact Assessments',
-    'Waste Management Plans',
-    'Environmental Incident Reports',
-    'Environmental Inspection Checklist',
+    'Environmental Manual', 'Environmental Policy', 'Impact Assessments',
+    'Waste Management Plans', 'Environmental Incident Reports', 'Environmental Inspection Checklist',
   ],
   quality: [
-    'Quality Manual',
-    'Quality Policy',
-    'Quality Procedures & Work Instructions',
-    'Audit Reports (Internal & External)',
-    'Non-conformance & Corrective Actions',
-    'Management Reviews',
-    'Client & Supplier',
-    'Quality Control Checklists',
+    'Quality Manual', 'Quality Policy', 'Quality Procedures & Work Instructions',
+    'Audit Reports (Internal & External)', 'Non-conformance & Corrective Actions',
+    'Management Reviews', 'Client & Supplier', 'Quality Control Checklists',
     'Tool & Equipment Inspection Logs',
   ],
   hr: [
-    'HR Policies & Procedures',
-    'General Appointments',
-    'Hiring Policy',
-    'Company Property Policy',
-    'Performance Management',
-    'Disciplinary & Grievance',
-    'Leave Request Forms',
-    'Employment Contracts & Agreements',
-    'Warning Templates',
+    'HR Policies & Procedures', 'General Appointments', 'Hiring Policy',
+    'Company Property Policy', 'Performance Management', 'Disciplinary & Grievance',
+    'Leave Request Forms', 'Employment Contracts & Agreements', 'Warning Templates'
   ],
 };
 
@@ -94,6 +80,8 @@ const sectionToCategoryMap: { [key: string]: keyof AllDocs } = {
     'she-plans': 'safety',
     'safe-work-procedures': 'safety',
     'general-documents': 'safety',
+    'plans-policies': 'safety',
+    'appointments': 'safety',
 };
 
 
@@ -111,12 +99,14 @@ export default function DocumentsPage() {
         const newDocs: AllDocs = { safety: {}, environmental: {}, quality: {}, hr: {} };
         for (const category of Object.keys(docStructure) as Array<keyof AllDocs>) {
             for (const subSection of docStructure[category]) {
-                newDocs[category][subSection] = [];
+                if (!newDocs[category][subSection]) {
+                  newDocs[category][subSection] = [];
+                }
             }
         }
 
         // Add the external OHS Act Manual manually to the 'Policies & Plans' section
-        newDocs.safety['Policies & Plans'].push({
+        newDocs.safety['Safety Policies & Procedures'].push({
           id: 'external-ohs-manual',
           name: 'OHS Act Manual',
           path: 'https://u7t73lof0p.ufs.sh/f/TqKtlDfGZP7BfWqqdioppQAEZ2iVrfBNJ6ChDRk59n7HMedI',
@@ -125,9 +115,15 @@ export default function DocumentsPage() {
 
         // Load documents from the JSON file and place them in the correct category/subsection
         documentsData.forEach(doc => {
-            const category = sectionToCategoryMap[doc.documentSection];
-            if (category && newDocs[category] && newDocs[category][doc.documentSection]) {
-                newDocs[category][doc.documentSection].push({
+            const categoryKey = sectionToCategoryMap[doc.documentSection] || 'safety';
+            const subSectionKey = doc.documentSection;
+
+            // Ensure category and sub-section exist before pushing
+            if (newDocs[categoryKey]) {
+                 if (!newDocs[categoryKey][subSectionKey]) {
+                    newDocs[categoryKey][subSectionKey] = [];
+                }
+                newDocs[categoryKey][subSectionKey].push({
                     id: doc.id,
                     name: doc.displayName,
                     path: doc.documentUrl,
@@ -270,5 +266,3 @@ export default function DocumentsPage() {
     </div>
   );
 }
-
-    
