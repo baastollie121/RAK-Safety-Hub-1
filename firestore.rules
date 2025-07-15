@@ -1,46 +1,40 @@
+
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    function isAdmin() {
-      return request.auth.token.role == 'admin';
-    }
-
-    function isClient() {
-      return request.auth.token.role == 'client';
-    }
-    
-    // User profile data
-    match /users/{userId} {
-      // Admins can see all user profiles.
-      // Clients can only see their own profile.
-      allow read: if isAdmin() || (isClient() && request.auth.uid == userId);
-      // Only admins (via cloud function) can create users or update roles.
-      allow write: if isAdmin();
-    }
-
-    // Chat conversations
-    match /chats/{userId} {
-        // Admins can read/write to any chat document metadata
-        // Clients can read/write to their own chat document metadata
-        allow read, write: if isAdmin() || (isClient() && request.auth.uid == userId);
-        
-        // Messages subcollection
-        match /messages/{messageId} {
-            // Admins can read any message in any chat.
-            // Clients can only read messages in their own chat.
-            allow read: if isAdmin() || (isClient() && request.auth.uid == userId);
-            
-            // Admins can write (send messages) to any chat.
-            // Clients can only write messages to their own chat.
-            allow write: if isAdmin() || (isClient() && request.auth.uid == userId);
-        }
-    }
-
-    // Default deny all other collections
+    // Default deny all reads and writes
     match /{document=**} {
       allow read, write: if false;
+    }
+
+    // Rules for the 'users' collection
+    // Admins can read/write any user document.
+    // Authenticated clients can only read/write their own document.
+    match /users/{userId} {
+      allow read: if request.auth != null && (request.auth.token.role == 'admin' || request.auth.uid == userId);
+      // Writes are handled by the admin cloud function, but allowing client-side updates can be useful for profile changes.
+      // For now, we keep it secure and only allow reads. Writes are server-side only.
+      allow write: if false;
+    }
+
+    // Rules for the 'chats' collection
+    match /chats/{userId} {
+      // Admins can read any chat document.
+      // Clients can create/update their own chat document when starting a conversation.
+      allow read, create, update: if request.auth != null && (request.auth.token.role == 'admin' || request.auth.uid == userId);
+
+      // Rules for the 'messages' subcollection within a chat
+      match /messages/{messageId} {
+        // Admins can read messages from any chat.
+        // Clients can only read messages from their own chat.
+        allow read: if request.auth != null && (request.auth.token.role == 'admin' || request.auth.uid == userId);
+        
+        // Admins can write (send) messages to any chat.
+        // Clients can only write (send) messages to their own chat.
+        allow write: if request.auth != null && (request.auth.token.role == 'admin' || request.auth.uid == userId);
+      }
     }
   }
 }

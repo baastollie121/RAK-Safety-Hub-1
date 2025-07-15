@@ -64,7 +64,7 @@ export default function SupportPage() {
                         <h3 className="font-semibold">Email Support</h3>
                         <p className="text-muted-foreground text-sm mb-2">For all inquiries, please email our support team. We aim to respond within 24 hours.</p>
                         <Button asChild variant="outline" size="sm">
-                            <a href="mailto:support@sitesafety.services">support@sitesafety.services</a>
+                            <a href="mailto:info@sitesafety.services">info@sitesafety.services</a>
                         </Button>
                     </div>
                 </div>
@@ -130,8 +130,8 @@ export default function SupportPage() {
                     </div>
                      <p className="text-muted-foreground text-sm mt-4">
                         Please email your proof of payment to{' '}
-                        <a href="mailto:support@sitesafety.services" className="font-medium text-primary hover:underline">
-                            support@sitesafety.services
+                        <a href="mailto:info@sitesafety.services" className="font-medium text-primary hover:underline">
+                            info@sitesafety.services
                         </a> to ensure your account is updated promptly.
                      </p>
                 </div>
