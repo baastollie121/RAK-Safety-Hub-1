@@ -1,33 +1,46 @@
-
 rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Admins can read/write any document
+
     function isAdmin() {
       return request.auth.token.role == 'admin';
     }
 
-    // A user can read/write to their own document
-    function isOwner(userId) {
-      return request.auth.uid == userId;
-    }
-
-    // Default deny all
-    match /{document=**} {
-      allow read, write: if false;
+    function isClient() {
+      return request.auth.token.role == 'client';
     }
     
-    // Allow users to read/write their own user data
+    // User profile data
     match /users/{userId} {
-      allow get: if request.auth != null; // Any authenticated user can read user profiles
-      allow list: if isAdmin(); // Only admins can list all users
-      allow create, update, delete: if isAdmin(); // Only admins can manage user docs
+      // Admins can see all user profiles.
+      // Clients can only see their own profile.
+      allow read: if isAdmin() || (isClient() && request.auth.uid == userId);
+      // Only admins (via cloud function) can create users or update roles.
+      allow write: if isAdmin();
     }
 
-    // Rules for the chat collection
-    match /chats/{userId}/{document=**} {
-      allow read, write: if isAdmin() || isOwner(userId);
+    // Chat conversations
+    match /chats/{userId} {
+        // Admins can read/write to any chat document metadata
+        // Clients can read/write to their own chat document metadata
+        allow read, write: if isAdmin() || (isClient() && request.auth.uid == userId);
+        
+        // Messages subcollection
+        match /messages/{messageId} {
+            // Admins can read any message in any chat.
+            // Clients can only read messages in their own chat.
+            allow read: if isAdmin() || (isClient() && request.auth.uid == userId);
+            
+            // Admins can write (send messages) to any chat.
+            // Clients can only write messages to their own chat.
+            allow write: if isAdmin() || (isClient() && request.auth.uid == userId);
+        }
+    }
+
+    // Default deny all other collections
+    match /{document=**} {
+      allow read, write: if false;
     }
   }
 }
