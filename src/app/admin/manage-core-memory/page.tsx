@@ -76,7 +76,7 @@ export default function ManageCoreMemoryPage() {
           Manage AI Core Memory
         </h1>
         <p className="text-muted-foreground">
-          Add new documents to Winston's permanent knowledge base.
+          Add new documents to Winston&apos;s permanent knowledge base.
         </p>
       </header>
       <Card className="w-full max-w-lg">

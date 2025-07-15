@@ -119,7 +119,7 @@ export default function SiteHealthDashboardPage() {
     <div className="p-4 sm:p-6 md:p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline tracking-tight">Site Health Dashboard</h1>
-        <p className="text-muted-foreground">An overview of your site's safety and compliance status.</p>
+        <p className="text-muted-foreground">An overview of your site&apos;s safety and compliance status.</p>
       </header>
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">

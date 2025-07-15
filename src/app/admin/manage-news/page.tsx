@@ -235,7 +235,7 @@ export default function ManageNewsPage() {
                 <div className="text-center py-12 text-muted-foreground">
                     <Newspaper className="mx-auto size-12" />
                     <p className="mt-4 font-semibold">No articles published yet.</p>
-                    <p>Click "Create New Article" to get started.</p>
+                    <p>Click &quot;Create New Article&quot; to get started.</p>
                 </div>
             )}
         </CardContent>
@@ -246,7 +246,7 @@ export default function ManageNewsPage() {
             <DialogHeader>
                 <DialogTitle>{editingArticle ? 'Edit' : 'Create'} Article</DialogTitle>
                 <DialogDescription>
-                    Fill in the details below. Click save when you're done.
+                    Fill in the details below. Click save when you&apos;re done.
                 </DialogDescription>
             </DialogHeader>
             <Form {...form}>

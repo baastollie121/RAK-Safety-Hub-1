@@ -210,7 +210,7 @@ export default function AssetEquipmentTrackerPage() {
     <div className="p-4 sm:p-6 md:p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline tracking-tight">Asset & Equipment Tracker</h1>
-        <p className="text-muted-foreground">Manage your company's assets and equipment in one place.</p>
+        <p className="text-muted-foreground">Manage your company&apos;s assets and equipment in one place.</p>
       </header>
 
       <Card className="mb-6">

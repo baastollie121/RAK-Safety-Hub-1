@@ -55,6 +55,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
+            // Log the UID to check which user document is being fetched
+            console.log('Fetching user document for UID:', firebaseUser.uid);
             const userDocRef = doc(db, 'users', firebaseUser.uid);
             const userDocSnap = await getDoc(userDocRef);
 
@@ -71,13 +73,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     companyName: userData.companyName || '',
                 });
             } else {
-                console.error('No user document found for UID:', firebaseUser.uid);
-                await firebaseSignout(auth);
-                setUser(null);
+                console.warn('No user document found for UID:', firebaseUser.uid, 'User will not be signed out, but will not have profile data.');
+                // Temporarily DO NOT sign out the user here to diagnose if a missing document is the core issue.
+                // await firebaseSignout(auth); 
+                setUser({
+                    uid: firebaseUser.uid,
+                    email: firebaseUser.email,
+                    role: 'client', // Default to client if no document
+                    firstName: 'Guest',
+                    lastName: '',
+                    companyName: '',
+                });
             }
         } catch (error) {
             console.error("Error fetching user data:", error);
-            await firebaseSignout(auth);
+            // Temporarily DO NOT sign out the user here to diagnose the permission error.
+            // await firebaseSignout(auth);
             setUser(null);
         }
       } else {

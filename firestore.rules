@@ -13,10 +13,9 @@ service cloud.firestore {
     // Admins can read/write any user document.
     // Authenticated clients can only read/write their own document.
     match /users/{userId} {
-      allow read: if request.auth != null && (request.auth.token.role == 'admin' || request.auth.uid == userId);
-      // Writes are handled by the admin cloud function, but allowing client-side updates can be useful for profile changes.
-      // For now, we keep it secure and only allow reads. Writes are server-side only.
-      allow write: if false;
+      allow read: if request.auth != null; // Temporarily permissive for debugging
+      // Allow authenticated users to create and update their own user documents.
+      allow create, update: if request.auth != null && request.auth.uid == userId;
     }
 
     // Rules for the 'chats' collection

@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -59,7 +60,7 @@ const nextConfig: NextConfig = {
   // Enable experimental features for better performance
   experimental: {
     // Use the correct property for your Next.js version
-    serverExternalPackages: ['jspdf', 'html2canvas'],
+    serverComponentsExternalPackages: ['jspdf', 'html2canvas'],
     
     // Optimize package imports
     optimizePackageImports: [

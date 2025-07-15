@@ -304,7 +304,7 @@ const HazardInputCard = ({ index, remove, control }: { index: number; remove: (i
     );
 };
 
-const SuggestHazardsButton = ({ isSuggesting, onClick, form }) => {
+const SuggestHazardsButton = ({ isSuggesting, onClick, form }: { isSuggesting: boolean, onClick: () => void, form: any }) => {
     const taskTitle = useWatch({ control: form.control, name: 'taskTitle' });
 
     return (
@@ -481,40 +481,11 @@ export default function HIRAGeneratorPage() {
         const imgData = canvas.toDataURL('image/png');
         const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
         
-        // Add Header
-        const logoUrl = '/logo-black.png'; // Make sure this path is correct in your `public` folder
-        try {
-            const response = await fetch(logoUrl);
-            const blob = await response.blob();
-            const reader = new FileReader();
-            reader.readAsDataURL(blob);
-            reader.onloadend = () => {
-                const base64data = reader.result as string;
-                pdf.addImage(base64data, 'PNG', 15, 10, 30, 15);
-                
-                pdf.setFontSize(18);
-                pdf.setFont('helvetica', 'bold');
-                pdf.text(companyName, pdf.internal.pageSize.getWidth() - 15, 20, { align: 'right' });
-                pdf.setFontSize(10);
-                pdf.setFont('helvetica', 'normal');
-                pdf.text(`HIRA: ${taskTitle}`, pdf.internal.pageSize.getWidth() - 15, 26, { align: 'right' });
-
-                // Add content
-                addContentToPdf();
-            }
-        } catch(e) {
-            console.error("Logo fetch failed, proceeding without it.", e);
-            // Incase logo fails, still generate PDF
-             pdf.setFontSize(18);
-             pdf.text(companyName, pdf.internal.pageSize.getWidth() - 15, 20, { align: 'right' });
-             addContentToPdf();
-        }
-        
-        const addContentToPdf = () => {
-             const pdfWidth = pdf.internal.pageSize.getWidth();
+        const addContentAndFooter = () => {
+            const pdfWidth = pdf.internal.pageSize.getWidth();
             const PADDING = 15;
             const contentWidth = pdfWidth - (PADDING * 2);
-            const contentStartY = 40; // Start content below header
+            const contentStartY = 40;
             const imgHeight = (canvas.height * contentWidth) / canvas.width;
             let heightLeft = imgHeight;
             let position = contentStartY;
@@ -544,6 +515,30 @@ export default function HIRAGeneratorPage() {
             pdf.save(`HIRA-${taskTitle.replace(/\s+/g, '_')}.pdf`);
             toast({ title: 'Success', description: 'PDF downloaded successfully.' });
             setIsDownloadingPdf(false);
+        };
+        
+        const logoUrl = '/logo-black.png';
+        try {
+            const response = await fetch(logoUrl);
+            const blob = await response.blob();
+            const reader = new FileReader();
+            reader.readAsDataURL(blob);
+            reader.onloadend = () => {
+                const base64data = reader.result as string;
+                pdf.addImage(base64data, 'PNG', 15, 10, 30, 15);
+                pdf.setFontSize(18);
+                pdf.setFont('helvetica', 'bold');
+                pdf.text(companyName, pdf.internal.pageSize.getWidth() - 15, 20, { align: 'right' });
+                pdf.setFontSize(10);
+                pdf.setFont('helvetica', 'normal');
+                pdf.text(`HIRA: ${taskTitle}`, pdf.internal.pageSize.getWidth() - 15, 26, { align: 'right' });
+                addContentAndFooter();
+            }
+        } catch(e) {
+            console.error("Logo fetch failed, proceeding without it.", e);
+            pdf.setFontSize(18);
+            pdf.text(companyName, pdf.internal.pageSize.getWidth() - 15, 20, { align: 'right' });
+            addContentAndFooter();
         }
 
     } catch(err) {

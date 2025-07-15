@@ -114,7 +114,7 @@ export default function OnboardClientPage() {
         <CardHeader>
           <CardTitle>Client Details</CardTitle>
           <CardDescription>
-            Enter the new client's information below. An invitation email will not be sent; you must provide the password to them directly.
+            Enter the new client&apos;s information below. An invitation email will not be sent; you must provide the password to them directly.
           </CardDescription>
         </CardHeader>
         <CardContent>
