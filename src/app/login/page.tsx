@@ -63,6 +63,7 @@ export default function LoginPage() {
         <div className="relative bg-card rounded-lg">
             <form onSubmit={handleLogin}>
               <CardHeader className="text-center">
+                <h1 className="text-xl font-bold text-primary font-headline tracking-tight pb-2">RAK-Site Safety Services</h1>
                 <CardTitle className="font-headline text-2xl pt-4">Welcome Back</CardTitle>
                 <CardDescription>Enter your credentials to access the Safety Hub.</CardDescription>
               </CardHeader>
