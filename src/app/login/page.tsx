@@ -8,7 +8,6 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Logo } from '@/components/logo';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
@@ -64,10 +63,7 @@ export default function LoginPage() {
         <div className="relative bg-card rounded-lg">
             <form onSubmit={handleLogin}>
               <CardHeader className="text-center">
-                  <div className="mx-auto mb-4 scale-125">
-                      <Logo />
-                  </div>
-                <CardTitle className="font-headline text-2xl">Welcome Back</CardTitle>
+                <CardTitle className="font-headline text-2xl pt-4">Welcome Back</CardTitle>
                 <CardDescription>Enter your credentials to access the Safety Hub.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
