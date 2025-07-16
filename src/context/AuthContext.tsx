@@ -55,8 +55,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
         try {
-            // Log the UID to check which user document is being fetched
-            console.log('Fetching user document for UID:', firebaseUser.uid);
             const userDocRef = doc(db, 'users', firebaseUser.uid);
             const userDocSnap = await getDoc(userDocRef);
 
@@ -73,22 +71,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                     companyName: userData.companyName || '',
                 });
             } else {
-                console.warn('No user document found for UID:', firebaseUser.uid, 'User will not be signed out, but will not have profile data.');
-                // Temporarily DO NOT sign out the user here to diagnose if a missing document is the core issue.
-                // await firebaseSignout(auth); 
-                setUser({
-                    uid: firebaseUser.uid,
-                    email: firebaseUser.email,
-                    role: 'client', // Default to client if no document
-                    firstName: 'Guest',
-                    lastName: '',
-                    companyName: '',
-                });
+                console.warn('No user document found for UID:', firebaseUser.uid);
+                await firebaseSignout(auth);
+                setUser(null);
             }
         } catch (error) {
             console.error("Error fetching user data:", error);
-            // Temporarily DO NOT sign out the user here to diagnose the permission error.
-            // await firebaseSignout(auth);
+            await firebaseSignout(auth);
             setUser(null);
         }
       } else {
@@ -109,27 +98,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // onAuthStateChanged will handle setting the user state.
         return true;
     } catch (error: any) {
-        console.error("Login failed via Firebase:", error.message);
-
-        // Fallback for rukoen@gmail.com if backend fails
-        if (email === "rukoen@gmail.com") {
-            console.warn("Firebase login failed, attempting local fallback for rukoen@gmail.com");
-            // Simulate a successful login for rukoen@gmail.com
-            // Assign a default UID and role for this fallback user
-            setUser({
-                uid: 'rukoen-fallback-uid', // A dummy UID for the fallback user
-                email: 'rukoen@gmail.com',
-                role: 'admin', // Assign admin role as per common practice for such special users
-                firstName: 'Rukoen',
-                lastName: 'Fallback',
-                companyName: 'Fallback Inc.',
-            });
-            setLoading(false);
-            return true; // Indicate success for the fallback
-        }
-
+        console.error("Login failed:", error.message);
         setLoading(false);
-        return false; // Indicate failure if no fallback or fallback failed
+        return false;
     }
   }
 

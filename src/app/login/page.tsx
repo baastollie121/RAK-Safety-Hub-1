@@ -10,7 +10,6 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Logo } from '@/components/logo';
 import { Eye, EyeOff, Loader2 } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
 import { z } from 'zod';
 import { useRouter } from 'next/navigation';
 
@@ -24,7 +23,6 @@ export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState<{ email?: string; password?: string }>({});
   const [isLoading, setIsLoading] = useState(false);
@@ -47,7 +45,7 @@ export default function LoginPage() {
       return;
     }
 
-    const success = await login(email, password, rememberMe);
+    const success = await login(email, password);
     if (success) {
         router.push('/');
     } else {
@@ -110,10 +108,6 @@ export default function LoginPage() {
                     </Button>
                   </div>
                   {errors.password && <p className="text-xs text-destructive">{errors.password}</p>}
-                </div>
-                <div className="flex items-center space-x-2">
-                    <Checkbox id="remember-me" checked={rememberMe} onCheckedChange={(checked) => setRememberMe(!!checked)} />
-                    <Label htmlFor="remember-me" className="text-sm font-normal">Remember me</Label>
                 </div>
               </CardContent>
               <CardFooter>
