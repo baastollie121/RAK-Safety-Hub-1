@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useEffect } from 'react';
@@ -17,6 +18,7 @@ import { Header } from "@/components/Header";
 import { Navigation } from "@/components/navigation";
 import { Skeleton } from './ui/skeleton';
 import { ChatWidget } from '@/components/support/ChatWidget';
+import { Logo } from './logo';
 
 function AppSkeleton() {
     return (
@@ -77,21 +79,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <SidebarProvider>
       <Sidebar>
-        <SidebarHeader className="p-0">
-          <div className="relative">
-             <Image 
-                src="https://i.postimg.cc/wvHVPCDR/lx8l1i-2.jpg" 
-                alt="Factory banner"
-                width={300}
-                height={120}
-                className="w-full h-auto object-cover"
-                data-ai-hint="factory industry"
-                priority
-              />
-            <div className="absolute top-2 right-2">
-              <SidebarTrigger />
-            </div>
-          </div>
+        <SidebarHeader className="p-4 flex items-center justify-between">
+           <Logo />
+           <SidebarTrigger />
         </SidebarHeader>
         <SidebarContent>
           <SidebarMenu>

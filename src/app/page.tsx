@@ -22,6 +22,7 @@ import {
   ShieldCheck, 
   UserCog 
 } from "lucide-react";
+import { Logo } from "@/components/logo";
 
 const features = [
   {
@@ -87,14 +88,19 @@ export default function DashboardPage() {
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
-      <Card className="mb-8">
-        <CardContent className="p-6">
-            <h1 className="text-3xl font-bold font-headline tracking-tight">
-              Welcome to RAK-Safety Management System
-            </h1>
-            <p className="text-muted-foreground mt-2">
-              Your all-in-one platform for workplace management hub to ensure legal compliance 24/7
-            </p>
+      <Card className="mb-8 neon-gradient-card">
+        <CardContent className="p-6 bg-card rounded-lg flex flex-col md:flex-row items-center gap-6">
+            <div className="md:scale-150 md:mx-4">
+              <Logo />
+            </div>
+            <div className="text-center md:text-left">
+                <h1 className="text-3xl font-bold font-headline tracking-tight">
+                  Welcome, {user?.firstName || 'User'}
+                </h1>
+                <p className="text-muted-foreground mt-2">
+                  Your all-in-one platform for workplace management hub to ensure legal compliance 24/7
+                </p>
+            </div>
         </CardContent>
       </Card>
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">

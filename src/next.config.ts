@@ -58,7 +58,9 @@ const nextConfig: NextConfig = {
   },
 
   // Add packages that should be handled by the server
-  serverExternalPackages: ['genkit'],
+  experimental: {
+    serverComponentsExternalPackages: ['jspdf', 'html2canvas'],
+  },
   
   // Security headers for production
   async headers() {

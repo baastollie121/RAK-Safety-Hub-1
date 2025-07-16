@@ -62,16 +62,15 @@ export default function LoginPage() {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-gray-900 to-slate-800 p-4">
-      <Card className="w-full max-w-sm relative overflow-hidden bg-card/80 backdrop-blur-sm border-primary/20 shadow-primary/10 shadow-2xl">
-         <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/10 opacity-50"></div>
-         <div className="relative">
+       <Card className="w-full max-w-sm neon-gradient-card">
+        <div className="relative bg-card rounded-lg">
             <form onSubmit={handleLogin}>
               <CardHeader className="text-center">
-                  <div className="flex justify-center mb-4">
+                  <div className="mx-auto mb-4 scale-125">
                       <Logo />
                   </div>
-                <CardTitle className="font-headline text-2xl">RAK Safety Hub Login</CardTitle>
-                <CardDescription>Enter your credentials to access your account.</CardDescription>
+                <CardTitle className="font-headline text-2xl">Welcome Back</CardTitle>
+                <CardDescription>Enter your credentials to access the Safety Hub.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="space-y-2">
