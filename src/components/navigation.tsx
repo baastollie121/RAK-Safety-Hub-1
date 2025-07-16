@@ -34,6 +34,7 @@ import {
   ChevronRight,
   BookOpenCheck,
   FilePlus,
+  ClipboardCheck,
 } from 'lucide-react';
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
@@ -85,7 +86,8 @@ export function Navigation() {
   
   const aiToolsNav = [
     { href: '/hazard-hunter', icon: <ScanSearch />, label: 'AI Hazard Hunter' },
-    { href: '/hira-generator', icon: <FileCheck2 />, label: 'HIRA Generator' },
+    { href: '/risk-assessment', icon: <ClipboardCheck />, label: 'Risk Assessment Gen' },
+    { href: '/hira-generator', icon: <FileCheck2 />, label: 'HIRA Generator (Simple)' },
     { href: '/she-site-plan-generator', icon: <Map />, label: 'SHE Site Plan Generator' },
     { href: '/safe-work-procedure', icon: <ShieldCheck />, label: 'Safe Work Procedure' },
     { href: '/method-statement', icon: <FileText />, label: 'Method Statement Gen' },
@@ -100,6 +102,7 @@ export function Navigation() {
   ];
   
   const aiDocsNav = [
+    { href: '/ai-docs/saved-risk-assessments', icon: <ClipboardCheck />, label: 'Saved Risk Assessments' },
     { href: '/ai-docs/saved-hira-reports', icon: <FileCheck2 />, label: 'Saved HIRA Reports' },
     { href: '/ai-docs/saved-she-plans', icon: <FileJson2 />, label: 'Saved SHE Plans' },
     { href: '/ai-docs/saved-swps', icon: <Shield />, label: 'Saved SWPs' },
