@@ -1,3 +1,4 @@
+
 import type {NextConfig} from 'next';
 
 const nextConfig: NextConfig = {
@@ -59,7 +60,7 @@ const nextConfig: NextConfig = {
   // Enable experimental features for better performance
   experimental: {
     // Use the correct property for your Next.js version
-    serverExternalPackages: ['jspdf', 'html2canvas'],
+    serverComponentsExternalPackages: ['jspdf', 'html2canvas'],
     
     // Optimize package imports
     optimizePackageImports: [
@@ -71,7 +72,7 @@ const nextConfig: NextConfig = {
       '@radix-ui/react-dialog',
       '@radix-ui/react-dropdown-menu',
       '@radix-ui/react-label',
-      '@radix-ui/react-menubar', // Fixed typo: was 'radix-ui/react-menubar'
+      '@radix-ui/react-menubar',
       '@radix-ui/react-popover',
       '@radix-ui/react-progress',
       '@radix-ui/react-radio-group',
@@ -111,8 +112,6 @@ const nextConfig: NextConfig = {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
-          // REMOVED: Access-Control-Allow-Origin header - this can cause CORS issues
-          // and should be handled by your API routes or Firebase hosting, not here
         ],
       },
     ];
@@ -152,15 +151,11 @@ const nextConfig: NextConfig = {
     return [
       {
         source: '/dashboard',
-        destination: '/dashboard/overview',
+        destination: '/',
         permanent: false,
       },
     ];
   },
-  
-  // CHANGED: Remove 'standalone' output for Firebase hosting
-  // Firebase hosting works best with static export or default output
-  // output: 'export', // Use this for static export if needed
   
   // Enable logging for debugging
   logging: {
