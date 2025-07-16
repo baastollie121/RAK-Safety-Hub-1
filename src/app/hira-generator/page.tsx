@@ -43,9 +43,7 @@ import { PlusCircle, Trash2, Loader2, Wand2, Download, CalendarIcon, WandSparkle
 import { useToast } from '@/hooks/use-toast';
 import { generateHira, type GenerateHiraOutput } from '@/ai/flows/hira-generator';
 import { suggestHiraHazards } from '@/ai/flows/hira-suggester';
-import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
 import { useDownloadPdf } from '@/hooks/use-download-pdf';
 
 const hazardSchema = z.object({
@@ -331,11 +329,6 @@ export default function HIRAGeneratorPage() {
   const [result, setResult] = useState<GenerateHiraOutput | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  
-  const { isDownloading, handleDownload } = useDownloadPdf({
-      reportRef,
-      fileName: `HIRA-Report-${form.getValues('taskTitle').replace(/\s+/g, '_')}`
-  });
 
   const form = useForm<HiraFormValues>({
     resolver: zodResolver(hiraSchema),
@@ -344,6 +337,11 @@ export default function HIRAGeneratorPage() {
       taskTitle: '',
       hazards: [],
     },
+  });
+  
+  const { isDownloading, handleDownload } = useDownloadPdf({
+      reportRef,
+      fileName: `HIRA-Report-${form.getValues('taskTitle').replace(/\s+/g, '_')}`
   });
 
   const { fields, append, remove } = useFieldArray({
