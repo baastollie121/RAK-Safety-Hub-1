@@ -149,11 +149,6 @@ export default function RiskAssessmentPage() {
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
   
-  const { isDownloading, handleDownload } = useDownloadPdf({
-      reportRef,
-      fileName: `Risk-Assessment-${form.getValues('taskTitle').replace(/\s+/g, '_')}`
-  });
-
   const form = useForm<HiraFormValues>({
     resolver: zodResolver(hiraSchema),
     defaultValues: {
@@ -162,6 +157,11 @@ export default function RiskAssessmentPage() {
       siteLocation: '',
       hazards: [],
     },
+  });
+
+  const { isDownloading, handleDownload } = useDownloadPdf({
+      reportRef,
+      fileName: `Risk-Assessment-${form.getValues('taskTitle').replace(/\s+/g, '_')}`
   });
 
   const { fields, append, remove } = useFieldArray({
