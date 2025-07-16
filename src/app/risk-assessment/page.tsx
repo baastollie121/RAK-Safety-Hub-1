@@ -1,4 +1,6 @@
+
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { HardHat } from "lucide-react";
 
 export default function RiskAssessmentPage() {
   return (
@@ -11,12 +13,20 @@ export default function RiskAssessmentPage() {
           Let our AI guide you through creating a OHS Act-compliant risk assessment.
         </p>
       </header>
-      <Card>
+      <Card className="flex flex-col items-center justify-center text-center py-12 px-6">
         <CardHeader>
-            <CardTitle className="font-headline">Coming Soon</CardTitle>
+            <div className="mx-auto bg-primary/10 p-4 rounded-full">
+                <HardHat className="size-12 text-primary" />
+            </div>
+            <CardTitle className="font-headline mt-4">Coming Soon</CardTitle>
+            <CardDescription>
+                This powerful AI-driven Risk Assessment tool is currently under construction.
+            </CardDescription>
         </CardHeader>
         <CardContent>
-            <p className="text-muted-foreground">This feature is currently under development. Please check back later.</p>
+            <p className="text-muted-foreground">
+                We are working hard to bring you a guided experience for creating comprehensive, legally compliant risk assessments. Please check back later for updates!
+            </p>
         </CardContent>
        </Card>
     </div>

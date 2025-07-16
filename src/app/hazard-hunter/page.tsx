@@ -120,7 +120,7 @@ export default function HazardHunterPage() {
                   className="max-h-full w-auto object-contain rounded-md"
                 />
               ) : (
-                <p className="text-muted-foreground text-center">Image preview will appear here.</p>
+                <Image src="https://placehold.co/600x400.png" alt="placeholder" width={600} height={400} data-ai-hint="construction safety" className="max-h-full w-auto object-contain rounded-md opacity-20" />
               )}
             </div>
           </CardContent>

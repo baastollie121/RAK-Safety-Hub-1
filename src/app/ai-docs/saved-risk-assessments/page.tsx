@@ -1,4 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { HardHat } from "lucide-react";
 
 export default function SavedRiskAssessmentsPage() {
   return (
@@ -11,12 +13,20 @@ export default function SavedRiskAssessmentsPage() {
           Browse and manage your AI-generated risk assessments.
         </p>
       </header>
-       <Card>
+       <Card className="flex flex-col items-center justify-center text-center py-12 px-6">
         <CardHeader>
-            <CardTitle className="font-headline">Coming Soon</CardTitle>
+            <div className="mx-auto bg-primary/10 p-4 rounded-full">
+                <HardHat className="size-12 text-primary" />
+            </div>
+            <CardTitle className="font-headline mt-4">Coming Soon</CardTitle>
+            <CardDescription>
+                This section will display all of your saved Risk Assessments.
+            </CardDescription>
         </CardHeader>
         <CardContent>
-            <p className="text-muted-foreground">This feature is currently under development. Please check back later.</p>
+            <p className="text-muted-foreground">
+                Once the Risk Assessment Generator is live, you'll be able to save and manage your documents here. Please check back soon!
+            </p>
         </CardContent>
        </Card>
     </div>

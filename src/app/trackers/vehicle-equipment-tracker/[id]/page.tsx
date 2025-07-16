@@ -157,6 +157,8 @@ export default function VehicleDetailPage() {
     if (!vehicle) return '';
 
     const subject = `Vehicle Report: ${vehicle.name}`;
+    const damageReports = vehicle.damages.map(d => `- ${d.partName}: ${d.description} (Reported by ${d.reportedBy} on ${format(new Date(d.date), 'PPP')})`).join('\n');
+    
     const body = `
 Hi Manager,
 
@@ -167,8 +169,7 @@ Status Summary:
 - Next Service Due: ${format(new Date(vehicle.nextService), 'PPP')}
 
 Damage Reports (${vehicle.damages.length} total):
-${vehicle.damages.map(d => `- ${d.partName}: ${d.description} (Reported by ${d.reportedBy} on ${format(new Date(d.date), 'PPP')})`).join('
-') || 'No damages reported.'}
+${damageReports || 'No damages reported.'}
 
 Please review.
 
@@ -204,7 +205,7 @@ RAK Safety Hub
         </Button>
         <h1 className="text-3xl font-bold font-headline tracking-tight">{vehicle.name}</h1>
         <p className="text-muted-foreground">
-          {vehicle.type.replace(/_/g, ' ').replace(/\w/g, (l) => l.toUpperCase())}
+          {vehicle.type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
         </p>
       </header>
 
