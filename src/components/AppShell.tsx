@@ -80,7 +80,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <Sidebar>
         <SidebarHeader className="p-4 flex items-center justify-between">
-           <Logo />
+           
            <SidebarTrigger />
         </SidebarHeader>
         <SidebarContent>
