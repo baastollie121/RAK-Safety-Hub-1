@@ -12,14 +12,21 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import {
-  Download,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  DownloadCloud,
   File,
-  Search,
   Briefcase,
   Leaf,
   Award,
   Users,
-  DownloadCloud,
+  Eye,
+  FolderOpen,
 } from 'lucide-react';
 import { getStorage, ref, getDownloadURL, listAll } from 'firebase/storage';
 import { useToast } from '@/hooks/use-toast';
@@ -52,7 +59,6 @@ const docStructure: { [key in keyof AllDocs]: string[] } = {
     'Registers & Checklists', 'Fall Protection & Working at Heights',
     'Gap Assessments (ISO 45001, Client-specific)', 'Legal Compliance Audit Reports',
     'Internal Audit Plan', 'Internal Audit Reports',
-    // Dynamic sections from documents.json
     'hira-reports', 'method-statements', 'risk-assessments', 'she-plans', 
     'safe-work-procedures', 'general-documents', 'plans-policies', 'appointments'
   ],
@@ -95,7 +101,6 @@ export default function DocumentsPage() {
     const fetchDocs = async () => {
       setIsLoading(true);
       try {
-        // Initialize an empty structure for all documents
         const newDocs: AllDocs = { safety: {}, environmental: {}, quality: {}, hr: {} };
         for (const category of Object.keys(docStructure) as Array<keyof AllDocs>) {
             for (const subSection of docStructure[category]) {
@@ -105,7 +110,6 @@ export default function DocumentsPage() {
             }
         }
 
-        // Add the external OHS Act Manual manually to the 'Policies & Plans' section
         newDocs.safety['Safety Policies & Procedures'].push({
           id: 'external-ohs-manual',
           name: 'OHS Act Manual',
@@ -113,12 +117,10 @@ export default function DocumentsPage() {
           isExternal: true,
         });
 
-        // Load documents from the JSON file and place them in the correct category/subsection
         documentsData.forEach(doc => {
             const categoryKey = sectionToCategoryMap[doc.documentSection] || 'safety';
             const subSectionKey = doc.documentSection;
-
-            // Ensure category and sub-section exist before pushing
+            
             if (newDocs[categoryKey]) {
                  if (!newDocs[categoryKey][subSectionKey]) {
                     newDocs[categoryKey][subSectionKey] = [];
@@ -153,8 +155,6 @@ export default function DocumentsPage() {
       return;
     }
 
-    // This part is for Firebase Storage files, which are not being used for the central library currently.
-    // Kept for future use.
     try {
       const storage = getStorage();
       const url = await getDownloadURL(ref(storage, doc.path));
@@ -178,14 +178,31 @@ export default function DocumentsPage() {
         <File className="size-4 text-muted-foreground" />
         <span className="text-sm">{doc.name}</span>
       </div>
-      <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)} disabled={isDownloading === doc.id}>
-        {isDownloading === doc.id ? (
-          <DownloadCloud className="mr-2 size-4 animate-pulse" />
-        ) : (
-          <DownloadCloud className="mr-2 size-4" />
-        )}
-        <span className="hidden sm:inline">Download</span>
-      </Button>
+      <div className='flex items-center gap-1'>
+        <Dialog>
+            <DialogTrigger asChild>
+                <Button variant="ghost" size="sm">
+                    <Eye className="mr-2 size-4" /> Preview
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl h-[90vh]">
+                 <DialogHeader>
+                    <DialogTitle>{doc.name}</DialogTitle>
+                </DialogHeader>
+                <div className="h-full w-full border rounded-md">
+                    <iframe src={doc.path} width="100%" height="100%" title={doc.name}></iframe>
+                </div>
+            </DialogContent>
+        </Dialog>
+        <Button variant="ghost" size="sm" onClick={() => handleDownload(doc)} disabled={isDownloading === doc.id}>
+            {isDownloading === doc.id ? (
+            <DownloadCloud className="mr-2 size-4 animate-pulse" />
+            ) : (
+            <DownloadCloud className="mr-2 size-4" />
+            )}
+            Download
+        </Button>
+      </div>
     </li>
   );
   
@@ -215,14 +232,19 @@ export default function DocumentsPage() {
         ) : !docs || !docs[categoryKey] ? (
           <p>No categories found.</p>
         ) : (
-          <Accordion type="multiple" className="w-full">
+          <Accordion type="multiple" className="w-full space-y-2">
             {Object.entries(docs[categoryKey])
             .filter(([, docList]) => docList.length > 0)
             .map(([subSection, docList]) => (
-              <AccordionItem value={subSection} key={subSection}>
-                <AccordionTrigger>{getSectionDisplayName(subSection)} ({docList.length})</AccordionTrigger>
-                <AccordionContent>
-                  <ul className="space-y-1 pl-4">
+              <AccordionItem value={subSection} key={subSection} className="border rounded-md px-4 bg-card/50">
+                <AccordionTrigger className="hover:no-underline">
+                  <div className="flex items-center gap-3">
+                    <FolderOpen className="size-5 text-primary"/>
+                    <span>{getSectionDisplayName(subSection)} ({docList.length})</span>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent className="pl-4">
+                  <ul className="space-y-1">
                     {docList.length > 0 ? (
                       docList.map((doc) => <DocumentRow key={doc.id} doc={doc} />)
                     ) : (
