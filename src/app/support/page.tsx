@@ -116,11 +116,12 @@ export default function SupportPage() {
                     <h3 className="font-semibold flex items-center gap-2"><Banknote className="size-5 text-primary"/> Direct EFT Payment</h3>
                      <div className="flex items-center gap-4 mt-3">
                         <Image
-                            src="https://i.ibb.co/bMRv8C4t/Fnb-logo.png"
+                            src="https://i.ibb.co/bMRv8C4/Fnb-logo.png"
                             alt="FNB Logo"
                             width={241}
                             height={97}
                             className="w-40 h-auto"
+                            data-ai-hint="bank logo"
                         />
                         <div className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm flex-1">
                             <span className="text-muted-foreground">Bank:</span> <strong>First National Bank (FNB)</strong>

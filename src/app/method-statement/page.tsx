@@ -1,11 +1,10 @@
+
 'use client';
 
 import { useState, useRef } from 'react';
 import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { format } from 'date-fns';
 import {
   Card,
@@ -38,6 +37,7 @@ import { generateMethodStatement, GenerateMethodStatementOutput } from '@/ai/flo
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { useDownloadPdf } from '@/hooks/use-download-pdf';
 
 const procedureStepSchema = z.object({
   value: z.string().min(1, "Step description cannot be empty."),
@@ -74,7 +74,6 @@ interface SavedStatement {
 export default function MethodStatementPage() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [result, setResult] = useState<GenerateMethodStatementOutput | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -97,6 +96,16 @@ export default function MethodStatementPage() {
       emergencyProcedures: '',
     },
   });
+  
+  const { isDownloading: isDownloadingPdf, handleDownload: handleDownloadPdf } = useDownloadPdf({
+    reportRef,
+    fileName: `Method-Statement-${form.getValues('taskTitle').replace(/\s+/g, '_')}`,
+    options: {
+        companyName: form.getValues('companyName'),
+        documentTitle: `Method Statement: ${form.getValues('taskTitle')}`
+    }
+  });
+
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -149,49 +158,6 @@ export default function MethodStatementPage() {
     } catch (error) {
       console.error('Failed to save to localStorage', error);
       toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the document.' });
-    }
-  };
-
-
-  const handleDownloadPdf = async () => {
-    const reportElement = reportRef.current;
-    const projectTitle = form.getValues('taskTitle');
-    if (!reportElement || !projectTitle) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Cannot download PDF. Please generate a document first.' });
-      return;
-    }
-    
-    setIsDownloadingPdf(true);
-    
-    try {
-        const canvas = await html2canvas(reportElement, { scale: 2, useCORS: true, backgroundColor: null });
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const PADDING = 10;
-        const contentWidth = pdfWidth - (PADDING * 2);
-        const imgHeight = (canvas.height * contentWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = PADDING;
-
-        pdf.addImage(imgData, 'PNG', PADDING, position, contentWidth, imgHeight);
-        heightLeft -= (pdf.internal.pageSize.getHeight() - (PADDING * 2));
-
-        while (heightLeft > 0) {
-            position = heightLeft - imgHeight + PADDING;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', PADDING, position, contentWidth, imgHeight);
-            heightLeft -= (pdf.internal.pageSize.getHeight() - (PADDING * 2));
-        }
-        
-        pdf.save(`Method-Statement-${projectTitle.replace(/\s+/g, '_')}.pdf`);
-        toast({ title: 'Success', description: 'PDF downloaded successfully.' });
-    } catch(err) {
-        console.error("PDF generation error:", err);
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate PDF.' });
-    } finally {
-        setIsDownloadingPdf(false);
     }
   };
 

@@ -33,26 +33,30 @@ import { Trash2, FileArchive, Loader2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
 
-interface SavedHiraReport {
+interface SavedRiskAssessment {
   id: string;
   title: string;
   companyName: string;
   reviewDate: string;
   createdAt: string;
-  hiraDocument: string;
+  riskAssessmentDocument: string;
 }
 
-const ReportContent = ({ report, onDelete }: { report: SavedHiraReport, onDelete: (id: string, title: string) => void }) => {
+const ReportContent = ({ report, onDelete }: { report: SavedRiskAssessment, onDelete: (id: string, title: string) => void }) => {
     const reportRef = useRef<HTMLDivElement>(null);
     const { isDownloading, handleDownload } = useDownloadPdf({
       reportRef,
-      fileName: `HIRA-${report.title.replace(/\s+/g, '_')}`,
+      fileName: `Risk-Assessment-${report.title.replace(/\s+/g, '_')}`,
+      options: {
+        companyName: report.companyName,
+        documentTitle: `Risk Assessment: ${report.title}`
+      }
     });
 
     return (
         <>
             <div ref={reportRef} className="prose prose-sm dark:prose-invert max-w-none rounded-lg border bg-background p-6">
-                <ReactMarkdown>{report.hiraDocument}</ReactMarkdown>
+                <ReactMarkdown>{report.riskAssessmentDocument}</ReactMarkdown>
             </div>
             <div className="mt-4 flex justify-end gap-2">
                 <Button onClick={handleDownload} disabled={isDownloading} variant="outline">
@@ -80,7 +84,7 @@ const ReportContent = ({ report, onDelete }: { report: SavedHiraReport, onDelete
                       </AlertDialogTitle>
                       <AlertDialogDescription>
                         This action cannot be undone. This will permanently
-                        delete this HIRA report for &quot;{report.title}&quot;.
+                        delete this Risk Assessment for &quot;{report.title}&quot;.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
@@ -98,20 +102,20 @@ const ReportContent = ({ report, onDelete }: { report: SavedHiraReport, onDelete
     );
 }
 
-export default function SavedHiraReportsPage() {
-  const [savedReports, setSavedReports] = useState<SavedHiraReport[]>([]);
+export default function SavedRiskAssessmentsPage() {
+  const [savedReports, setSavedReports] = useState<SavedRiskAssessment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
     try {
       const reportsFromStorage = JSON.parse(
-        localStorage.getItem('savedHiraReports') || '[]'
+        localStorage.getItem('savedRiskAssessments') || '[]'
       );
       setSavedReports(reportsFromStorage);
     } catch (error) {
       console.error(
-        'Failed to load HIRA reports from localStorage',
+        'Failed to load reports from localStorage',
         error
       );
       toast({
@@ -130,14 +134,14 @@ export default function SavedHiraReportsPage() {
         (report) => report.id !== reportId
       );
       setSavedReports(updatedReports);
-      localStorage.setItem('savedHiraReports', JSON.stringify(updatedReports));
+      localStorage.setItem('savedRiskAssessments', JSON.stringify(updatedReports));
       toast({
         title: 'Success',
         description: `Report "${reportTitle}" has been deleted.`,
       });
     } catch (error) {
       console.error(
-        'Failed to delete HIRA report from localStorage',
+        'Failed to delete from localStorage',
         error
       );
       toast({
@@ -153,10 +157,10 @@ export default function SavedHiraReportsPage() {
       <div className="p-4 sm:p-6 md:p-8">
         <header className="mb-8">
           <h1 className="text-3xl font-bold font-headline tracking-tight">
-            Saved HIRA Reports
+            Saved Risk Assessments
           </h1>
           <p className="text-muted-foreground">
-            Browse and manage your AI-generated HIRA reports.
+            Browse and manage your AI-generated risk assessments.
           </p>
         </header>
         <div className="space-y-4">
@@ -172,10 +176,10 @@ export default function SavedHiraReportsPage() {
     <div className="p-4 sm:p-6 md:p-8">
       <header className="mb-8">
         <h1 className="text-3xl font-bold font-headline tracking-tight">
-          Saved HIRA Reports
+          Saved Risk Assessments
         </h1>
         <p className="text-muted-foreground">
-          Browse and manage your AI-generated HIRA reports.
+          Browse and manage your AI-generated risk assessments.
         </p>
       </header>
 
@@ -208,9 +212,9 @@ export default function SavedHiraReportsPage() {
           </CardHeader>
           <CardContent>
             <p className="text-muted-foreground">
-              You haven&apos;t saved any HIRA reports yet. Go to the{' '}
-              <Link href="/hira-generator" className="text-primary underline">
-                HIRA Generator
+              You haven&apos;t saved any Risk Assessments yet. Go to the{' '}
+              <Link href="/risk-assessment" className="text-primary underline">
+                Risk Assessment Generator
               </Link>{' '}
               to create and save your first report.
             </p>

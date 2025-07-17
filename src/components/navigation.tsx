@@ -101,8 +101,7 @@ export function Navigation() {
   ];
   
   const aiDocsNav = [
-    { href: '/ai-docs/saved-risk-assessments', icon: <ClipboardCheck />, label: 'Saved Risk Assessments' },
-    { href: '/ai-docs/saved-hira-reports', icon: <FileCheck2 />, label: 'Saved HIRA Reports' },
+    { href: '/ai-docs/saved-risk-assessments', icon: <FileCheck2 />, label: 'Saved Risk Assessments' },
     { href: '/ai-docs/saved-she-plans', icon: <FileJson2 />, label: 'Saved SHE Plans' },
     { href: '/ai-docs/saved-swps', icon: <Shield />, label: 'Saved SWPs' },
     { href: '/ai-docs/saved-method-statements', icon: <FileText />, label: 'Saved Method Statements' },

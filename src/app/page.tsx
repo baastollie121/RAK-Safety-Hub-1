@@ -20,7 +20,9 @@ import {
   Newspaper, 
   ScanSearch, 
   ShieldCheck, 
-  UserCog 
+  UserCog,
+  Map,
+  ClipboardCheck
 } from "lucide-react";
 import { Logo } from "@/components/logo";
 
@@ -50,10 +52,10 @@ const features = [
     href: "/hazard-hunter",
   },
   {
-    title: "HIRA Generator",
-    description: "Generate OHS Act-compliant HIRA documents with a guided tool.",
-    icon: <FileCheck2 className="size-8 text-primary" />,
-    href: "/hira-generator",
+    title: "Risk Assessment Generator",
+    description: "Generate OHS Act-compliant risk assessments with a guided tool.",
+    icon: <ClipboardCheck className="size-8 text-primary" />,
+    href: "/risk-assessment",
   },
   {
     title: "Method Statement Generator",
@@ -66,6 +68,12 @@ const features = [
     description: "Create custom safe work procedures for your tasks.",
     icon: <ShieldCheck className="size-8 text-primary" />,
     href: "/safe-work-procedure",
+  },
+   {
+    title: "SHE Site Plan Generator",
+    description: "Create comprehensive SHE site plans for your projects.",
+    icon: <Map className="size-8 text-primary" />,
+    href: "/she-site-plan-generator",
   },
   {
     title: "Admin",

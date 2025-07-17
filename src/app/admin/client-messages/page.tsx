@@ -310,18 +310,42 @@ export default function ClientMessagesPage() {
 
         const chatDocRef = doc(db, 'chats', clientId);
         const messagesColRef = collection(db, 'chats', clientId, 'messages');
+        const now = serverTimestamp();
 
         try {
             // Ensure chat document exists (doesn't hurt if it does)
-            await setDoc(chatDocRef, { startedBy: user.uid, startedAt: serverTimestamp() }, { merge: true });
+            await setDoc(chatDocRef, { startedBy: user.uid, startedAt: now }, { merge: true });
 
             await addDoc(messagesColRef, {
                 role: 'admin',
                 text: message,
-                timestamp: serverTimestamp(),
+                timestamp: now,
                 read: true,
                 adminId: user.uid
             });
+
+            // Manually add to local state to make it appear instantly
+            const client = allClients.find(c => c.id === clientId);
+            if (client) {
+                const newConvo = {
+                    id: client.id,
+                    userName: client.name,
+                    userEmail: client.email,
+                    avatar: client.avatar,
+                    lastMessage: message,
+                    lastMessageTimestamp: new Date(), // Use current time as a placeholder
+                    unreadCount: 0,
+                    messages: [],
+                }
+                 setConversations(prev => {
+                    const exists = prev.some(c => c.id === clientId);
+                    if (exists) {
+                       return prev.map(c => c.id === clientId ? {...c, ...newConvo} : c);
+                    }
+                    return [...prev, newConvo];
+                });
+            }
+
             
             setSelectedConvoId(clientId);
             setIsNewMessageOpen(false);
