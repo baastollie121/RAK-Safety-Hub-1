@@ -110,11 +110,7 @@ const RiskMatrix = ({ hazards }: { hazards: any[] }) => (
         <div className="grid grid-cols-6 gap-1 text-xs text-center">
             <div className="font-bold col-span-1 self-center">Consequence</div>
             <div className="font-bold col-span-5 grid grid-cols-5 gap-1">
-                <div className="p-1">1</div>
-                <div className="p-1">2</div>
-                <div className="p-1">3</div>
-                <div className="p-1">4</div>
-                <div className="p-1">5</div>
+                {[1, 2, 3, 4, 5].map(c => <div key={c} className="p-1">{c}</div>)}
             </div>
 
             {likelihoodOptions.slice().reverse().map((l, lIndex) => (
@@ -329,7 +325,7 @@ export default function HIRAGeneratorPage() {
   const [result, setResult] = useState<GenerateHiraOutput | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-  
+
   const form = useForm<HiraFormValues>({
     resolver: zodResolver(hiraSchema),
     defaultValues: {
@@ -340,14 +336,14 @@ export default function HIRAGeneratorPage() {
   });
 
   const { isDownloading, handleDownload } = useDownloadPdf({
-      reportRef,
-      fileName: `HIRA-Report-${form.getValues('taskTitle').replace(/\s+/g, '_')}`,
-      options: {
+    reportRef,
+    fileName: `HIRA-${form.getValues('taskTitle').replace(/\s+/g, '_')}`,
+    options: {
         companyName: form.getValues('companyName'),
         documentTitle: `HIRA: ${form.getValues('taskTitle')}`
-      }
+    }
   });
-
+  
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'hazards',
@@ -356,7 +352,7 @@ export default function HIRAGeneratorPage() {
   const watchedHazards = useWatch({
       control: form.control,
       name: 'hazards'
-  })
+  });
 
   const onSubmit = async (data: HiraFormValues) => {
     setIsLoading(true);
@@ -507,7 +503,6 @@ export default function HIRAGeneratorPage() {
     toast({ title: 'Success', description: 'HIRA data exported as CSV.' });
   };
 
-
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <header className="mb-8">
@@ -564,11 +559,7 @@ export default function HIRAGeneratorPage() {
                                               variant={'outline'}
                                               className={cn('pl-3 text-left font-normal w-full', !field.value && 'text-muted-foreground')}
                                           >
-                                              {field.value ? (
-                                                  <span>{format(field.value, 'PPP')}</span>
-                                              ) : (
-                                                <span>Pick a date</span>
-                                              )}
+                                              {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
                                               <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                                           </Button>
                                       </FormControl>
@@ -673,7 +664,6 @@ export default function HIRAGeneratorPage() {
             </CardContent>
         </Card>
       )}
-
     </div>
   );
 }

@@ -577,7 +577,6 @@ export default function HIRAGeneratorPage() {
         residualRisk.rating
       ].join(',');
     });
-
     const csvContent = "data:text/csv;charset=utf-8," + [headers.join(','), ...rows].join('
 ');
     const encodedUri = encodeURI(csvContent);
@@ -590,8 +589,6 @@ export default function HIRAGeneratorPage() {
 
     toast({ title: 'Success', description: 'HIRA data exported as CSV.' });
   };
-
-
   return (
     <div className="p-4 sm:p-6 md:p-8">
       <header className="mb-8">
