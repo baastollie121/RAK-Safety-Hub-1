@@ -329,7 +329,7 @@ export default function HIRAGeneratorPage() {
   const [result, setResult] = useState<GenerateHiraOutput | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
-
+  
   const form = useForm<HiraFormValues>({
     resolver: zodResolver(hiraSchema),
     defaultValues: {
@@ -338,7 +338,7 @@ export default function HIRAGeneratorPage() {
       hazards: [],
     },
   });
-  
+
   const { isDownloading, handleDownload } = useDownloadPdf({
       reportRef,
       fileName: `HIRA-Report-${form.getValues('taskTitle').replace(/\s+/g, '_')}`
