@@ -12,6 +12,9 @@ const nextConfig: NextConfig = {
   
   // Enable strict mode for better React development
   reactStrictMode: true,
+
+  // External packages for server components
+  serverExternalPackages: ['jspdf', 'html2canvas'],
   
   // Optimize images
   images: {
@@ -60,7 +63,6 @@ const nextConfig: NextConfig = {
   // Enable experimental features for better performance
   experimental: {
     // Use the correct property for your Next.js version
-    serverComponentsExternalPackages: ['jspdf', 'html2canvas'],
     
     // Optimize package imports
     optimizePackageImports: [

@@ -338,7 +338,7 @@ export default function HIRAGeneratorPage() {
       hazards: [],
     },
   });
-
+  
   const { isDownloading, handleDownload } = useDownloadPdf({
       reportRef,
       fileName: `HIRA-Report-${form.getValues('taskTitle').replace(/\s+/g, '_')}`
