@@ -158,10 +158,14 @@ export default function RiskAssessmentPage() {
       hazards: [],
     },
   });
-
+  
   const { isDownloading, handleDownload } = useDownloadPdf({
       reportRef,
-      fileName: `Risk-Assessment-${form.getValues('taskTitle').replace(/\s+/g, '_')}`
+      fileName: `Risk-Assessment-${form.getValues('taskTitle').replace(/\s+/g, '_')}`,
+      options: {
+        companyName: form.getValues('companyName'),
+        documentTitle: `Risk Assessment: ${form.getValues('taskTitle')}`
+      }
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -241,7 +245,32 @@ export default function RiskAssessmentPage() {
                   <FormField control={form.control} name="companyName" render={({ field }) => ( <FormItem className="lg:col-span-2"> <FormLabel>Company/Organization</FormLabel> <FormControl><Input placeholder="e.g., RAK Safety" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                   <FormField control={form.control} name="taskTitle" render={({ field }) => ( <FormItem className="lg:col-span-2"> <FormLabel>Task/Project Title</FormLabel> <FormControl><Input placeholder="e.g., Office Electrical Maintenance" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
                   <FormField control={form.control} name="siteLocation" render={({ field }) => ( <FormItem className="lg:col-span-2"> <FormLabel>Site Location</FormLabel> <FormControl><Input placeholder="e.g., 123 Industrial Rd, Johannesburg" {...field} /></FormControl> <FormMessage /> </FormItem> )} />
-                  <FormField control={form.control} name="reviewDate" render={({ field }) => ( <FormItem className="flex flex-col lg:col-span-2"> <FormLabel>Next Review Date</FormLabel> <Popover> <PopoverTrigger asChild> <FormControl> <Button variant={'outline'} className={cn('pl-3 text-left font-normal w-full', !field.value && 'text-muted-foreground')}> <span className="flex-grow">{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</span> <CalendarIcon className="ml-auto h-4 w-4 opacity-50" /> </Button> </FormControl> </PopoverTrigger> <PopoverContent className="w-auto p-0" align="start"> <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus /> </PopoverContent> </Popover> <FormMessage /> </FormItem> )} />
+                  <FormField
+                    control={form.control}
+                    name="reviewDate"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-col lg:col-span-2">
+                        <FormLabel>Next Review Date</FormLabel>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <FormControl>
+                              <Button
+                                variant={'outline'}
+                                className={cn('pl-3 text-left font-normal w-full', !field.value && 'text-muted-foreground')}
+                              >
+                                <span className="flex-grow">{field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}</span>
+                                <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
+                              </Button>
+                            </FormControl>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                          </PopoverContent>
+                        </Popover>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
               </CardContent>
           </Card>
           
@@ -313,4 +342,3 @@ export default function RiskAssessmentPage() {
     </div>
   );
 }
-

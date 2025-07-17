@@ -338,10 +338,14 @@ export default function HIRAGeneratorPage() {
       hazards: [],
     },
   });
-  
+
   const { isDownloading, handleDownload } = useDownloadPdf({
       reportRef,
-      fileName: `HIRA-Report-${form.getValues('taskTitle').replace(/\s+/g, '_')}`
+      fileName: `HIRA-Report-${form.getValues('taskTitle').replace(/\s+/g, '_')}`,
+      options: {
+        companyName: form.getValues('companyName'),
+        documentTitle: `HIRA: ${form.getValues('taskTitle')}`
+      }
   });
 
   const { fields, append, remove } = useFieldArray({
@@ -632,7 +636,7 @@ export default function HIRAGeneratorPage() {
                   <Button type="submit" disabled={isLoading} size="lg">
                       {isLoading ? <><Loader2 className="animate-spin mr-2" /> Generating...</> : <><Wand2 className="mr-2" /> Generate HIRA Document</>}
                   </Button>
-                   <Button type="button" variant="outline" size="lg" onClick={handleExportCsv} disabled={watchedHazards.length === 0}>
+                   <Button type="button" variant="outline" size="lg" onClick={handleExportCsv} disabled={!watchedHazards || watchedHazards.length === 0}>
                       <FileDown className="mr-2" /> Export as CSV
                   </Button>
               </CardFooter>

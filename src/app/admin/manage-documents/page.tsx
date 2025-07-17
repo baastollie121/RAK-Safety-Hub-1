@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState } from 'react';
@@ -8,8 +9,10 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2 } from 'lucide-react';
+import { useAuth } from '@/context/AuthContext';
 
 export default function ManageDocumentsPage() {
+  const { user } = useAuth();
   const [documentUrl, setDocumentUrl] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [documentSection, setDocumentSection] = useState('');
@@ -40,6 +43,12 @@ export default function ManageDocumentsPage() {
       setIsLoading(false);
       return;
     }
+    
+    if (!user) {
+        toast({ variant: 'destructive', title: 'Authentication Error', description: 'You must be logged in to add a document.' });
+        setIsLoading(false);
+        return;
+    }
 
     try {
       const response = await fetch('/api/documents', {
@@ -51,6 +60,8 @@ export default function ManageDocumentsPage() {
           documentUrl,
           displayName,
           documentSection,
+          userId: user.uid,
+          companyName: user.companyName || 'RAK Safety',
         }),
       });
 

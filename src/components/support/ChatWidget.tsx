@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Textarea } from '@/components/ui/textarea';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Logo } from '@/components/logo';
-import { Send, X, Loader2 } from 'lucide-react';
+import { Send, X, Loader2, MessageSquare } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { format } from 'date-fns';
 import { db } from '@/lib/firebase';
@@ -111,9 +111,8 @@ export function ChatWidget() {
                 "fixed bottom-4 right-4 z-50 transition-all duration-300",
                 isOpen && "opacity-0 pointer-events-none"
             )}>
-                <Button onClick={() => setIsOpen(true)} className="flex flex-col items-center justify-center h-20 w-20 rounded-full shadow-lg gap-1">
-                    <Logo />
-                    <span className="text-xs font-bold">Support</span>
+                <Button onClick={() => setIsOpen(true)} className="flex items-center justify-center h-16 w-16 rounded-full shadow-lg gap-1 neon-glow-blue-animated !bg-primary">
+                    <MessageSquare className="size-8"/>
                 </Button>
             </div>
             
