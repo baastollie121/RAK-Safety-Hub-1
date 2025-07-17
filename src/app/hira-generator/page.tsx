@@ -45,6 +45,7 @@ import { generateHira, type GenerateHiraOutput } from '@/ai/flows/hira-generator
 import { suggestHiraHazards } from '@/ai/flows/hira-suggester';
 import { cn } from '@/lib/utils';
 import { useDownloadPdf } from '@/hooks/use-download-pdf';
+import Link from 'next/link';
 
 const hazardSchema = z.object({
   hazard: z.string().min(1, 'Hazard description is required.'),
@@ -337,10 +338,10 @@ export default function HIRAGeneratorPage() {
 
   const { isDownloading, handleDownload } = useDownloadPdf({
     reportRef,
-    fileName: `HIRA-${form.getValues('taskTitle').replace(/\s+/g, '_')}`,
+    fileName: `HIRA-${form.watch('taskTitle').replace(/\s+/g, '_')}`,
     options: {
-        companyName: form.getValues('companyName'),
-        documentTitle: `HIRA: ${form.getValues('taskTitle')}`
+        companyName: form.watch('companyName'),
+        documentTitle: `HIRA: ${form.watch('taskTitle')}`
     }
   });
   
@@ -463,7 +464,7 @@ export default function HIRAGeneratorPage() {
 
   const handleExportCsv = () => {
     const hazards = form.getValues('hazards');
-    if (hazards.length === 0) {
+    if (!hazards || hazards.length === 0) {
       toast({ variant: 'destructive', title: 'No Hazards', description: 'Add at least one hazard to export.' });
       return;
     }

@@ -10,7 +10,6 @@ import { format } from 'date-fns';
 interface PdfOptions {
   companyName: string;
   documentTitle: string;
-  logoUrl?: string; // Optional logo URL
 }
 
 interface UseDownloadPdfProps {
@@ -40,11 +39,6 @@ export function useDownloadPdf({ reportRef, fileName, options }: UseDownloadPdfP
       const pdfHeight = pdf.internal.pageSize.getHeight();
       
       const addHeader = () => {
-        // Placeholder for logo
-        pdf.setFontSize(10);
-        pdf.setTextColor(150);
-        pdf.text('[Company Logo]', PADDING, 20);
-
         pdf.setFontSize(18);
         pdf.setFont('helvetica', 'bold');
         pdf.setTextColor(40);

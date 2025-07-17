@@ -55,8 +55,7 @@ import {
 
 export function Navigation() {
   const pathname = usePathname();
-  const { user, logout } = useAuth();
-  const [hasNewMessages, setHasNewMessages] = useState(true); // Mocked for now
+  const { user, logout, unreadMessagesCount } = useAuth();
   const [hasUnreadNews, setHasUnreadNews] = useState(false);
 
   useEffect(() => {
@@ -118,7 +117,7 @@ export function Navigation() {
     { href: '/admin/manage-core-memory', icon: <BrainCircuit />, label: 'Manage AI Memory' },
     { href: '/admin/manage-news', icon: <FilePlus />, label: 'Manage Articles' },
     { href: '/admin/news-scraper', icon: <FileSearch />, label: 'News Scraper' },
-    { href: '/admin/client-messages', icon: <MessageSquare />, label: 'Client Messages', notification: hasNewMessages },
+    { href: '/admin/client-messages', icon: <MessageSquare />, label: 'Client Messages', notification: (unreadMessagesCount || 0) > 0 },
   ];
 
   const NavGroup = ({
