@@ -87,7 +87,6 @@ export function Navigation() {
   const aiToolsNav = [
     { href: '/hazard-hunter', icon: <ScanSearch />, label: 'AI Hazard Hunter' },
     { href: '/risk-assessment', icon: <ClipboardCheck />, label: 'Risk Assessment Gen' },
-    { href: '/hira-generator', icon: <FileCheck2 />, label: 'HIRA Generator (Simple)' },
     { href: '/she-site-plan-generator', icon: <Map />, label: 'SHE Site Plan Generator' },
     { href: '/safe-work-procedure', icon: <ShieldCheck />, label: 'Safe Work Procedure' },
     { href: '/method-statement', icon: <FileText />, label: 'Method Statement Gen' },
