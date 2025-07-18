@@ -1,6 +1,13 @@
 # Settings to manage and configure a Firebase App Hosting backend.
 # https://firebase.google.com/docs/app-hosting/configure
 
+# A list of Google Cloud APIs that are needed for this app.
+requiredAPIs:
+  - id: aiplatform.googleapis.com
+    reason: Powers the Genkit AI features of the application.
+  - id: run.googleapis.com
+    reason: Required for the hosting service to run correctly.
+
 runConfig:
   # Increase this value if you'd like to automatically spin up
   # more instances in response to increased traffic.
