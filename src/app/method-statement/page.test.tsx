@@ -6,46 +6,58 @@ import MethodStatementPage from './page';
 import { useAuth } from '@/context/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { generateMethodStatement } from '@/ai/flows/method-statement-generator';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import * as pdfHook from '@/hooks/use-download-pdf';
+import { db } from '@/lib/firebase';
+import { addDoc, collection } from 'firebase/firestore';
 
 // Mock dependencies
 jest.mock('@/context/AuthContext');
 jest.mock('@/hooks/use-toast');
 jest.mock('@/ai/flows/method-statement-generator');
-jest.mock('html2canvas');
-jest.mock('jspdf');
+jest.mock('@/hooks/use-download-pdf');
+jest.mock('@/lib/firebase', () => ({
+  db: jest.fn(),
+}));
+jest.mock('firebase/firestore', () => ({
+  collection: jest.fn(),
+  addDoc: jest.fn(),
+  serverTimestamp: jest.fn(() => new Date()),
+}));
+
 
 const mockUseAuth = useAuth as jest.Mock;
 const mockUseToast = useToast as jest.Mock;
 const mockGenerateMethodStatement = generateMethodStatement as jest.Mock;
-const mockHtml2canvas = html2canvas as jest.Mock;
-const mockJsPDF = jsPDF as jest.Mock;
+const mockUseDownloadPdf = pdfHook.useDownloadPdf as jest.Mock;
+const mockAddDoc = addDoc as jest.Mock;
 
 const mockToast = jest.fn();
-const mockSave = jest.fn();
+const mockHandleDownload = jest.fn();
 
 describe('MethodStatementPage', () => {
   beforeEach(() => {
     // Reset mocks before each test
     jest.clearAllMocks();
 
-    mockUseAuth.mockReturnValue({ user: { email: 'test@example.com' } });
+    mockUseAuth.mockReturnValue({ user: { uid: 'test-user-id', email: 'test@example.com' } });
     mockUseToast.mockReturnValue({ toast: mockToast });
-
-    // Mock jsPDF instance and its methods
-    mockJsPDF.mockImplementation(() => ({
-      addImage: jest.fn(),
-      addPage: jest.fn(),
-      save: mockSave,
-      internal: {
-        pageSize: {
-          getWidth: () => 210,
-          getHeight: () => 297,
-        },
-      },
-    }));
+    mockUseDownloadPdf.mockReturnValue({ isDownloading: false, handleDownload: mockHandleDownload });
+    mockAddDoc.mockResolvedValue({ id: 'new-doc-id' });
   });
+
+  const fillOutForm = () => {
+    fireEvent.change(screen.getByLabelText(/Company Name/i), { target: { value: 'Test Co' } });
+    fireEvent.change(screen.getByLabelText(/Project Title/i), { target: { value: 'Test Project' } });
+    fireEvent.change(screen.getByLabelText(/Specific Task \/ Operation Title/i), { target: { value: 'Test Task' } });
+    fireEvent.change(screen.getByLabelText(/Scope of Work/i), { target: { value: 'Test Scope' } });
+    fireEvent.change(screen.getByLabelText(/Identified Hazards/i), { target: { value: 'Test Hazards' } });
+    fireEvent.change(screen.getByLabelText(/Personal Protective Equipment \(PPE\)/i), { target: { value: 'Test PPE' } });
+    fireEvent.change(screen.getByLabelText(/Equipment & Resources/i), { target: { value: 'Test Equipment' } });
+    fireEvent.change(screen.getByPlaceholderText(/Step 1 description.../i), { target: { value: 'Test Procedure' } });
+    fireEvent.change(screen.getByLabelText(/Training & Competency/i), { target: { value: 'Test Training' } });
+    fireEvent.change(screen.getByLabelText(/Supervision & Monitoring/i), { target: { value: 'Test Monitoring' } });
+    fireEvent.change(screen.getByLabelText(/Emergency Procedures/i), { target: { value: 'Test Emergency' } });
+  }
 
   it('renders the form correctly with initial values', () => {
     render(<MethodStatementPage />);
@@ -85,26 +97,12 @@ describe('MethodStatementPage', () => {
   });
   
   it('successfully generates a method statement on valid form submission', async () => {
-    const mockResult = { methodStatementDocument: '## Generated Document
-
-This is a test document.' };
+    const mockResult = { methodStatementDocument: '## Generated Document\n\nThis is a test document.' };
     mockGenerateMethodStatement.mockResolvedValue(mockResult);
 
     render(<MethodStatementPage />);
 
-    // Fill out the form
-    fireEvent.change(screen.getByLabelText(/Company Name/i), { target: { value: 'Test Co' } });
-    fireEvent.change(screen.getByLabelText(/Project Title/i), { target: { value: 'Test Project' } });
-    fireEvent.change(screen.getByLabelText(/Specific Task \/ Operation Title/i), { target: { value: 'Test Task' } });
-    fireEvent.change(screen.getByLabelText(/Scope of Work/i), { target: { value: 'Test Scope' } });
-    fireEvent.change(screen.getByLabelText(/Identified Hazards/i), { target: { value: 'Test Hazards' } });
-    fireEvent.change(screen.getByLabelText(/Personal Protective Equipment \(PPE\)/i), { target: { value: 'Test PPE' } });
-    fireEvent.change(screen.getByLabelText(/Equipment & Resources/i), { target: { value: 'Test Equipment' } });
-    fireEvent.change(screen.getByPlaceholderText(/Step 1 description.../i), { target: { value: 'Test Procedure' } });
-    fireEvent.change(screen.getByLabelText(/Training & Competency/i), { target: { value: 'Test Training' } });
-    fireEvent.change(screen.getByLabelText(/Supervision & Monitoring/i), { target: { value: 'Test Monitoring' } });
-    fireEvent.change(screen.getByLabelText(/Emergency Procedures/i), { target: { value: 'Test Emergency' } });
-
+    fillOutForm();
 
     fireEvent.click(screen.getByRole('button', { name: /Generate Method Statement/i }));
     
@@ -126,19 +124,7 @@ This is a test document.' };
         mockGenerateMethodStatement.mockRejectedValue(new Error('AI failed'));
 
         render(<MethodStatementPage />);
-
-        // Fill out the form with valid data
-        fireEvent.change(screen.getByLabelText(/Company Name/i), { target: { value: 'Test Co' } });
-        fireEvent.change(screen.getByLabelText(/Project Title/i), { target: { value: 'Test Project' } });
-        fireEvent.change(screen.getByLabelText(/Specific Task \/ Operation Title/i), { target: { value: 'Test Task' } });
-        fireEvent.change(screen.getByLabelText(/Scope of Work/i), { target: { value: 'Test Scope' } });
-        fireEvent.change(screen.getByLabelText(/Identified Hazards/i), { target: { value: 'Test Hazards' } });
-        fireEvent.change(screen.getByLabelText(/Personal Protective Equipment \(PPE\)/i), { target: { value: 'Test PPE' } });
-        fireEvent.change(screen.getByLabelText(/Equipment & Resources/i), { target: { value: 'Test Equipment' } });
-        fireEvent.change(screen.getByPlaceholderText(/Step 1 description.../i), { target: { value: 'Test Procedure' } });
-        fireEvent.change(screen.getByLabelText(/Training & Competency/i), { target: { value: 'Test Training' } });
-        fireEvent.change(screen.getByLabelText(/Supervision & Monitoring/i), { target: { value: 'Test Monitoring' } });
-        fireEvent.change(screen.getByLabelText(/Emergency Procedures/i), { target: { value: 'Test Emergency' } });
+        fillOutForm();
 
         fireEvent.click(screen.getByRole('button', { name: /Generate Method Statement/i }));
 
@@ -153,76 +139,49 @@ This is a test document.' };
         expect(screen.queryByText('Generated Method Statement')).not.toBeInTheDocument();
     });
 
-    it('downloads a PDF of the generated report', async () => {
+    it('calls the download hook when download button is clicked', async () => {
         const mockResult = { methodStatementDocument: '## PDF Content' };
         mockGenerateMethodStatement.mockResolvedValue(mockResult);
-        const mockCanvas = document.createElement('canvas');
-        mockHtml2canvas.mockResolvedValue(mockCanvas);
         
         render(<MethodStatementPage />);
         
-        // Generate the document first
-        fireEvent.change(screen.getByLabelText(/Company Name/i), { target: { value: 'Test Co' } });
-        fireEvent.change(screen.getByLabelText(/Project Title/i), { target: { value: 'Test Project' } });
-        fireEvent.change(screen.getByLabelText(/Specific Task \/ Operation Title/i), { target: { value: 'Test Task' } });
-        fireEvent.change(screen.getByLabelText(/Scope of Work/i), { target: { value: 'Test Scope' } });
-        fireEvent.change(screen.getByLabelText(/Identified Hazards/i), { target: { value: 'Test Hazards' } });
-        fireEvent.change(screen.getByLabelText(/Personal Protective Equipment \(PPE\)/i), { target: { value: 'Test PPE' } });
-        fireEvent.change(screen.getByLabelText(/Equipment & Resources/i), { target: { value: 'Test Equipment' } });
-        fireEvent.change(screen.getByPlaceholderText(/Step 1 description.../i), { target: { value: 'Test Procedure' } });
-        fireEvent.change(screen.getByLabelText(/Training & Competency/i), { target: { value: 'Test Training' } });
-        fireEvent.change(screen.getByLabelText(/Supervision & Monitoring/i), { target: { value: 'Test Monitoring' } });
-        fireEvent.change(screen.getByLabelText(/Emergency Procedures/i), { target: { value: 'Test Emergency' } });
-
+        fillOutForm();
         fireEvent.click(screen.getByRole('button', { name: /Generate Method Statement/i }));
         
         const downloadButton = await screen.findByRole('button', { name: /Download as PDF/i });
         fireEvent.click(downloadButton);
         
-        expect(await screen.findByRole('button', { name: /Downloading.../i })).toBeInTheDocument();
-        
         await waitFor(() => {
-            expect(mockHtml2canvas).toHaveBeenCalled();
-            expect(mockJsPDF).toHaveBeenCalled();
-            expect(mockSave).toHaveBeenCalledWith('Method-Statement-Test_Task.pdf');
+            expect(mockHandleDownload).toHaveBeenCalled();
         });
     });
 
-    it('saves a generated statement to localStorage', async () => {
+    it('saves a generated statement to firestore', async () => {
         const mockResult = { methodStatementDocument: '## Saved Content' };
         mockGenerateMethodStatement.mockResolvedValue(mockResult);
 
-        const setItemSpy = jest.spyOn(Storage.prototype, 'setItem');
-        jest.spyOn(Storage.prototype, 'getItem').mockReturnValue('[]');
-
         render(<MethodStatementPage />);
 
-        // Generate the document
-        fireEvent.change(screen.getByLabelText(/Company Name/i), { target: { value: 'Save Co' } });
-        fireEvent.change(screen.getByLabelText(/Project Title/i), { target: { value: 'Save Project' } });
-        fireEvent.change(screen.getByLabelText(/Specific Task \/ Operation Title/i), { target: { value: 'Save Task' } });
-        fireEvent.change(screen.getByLabelText(/Scope of Work/i), { target: { value: 'Test Scope' } });
-        fireEvent.change(screen.getByLabelText(/Identified Hazards/i), { target: { value: 'Test Hazards' } });
-        fireEvent.change(screen.getByLabelText(/Personal Protective Equipment \(PPE\)/i), { target: { value: 'Test PPE' } });
-        fireEvent.change(screen.getByLabelText(/Equipment & Resources/i), { target: { value: 'Test Equipment' } });
-        fireEvent.change(screen.getByPlaceholderText(/Step 1 description.../i), { target: { value: 'Test Procedure' } });
-        fireEvent.change(screen.getByLabelText(/Training & Competency/i), { target: { value: 'Test Training' } });
-        fireEvent.change(screen.getByLabelText(/Supervision & Monitoring/i), { target: { value: 'Test Monitoring' } });
-        fireEvent.change(screen.getByLabelText(/Emergency Procedures/i), { target: { value: 'Test Emergency' } });
-        
+        fillOutForm();
         fireEvent.click(screen.getByRole('button', { name: /Generate Method Statement/i }));
 
         const saveButton = await screen.findByRole('button', { name: /Save Document/i });
         fireEvent.click(saveButton);
 
-        expect(setItemSpy).toHaveBeenCalledWith(
-            'savedMethodStatements',
-            expect.stringContaining('"title":"Save Task"')
-        );
+        await waitFor(() => {
+          expect(mockAddDoc).toHaveBeenCalledWith(
+              expect.anything(), // collection ref
+              expect.objectContaining({
+                docType: 'MethodStatement',
+                userId: 'test-user-id',
+                title: 'Test Task'
+              })
+          );
+        });
 
         expect(mockToast).toHaveBeenCalledWith({
             title: 'Success',
-            description: 'Method Statement "Save Task" has been saved.',
+            description: 'Method Statement "Test Task" has been saved.',
         });
     });
 });
