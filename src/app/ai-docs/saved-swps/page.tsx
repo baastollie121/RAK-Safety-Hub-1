@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -31,21 +32,31 @@ import { useDownloadPdf } from '@/hooks/use-download-pdf';
 import { Trash2, FileArchive, Loader2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/context/AuthContext';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 interface SavedSwp {
-  id: string;
+  id: string; // Firestore document ID
   title: string;
   companyName: string;
   reviewDate: string;
-  createdAt: string;
+  createdAt: string; // ISO string
   swpDocument: string;
+  userId: string;
+  docType: 'SWP';
 }
 
 const ReportContent = ({ report, onDelete }: { report: SavedSwp, onDelete: (id: string, title: string) => void }) => {
     const reportRef = useRef<HTMLDivElement>(null);
     const { isDownloading, handleDownload } = useDownloadPdf({
       reportRef,
-      fileName: `SWP-${report.title.replace(/\s+/g, '_')}`
+      fileName: `SWP-${report.title.replace(/\s+/g, '_')}`,
+      options: {
+        companyName: report.companyName,
+        documentTitle: `Safe Work Procedure: ${report.title}`
+      }
     });
     
     return (
@@ -98,47 +109,54 @@ const ReportContent = ({ report, onDelete }: { report: SavedSwp, onDelete: (id: 
 }
 
 export default function SavedSwpsPage() {
+  const { user } = useAuth();
   const [savedSwps, setSavedSwps] = useState<SavedSwp[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    try {
-      const reportsFromStorage = JSON.parse(
-        localStorage.getItem('savedSwps') || '[]'
-      );
-      setSavedSwps(reportsFromStorage);
-    } catch (error) {
-      console.error(
-        'Failed to load SWPs from localStorage',
-        error
-      );
-      toast({
-        variant: 'destructive',
-        title: 'Load Failed',
-        description: 'Could not load saved SWPs.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+    if (!user) return;
 
-  const handleDelete = (reportId: string, reportTitle: string) => {
+    const fetchReports = async () => {
+        try {
+            const q = query(
+                collection(db, 'generated_documents'), 
+                where('userId', '==', user.uid),
+                where('docType', '==', 'SWP'),
+                orderBy('createdAt', 'desc')
+            );
+            const querySnapshot = await getDocs(q);
+            const reportsFromDb = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: format(doc.data().createdAt.toDate(), 'PPP p')
+            } as SavedSwp));
+            setSavedSwps(reportsFromDb);
+        } catch (error) {
+            console.error("Error fetching SWPs from Firestore: ", error);
+            toast({
+                variant: 'destructive',
+                title: 'Load Failed',
+                description: 'Could not load saved SWPs.',
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    fetchReports();
+  }, [user, toast]);
+
+  const handleDelete = async (reportId: string, reportTitle: string) => {
     try {
-      const updatedReports = savedSwps.filter(
-        (report) => report.id !== reportId
-      );
-      setSavedSwps(updatedReports);
-      localStorage.setItem('savedSwps', JSON.stringify(updatedReports));
+      await deleteDoc(doc(db, 'generated_documents', reportId));
+      setSavedSwps(savedSwps.filter(report => report.id !== reportId));
       toast({
         title: 'Success',
         description: `SWP "${reportTitle}" has been deleted.`,
       });
     } catch (error) {
-      console.error(
-        'Failed to delete SWP from localStorage',
-        error
-      );
+      console.error('Failed to delete SWP from Firestore', error);
       toast({
         variant: 'destructive',
         title: 'Delete Failed',

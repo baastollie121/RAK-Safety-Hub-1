@@ -4,36 +4,53 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Default deny all reads and writes
-    match /{document=**} {
-      allow read, write: if false;
+    function isUserAuthenticated() {
+      return request.auth != null;
     }
 
-    // Rules for the 'users' collection
-    // Admins can read/write any user document.
-    // Authenticated clients can only read/write their own document.
+    function isUserRole(role) {
+      return request.auth.token.role == role;
+    }
+
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
     match /users/{userId} {
-      allow read: if request.auth != null; // Temporarily permissive for debugging
-      // Allow authenticated users to create and update their own user documents.
-      allow create, update: if request.auth != null && request.auth.uid == userId;
+      allow read: if isUserAuthenticated();
+      allow write: if isUserRole('admin');
+      allow create: if isUserRole('admin');
     }
 
-    // Rules for the 'chats' collection
-    match /chats/{userId} {
-      // Admins can read any chat document.
-      // Clients can create/update their own chat document when starting a conversation.
-      allow read, create, update: if request.auth != null && (request.auth.token.role == 'admin' || request.auth.uid == userId);
+    match /chats/{userId}/{document=**} {
+      allow read, write: if isOwner(userId) || isUserRole('admin');
+    }
+    
+    match /generated_documents/{docId} {
+      allow read: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isUserRole('admin'));
+      allow create: if isUserAuthenticated();
+      allow delete: if isUserAuthenticated() && (resource.data.userId == request.auth.uid || isUserRole('admin'));
+    }
 
-      // Rules for the 'messages' subcollection within a chat
-      match /messages/{messageId} {
-        // Admins can read messages from any chat.
-        // Clients can only read messages from their own chat.
-        allow read: if request.auth != null && (request.auth.token.role == 'admin' || request.auth.uid == userId);
-        
-        // Admins can write (send) messages to any chat.
-        // Clients can only write (send) messages to their own chat.
-        allow write: if request.auth != null && (request.auth.token.role == 'admin' || request.auth.uid == userId);
-      }
+    match /core_memory/{docId} {
+      allow read: if isUserAuthenticated();
+      allow create, update, delete: if isUserRole('admin');
+    }
+
+    match /vehicles/{docId} {
+      allow read, write: if isUserAuthenticated();
+    }
+    
+    match /assets/{docId} {
+      allow read, write: if isUserAuthenticated();
+    }
+    
+    match /employees/{docId} {
+      allow read, write: if isUserAuthenticated();
+    }
+
+    match /training_courses/{docId} {
+        allow read, write: if isUserAuthenticated();
     }
   }
 }

@@ -38,6 +38,8 @@ import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useDownloadPdf } from '@/hooks/use-download-pdf';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const procedureStepSchema = z.object({
   value: z.string().min(1, "Step description cannot be empty."),
@@ -56,15 +58,6 @@ const formSchema = z.object({
 });
 
 type SwpFormValues = z.infer<typeof formSchema>;
-
-interface SavedSwp {
-    id: string;
-    title: string;
-    companyName: string;
-    reviewDate: string;
-    createdAt: string;
-    swpDocument: string;
-}
 
 export default function SafeWorkProcedurePage() {
   const { user } = useAuth();
@@ -88,7 +81,7 @@ export default function SafeWorkProcedurePage() {
     },
   });
 
-  const { isDownloading: isDownloadingPdf, handleDownload: handleDownloadPdf } = useDownloadPdf({
+  const { isDownloading, handleDownload } = useDownloadPdf({
     reportRef,
     fileName: `SWP-${form.getValues('taskTitle').replace(/\s+/g, '_')}`,
     options: {
@@ -123,30 +116,29 @@ export default function SafeWorkProcedurePage() {
     setIsLoading(false);
   };
   
-  const handleSaveSwp = () => {
-    if (!result || !result.swpDocument) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No SWP to save.' });
+  const handleSaveSwp = async () => {
+    if (!result || !result.swpDocument || !user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No SWP or user session to save.' });
       return;
     }
 
     const { companyName, taskTitle, reviewDate } = form.getValues();
 
-    const newSwp: SavedSwp = {
-      id: new Date().toISOString(),
+    const newSwp = {
+      docType: 'SWP',
+      userId: user.uid,
       companyName,
       title: taskTitle,
       reviewDate: format(reviewDate, 'PPP'),
-      createdAt: format(new Date(), 'PPP p'),
+      createdAt: serverTimestamp(),
       swpDocument: result.swpDocument,
     };
 
     try {
-      const savedSwps: SavedSwp[] = JSON.parse(localStorage.getItem('savedSwps') || '[]');
-      savedSwps.unshift(newSwp);
-      localStorage.setItem('savedSwps', JSON.stringify(savedSwps));
+      await addDoc(collection(db, 'generated_documents'), newSwp);
       toast({ title: 'Success', description: `SWP "${taskTitle}" has been saved.` });
     } catch (error) {
-      console.error('Failed to save SWP to localStorage', error);
+      console.error('Failed to save SWP to Firestore', error);
       toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the SWP.' });
     }
   };
@@ -289,11 +281,11 @@ export default function SafeWorkProcedurePage() {
                         <CardDescription>Review the document below. You can save it or download as a PDF.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <Button onClick={handleSaveSwp} variant="outline">
+                        <Button onClick={handleSaveSwp} variant="outline" disabled={!user}>
                             <FileArchive className="mr-2" /> Save SWP
                         </Button>
-                        <Button onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
-                            {isDownloadingPdf ? <><Loader2 className="animate-spin mr-2" /> Downloading...</> : <><Download className="mr-2" /> Download as PDF</>}
+                        <Button onClick={handleDownload} disabled={isDownloading}>
+                            {isDownloading ? <><Loader2 className="animate-spin mr-2" /> Downloading...</> : <><Download className="mr-2" /> Download as PDF</>}
                         </Button>
                     </div>
                 </div>

@@ -1,7 +1,7 @@
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -69,9 +69,14 @@ import {
   FolderPlus,
   CalendarIcon,
   GripVertical,
+  Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/context/AuthContext';
+import { db } from '@/lib/firebase';
+import { collection, getDocs, doc, setDoc, addDoc, deleteDoc, serverTimestamp, query, orderBy } from 'firebase/firestore';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const assetSchema = z.object({
   name: z.string().min(2, 'Name must be at least 2 characters.'),
@@ -85,40 +90,21 @@ const assetSchema = z.object({
 
 type AssetFormValues = z.infer<typeof assetSchema>;
 
-interface Asset extends AssetFormValues {
+export interface Asset extends AssetFormValues {
   id: string;
 }
 
-const initialCategories = [
-  'Hand Tools',
-  'Electrical Equipment',
-  'Drills',
-  'Grinders',
-  'Welding',
-  'Storage',
-  'Ladders',
-  'Moving Machinery',
-  'Generators',
-  'Gas Cutters',
-  'Lifting Equipment',
-];
-
-const initialAssets: Asset[] = [
-    { id: '1', name: 'Hammer Drill', serialNumber: 'HD-12345', category: 'Drills', status: 'Operational', lastInspected: new Date('2024-05-10'), inspectedBy: 'John Doe', lastReplaced: new Date('2022-01-15') },
-    { id: '2', name: 'Angle Grinder', serialNumber: 'AG-67890', category: 'Grinders', status: 'Needs Repair', lastInspected: new Date('2024-03-20'), inspectedBy: 'Jane Smith' },
-    { id: '3', name: 'Step Ladder 6ft', serialNumber: 'SL-ABCDE', category: 'Ladders', status: 'Operational', lastInspected: new Date('2024-06-01'), inspectedBy: 'John Doe' },
-    { id: '4', name: 'Forklift', serialNumber: 'FL-XYZ', category: 'Moving Machinery', status: 'Out of Service', lastInspected: new Date('2023-12-01'), inspectedBy: 'Maintenance Co.', lastReplaced: new Date('2018-07-20') },
-];
-
 export default function AssetEquipmentTrackerPage() {
-  const [categories, setCategories] = useState<string[]>(initialCategories);
-  const [assets, setAssets] = useState<Asset[]>(initialAssets);
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [categories, setCategories] = useState<string[]>([]);
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [isAssetDialogOpen, setIsAssetDialogOpen] = useState(false);
   const [isCategoryDialogOpen, setIsCategoryDialogOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const { toast } = useToast();
 
   const form = useForm<AssetFormValues>({
     resolver: zodResolver(assetSchema),
@@ -128,10 +114,40 @@ export default function AssetEquipmentTrackerPage() {
       category: '',
       status: 'Operational',
       inspectedBy: '',
-      lastInspected: new Date(),
-      lastReplaced: undefined,
     },
   });
+
+  useEffect(() => {
+    if (!user) return;
+    const fetchAssets = async () => {
+        setIsLoading(true);
+        try {
+            const assetsQuery = query(collection(db, 'assets'), orderBy('createdAt', 'desc'));
+            const assetsSnapshot = await getDocs(assetsQuery);
+            const fetchedAssets = assetsSnapshot.docs.map(d => {
+                const data = d.data();
+                return {
+                    id: d.id,
+                    ...data,
+                    lastInspected: data.lastInspected.toDate(),
+                    lastReplaced: data.lastReplaced?.toDate ? data.lastReplaced.toDate() : undefined,
+                } as Asset;
+            });
+            setAssets(fetchedAssets);
+
+            const uniqueCategories = [...new Set(fetchedAssets.map(a => a.category))];
+            setCategories(uniqueCategories);
+
+        } catch (error) {
+            console.error("Error fetching assets:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not load assets.' });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    fetchAssets();
+  }, [user, toast]);
+
 
   const handleAddAssetClick = () => {
     setEditingAsset(null);
@@ -157,21 +173,36 @@ export default function AssetEquipmentTrackerPage() {
     setIsAssetDialogOpen(true);
   };
 
-  const handleDeleteAsset = (assetId: string, assetName: string) => {
-    setAssets(assets.filter((asset) => asset.id !== assetId));
-    toast({ title: 'Success', description: `Asset "${assetName}" removed.` });
+  const handleDeleteAsset = async (assetId: string, assetName: string) => {
+    try {
+        await deleteDoc(doc(db, 'assets', assetId));
+        setAssets(assets.filter((asset) => asset.id !== assetId));
+        toast({ title: 'Success', description: `Asset "${assetName}" removed.` });
+    } catch (error) {
+        toast({ variant: 'destructive', title: 'Error', description: 'Could not delete asset.' });
+    }
   };
 
-  const handleSaveAsset = (data: AssetFormValues) => {
-    if (editingAsset) {
-      setAssets(assets.map((asset) => (asset.id === editingAsset.id ? { ...asset, ...data } : asset)));
-      toast({ title: 'Success', description: 'Asset updated.' });
-    } else {
-      setAssets([...assets, { ...data, id: new Date().toISOString() }]);
-      toast({ title: 'Success', description: 'Asset added.' });
+  const handleSaveAsset = async (data: AssetFormValues) => {
+    const dataToSave = { ...data, createdAt: serverTimestamp() };
+    try {
+        if (editingAsset) {
+            await setDoc(doc(db, 'assets', editingAsset.id), dataToSave, { merge: true });
+            setAssets(assets.map((asset) => (asset.id === editingAsset.id ? { ...asset, ...data } : asset)));
+            toast({ title: 'Success', description: 'Asset updated.' });
+        } else {
+            const docRef = await addDoc(collection(db, 'assets'), dataToSave);
+            setAssets([{ ...data, id: docRef.id }, ...assets]);
+            toast({ title: 'Success', description: 'Asset added.' });
+        }
+         if (!categories.includes(data.category)) {
+            setCategories([...categories, data.category]);
+        }
+        setIsAssetDialogOpen(false);
+        setEditingAsset(null);
+    } catch (error) {
+         toast({ variant: 'destructive', title: 'Error', description: 'Could not save asset.' });
     }
-    setIsAssetDialogOpen(false);
-    setEditingAsset(null);
   };
   
   const handleAddCategory = () => {
@@ -186,12 +217,15 @@ export default function AssetEquipmentTrackerPage() {
   };
 
   const handleDeleteCategory = (categoryToDelete: string) => {
+    // This is a client-side only operation for now. A backend implementation would be better.
     setCategories(categories.filter(c => c !== categoryToDelete));
+    // Note: this doesn't delete the assets from the DB. A more robust solution would be a batch delete.
     setAssets(assets.filter(a => a.category !== categoryToDelete));
-    toast({ title: 'Success', description: `Category "${categoryToDelete}" and its assets have been removed.` });
+    toast({ title: 'Success', description: `Category "${categoryToDelete}" removed from view.` });
   };
 
   const filteredAssets = useMemo(() => {
+    if (!searchTerm) return assets;
     return assets.filter(asset => 
         asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         (asset.serialNumber || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -255,116 +289,124 @@ export default function AssetEquipmentTrackerPage() {
         </CardContent>
       </Card>
       
-      <Accordion type="multiple" defaultValue={initialCategories} className="w-full space-y-2">
-        {categories.map((category) => (
-            <AccordionItem value={category} key={category} className="border rounded-lg bg-card">
-              <div className="flex items-center">
-                  <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline text-lg font-headline text-left">
-                    <div className='flex items-center gap-2'>
-                        <GripVertical className="size-5 text-muted-foreground"/>
-                        {category} ({assetsByCategory[category].length})
+        {isLoading ? (
+            <div className="space-y-2">
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+                <Skeleton className="h-16 w-full" />
+            </div>
+        ) : (
+            <Accordion type="multiple" defaultValue={categories} className="w-full space-y-2">
+                {categories.map((category) => (
+                    <AccordionItem value={category} key={category} className="border rounded-lg bg-card">
+                    <div className="flex items-center">
+                        <AccordionTrigger className="flex-1 px-4 py-3 hover:no-underline text-lg font-headline text-left">
+                            <div className='flex items-center gap-2'>
+                                <GripVertical className="size-5 text-muted-foreground"/>
+                                {category} ({assetsByCategory[category]?.length || 0})
+                            </div>
+                        </AccordionTrigger>
+                        <div className="pr-4">
+                            <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10">
+                                    <Trash2 className="size-4" />
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This will only remove the category from the view. It will not delete the assets within it from the database.
+                                </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={() => handleDeleteCategory(category)}>
+                                    Yes, remove category
+                                </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
                     </div>
-                  </AccordionTrigger>
-                  <div className="pr-4">
-                    <AlertDialog>
-                      <AlertDialogTrigger asChild>
-                         <Button variant="ghost" size="icon" className="text-destructive hover:bg-destructive/10">
-                            <Trash2 className="size-4" />
-                        </Button>
-                      </AlertDialogTrigger>
-                      <AlertDialogContent>
-                        <AlertDialogHeader>
-                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                          <AlertDialogDescription>
-                            This will permanently delete the &quot;{category}&quot; category and all {assetsByCategory[category].length} assets within it. This action cannot be undone.
-                          </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                          <AlertDialogAction onClick={() => handleDeleteCategory(category)}>
-                            Yes, delete category
-                          </AlertDialogAction>
-                        </AlertDialogFooter>
-                      </AlertDialogContent>
-                    </AlertDialog>
-                  </div>
-              </div>
-              <AccordionContent className="p-0 border-t">
-                <div className="overflow-x-auto">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Name</TableHead>
-                                <TableHead>Serial No.</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>Last Inspected</TableHead>
-                                <TableHead>Inspected By</TableHead>
-                                <TableHead>Last Replaced</TableHead>
-                                <TableHead className="text-right">Actions</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {assetsByCategory[category].length > 0 ? (
-                                assetsByCategory[category].map((asset) => (
-                                <TableRow key={asset.id}>
-                                    <TableCell className="font-medium">{asset.name}</TableCell>
-                                    <TableCell>{asset.serialNumber || 'N/A'}</TableCell>
-                                    <TableCell>
-                                        <Badge variant={asset.status === 'Operational' ? 'secondary' : asset.status === 'Needs Repair' ? 'default' : 'destructive'}
-                                            className={cn({
-                                                'bg-green-500/20 text-green-300 border-green-500/30': asset.status === 'Operational',
-                                                'bg-yellow-500/20 text-yellow-300 border-yellow-500/30': asset.status === 'Needs Repair',
-                                                'bg-red-500/20 text-red-300 border-red-500/30': asset.status === 'Out of Service'
-                                            })}
-                                        >
-                                            {asset.status}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>{format(new Date(asset.lastInspected), 'PPP')}</TableCell>
-                                    <TableCell>{asset.inspectedBy}</TableCell>
-                                    <TableCell>{asset.lastReplaced ? format(new Date(asset.lastReplaced), 'PPP') : 'N/A'}</TableCell>
-                                    <TableCell className="text-right">
-                                    <Button variant="ghost" size="icon" onClick={() => handleEditAssetClick(asset)}>
-                                        <Edit className="size-4" />
-                                    </Button>
-                                    <AlertDialog>
-                                      <AlertDialogTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
-                                            <Trash2 className="size-4" />
-                                        </Button>
-                                      </AlertDialogTrigger>
-                                      <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                          <AlertDialogDescription>
-                                            This will permanently delete the asset &quot;{asset.name}&quot;. This action cannot be undone.
-                                          </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                          <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                          <AlertDialogAction onClick={() => handleDeleteAsset(asset.id, asset.name)}>
-                                            Yes, delete asset
-                                          </AlertDialogAction>
-                                        </AlertDialogFooter>
-                                      </AlertDialogContent>
-                                    </AlertDialog>
-                                    </TableCell>
-                                </TableRow>
-                                ))
-                            ) : (
-                                <TableRow>
-                                    <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
-                                        No assets in this category.
-                                    </TableCell>
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </div>
-              </AccordionContent>
-            </AccordionItem>
-        ))}
-      </Accordion>
+                    <AccordionContent className="p-0 border-t">
+                        <div className="overflow-x-auto">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow>
+                                        <TableHead>Name</TableHead>
+                                        <TableHead>Serial No.</TableHead>
+                                        <TableHead>Status</TableHead>
+                                        <TableHead>Last Inspected</TableHead>
+                                        <TableHead>Inspected By</TableHead>
+                                        <TableHead>Last Replaced</TableHead>
+                                        <TableHead className="text-right">Actions</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {(assetsByCategory[category] && assetsByCategory[category].length > 0) ? (
+                                        assetsByCategory[category].map((asset) => (
+                                        <TableRow key={asset.id}>
+                                            <TableCell className="font-medium">{asset.name}</TableCell>
+                                            <TableCell>{asset.serialNumber || 'N/A'}</TableCell>
+                                            <TableCell>
+                                                <Badge variant={asset.status === 'Operational' ? 'secondary' : asset.status === 'Needs Repair' ? 'default' : 'destructive'}
+                                                    className={cn({
+                                                        'bg-green-500/20 text-green-300 border-green-500/30': asset.status === 'Operational',
+                                                        'bg-yellow-500/20 text-yellow-300 border-yellow-500/30': asset.status === 'Needs Repair',
+                                                        'bg-red-500/20 text-red-300 border-red-500/30': asset.status === 'Out of Service'
+                                                    })}
+                                                >
+                                                    {asset.status}
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>{format(new Date(asset.lastInspected), 'PPP')}</TableCell>
+                                            <TableCell>{asset.inspectedBy}</TableCell>
+                                            <TableCell>{asset.lastReplaced ? format(new Date(asset.lastReplaced), 'PPP') : 'N/A'}</TableCell>
+                                            <TableCell className="text-right">
+                                            <Button variant="ghost" size="icon" onClick={() => handleEditAssetClick(asset)}>
+                                                <Edit className="size-4" />
+                                            </Button>
+                                            <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="text-destructive hover:text-destructive">
+                                                    <Trash2 className="size-4" />
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                <AlertDialogDescription>
+                                                    This will permanently delete the asset &quot;{asset.name}&quot;. This action cannot be undone.
+                                                </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                <AlertDialogAction onClick={() => handleDeleteAsset(asset.id, asset.name)}>
+                                                    Yes, delete asset
+                                                </AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                            </AlertDialog>
+                                            </TableCell>
+                                        </TableRow>
+                                        ))
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={7} className="text-center text-muted-foreground h-24">
+                                                No assets in this category.
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </div>
+                    </AccordionContent>
+                    </AccordionItem>
+                ))}
+            </Accordion>
+        )}
 
       <Dialog open={isAssetDialogOpen} onOpenChange={setIsAssetDialogOpen}>
         <DialogContent className="sm:max-w-[425px]">
@@ -376,44 +418,13 @@ export default function AssetEquipmentTrackerPage() {
           </DialogHeader>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(handleSaveAsset)} className="space-y-4 py-4">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Cordless Drill" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="serialNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Serial Number (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., SN-123456" {...field} value={field.value || ''} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="category"
-                render={({ field }) => (
+              <FormField control={form.control} name="name" render={({ field }) => (<FormItem><FormLabel>Name</FormLabel><FormControl><Input placeholder="e.g., Cordless Drill" {...field} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="serialNumber" render={({ field }) => (<FormItem><FormLabel>Serial Number (Optional)</FormLabel><FormControl><Input placeholder="e.g., SN-123456" {...field} value={field.value || ''} /></FormControl><FormMessage /></FormItem>)} />
+              <FormField control={form.control} name="category" render={({ field }) => (
                   <FormItem>
                     <FormLabel>Category</FormLabel>
                     <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select a category" />
-                        </SelectTrigger>
-                        </FormControl>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select or type a category" /></SelectTrigger></FormControl>
                         <SelectContent>
                         {categories.map(cat => (
                             <SelectItem key={cat} value={cat}>{cat}</SelectItem>
@@ -424,98 +435,46 @@ export default function AssetEquipmentTrackerPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                        <SelectTrigger>
-                            <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
+              <FormField control={form.control} name="status" render={({ field }) => (
+                  <FormItem><FormLabel>Status</FormLabel><Select onValueChange={field.onChange} defaultValue={field.value}><FormControl><SelectTrigger><SelectValue placeholder="Select status" /></SelectTrigger></FormControl><SelectContent>
                             <SelectItem value="Operational">Operational</SelectItem>
                             <SelectItem value="Needs Repair">Needs Repair</SelectItem>
                             <SelectItem value="Out of Service">Out of Service</SelectItem>
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
+                        </SelectContent></Select><FormMessage />
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="lastInspected"
-                render={({ field }) => (
+              <FormField control={form.control} name="lastInspected" render={({ field }) => (
                     <FormItem className="flex flex-col">
                         <FormLabel>Last Inspected Date</FormLabel>
-                        <Popover>
-                        <PopoverTrigger asChild>
-                            <FormControl>
-                            <Button
-                                variant="outline"
-                                className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                            >
+                        <Popover><PopoverTrigger asChild><FormControl>
+                            <Button variant="outline" className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>
                                 {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                            </FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
                             <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
-                        </PopoverContent>
-                        </Popover>
-                        <FormMessage />
+                        </PopoverContent></Popover><FormMessage />
                     </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="inspectedBy"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Inspected By</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Site Supervisor" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-               <FormField
-                control={form.control}
-                name="lastReplaced"
-                render={({ field }) => (
+              <FormField control={form.control} name="inspectedBy" render={({ field }) => (<FormItem><FormLabel>Inspected By</FormLabel><FormControl><Input placeholder="e.g., Site Supervisor" {...field} /></FormControl><FormMessage /></FormItem>)} />
+               <FormField control={form.control} name="lastReplaced" render={({ field }) => (
                     <FormItem className="flex flex-col">
                         <FormLabel>Last Replaced Date (Optional)</FormLabel>
-                        <Popover>
-                        <PopoverTrigger asChild>
-                            <FormControl>
-                            <Button
-                                variant="outline"
-                                className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}
-                            >
+                        <Popover><PopoverTrigger asChild><FormControl>
+                            <Button variant="outline" className={cn('w-full pl-3 text-left font-normal', !field.value && 'text-muted-foreground')}>
                                 {field.value ? format(field.value, 'PPP') : <span>Pick a date</span>}
                                 <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                             </Button>
-                            </FormControl>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
+                            </FormControl></PopoverTrigger><PopoverContent className="w-auto p-0" align="start">
                             <Calendar mode="single" selected={field.value} onSelect={field.onChange} />
-                        </PopoverContent>
-                        </Popover>
-                        <FormMessage />
+                        </PopoverContent></Popover><FormMessage />
                     </FormItem>
                 )}
               />
-
               <DialogFooter>
-                <DialogClose asChild>
-                    <Button type="button" variant="outline">Cancel</Button>
-                </DialogClose>
+                <DialogClose asChild><Button type="button" variant="outline">Cancel</Button></DialogClose>
                 <Button type="submit">Save Asset</Button>
               </DialogFooter>
             </form>

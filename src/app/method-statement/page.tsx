@@ -38,6 +38,8 @@ import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
 import { useDownloadPdf } from '@/hooks/use-download-pdf';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const procedureStepSchema = z.object({
   value: z.string().min(1, "Step description cannot be empty."),
@@ -60,16 +62,6 @@ const formSchema = z.object({
 });
 
 type FormValues = z.infer<typeof formSchema>;
-
-interface SavedStatement {
-    id: string;
-    title: string;
-    projectTitle: string;
-    companyName: string;
-    reviewDate: string;
-    createdAt: string;
-    methodStatementDocument: string;
-}
 
 export default function MethodStatementPage() {
   const { user } = useAuth();
@@ -97,7 +89,7 @@ export default function MethodStatementPage() {
     },
   });
   
-  const { isDownloading: isDownloadingPdf, handleDownload: handleDownloadPdf } = useDownloadPdf({
+  const { isDownloading, handleDownload } = useDownloadPdf({
     reportRef,
     fileName: `Method-Statement-${form.getValues('taskTitle').replace(/\s+/g, '_')}`,
     options: {
@@ -132,31 +124,30 @@ export default function MethodStatementPage() {
     setIsLoading(false);
   };
   
-  const handleSaveStatement = () => {
-    if (!result || !result.methodStatementDocument) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No document to save.' });
+  const handleSaveStatement = async () => {
+    if (!result || !result.methodStatementDocument || !user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No document or user session to save.' });
       return;
     }
 
     const { companyName, projectTitle, taskTitle, reviewDate } = form.getValues();
 
-    const newStatement: SavedStatement = {
-      id: new Date().toISOString(),
+    const newStatement = {
+      docType: 'MethodStatement',
+      userId: user.uid,
       companyName,
       projectTitle,
       title: taskTitle,
       reviewDate: format(reviewDate, 'PPP'),
-      createdAt: format(new Date(), 'PPP p'),
+      createdAt: serverTimestamp(),
       methodStatementDocument: result.methodStatementDocument,
     };
 
     try {
-      const savedStatements: SavedStatement[] = JSON.parse(localStorage.getItem('savedMethodStatements') || '[]');
-      savedStatements.unshift(newStatement);
-      localStorage.setItem('savedMethodStatements', JSON.stringify(savedStatements));
+      await addDoc(collection(db, 'generated_documents'), newStatement);
       toast({ title: 'Success', description: `Method Statement "${taskTitle}" has been saved.` });
     } catch (error) {
-      console.error('Failed to save to localStorage', error);
+      console.error('Failed to save to Firestore', error);
       toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the document.' });
     }
   };
@@ -310,11 +301,11 @@ export default function MethodStatementPage() {
                         <CardDescription>Review the document below. You can save it or download as a PDF.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <Button onClick={handleSaveStatement} variant="outline">
+                        <Button onClick={handleSaveStatement} variant="outline" disabled={!user}>
                             <FileArchive className="mr-2" /> Save Document
                         </Button>
-                        <Button onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
-                            {isDownloadingPdf ? <><Loader2 className="animate-spin mr-2" /> Downloading...</> : <><Download className="mr-2" /> Download as PDF</>}
+                        <Button onClick={handleDownload} disabled={isDownloading}>
+                            {isDownloading ? <><Loader2 className="animate-spin mr-2" /> Downloading...</> : <><Download className="mr-2" /> Download as PDF</>}
                         </Button>
                     </div>
                 </div>

@@ -39,12 +39,14 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
-import { PlusCircle, Trash2, Loader2, Wand2, Download, CalendarIcon, FileArchive, FileDown } from 'lucide-react';
+import { PlusCircle, Trash2, Loader2, Wand2, Download, CalendarIcon, FileArchive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateRiskAssessment, type GenerateRiskAssessmentOutput } from '@/ai/flows/risk-assessment-generator';
 import { cn } from '@/lib/utils';
 import { useDownloadPdf } from '@/hooks/use-download-pdf';
-import Link from 'next/link';
+import { useAuth } from '@/context/AuthContext';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const hazardSchema = z.object({
   hazard: z.string().min(1, 'Hazard description is required.'),
@@ -66,15 +68,6 @@ const hiraSchema = z.object({
 
 type HiraFormValues = z.infer<typeof hiraSchema>;
 
-interface SavedRiskAssessment {
-    id: string;
-    title: string;
-    companyName: string;
-    reviewDate: string;
-    createdAt: string;
-    riskAssessmentDocument: string;
-}
-
 const likelihoodOptions = [
   { value: '0', label: '0 - Impossible' },
   { value: '1', label: '1 - Almost Impossible' },
@@ -89,7 +82,7 @@ const consequenceOptions = [
     { value: '1', label: '1 - Minor First Aid Injury' },
     { value: '2', label: '2 - Break Bone/Minor Illness (Temp)' },
     { value: '3', label: '3 - Break Bone/Serious Illness (Perm)' },
-    { value: '4', label: '4 - Loss of Limb/Eye/Major Illness' },
+    { value: '4 - Loss of Limb/Eye/Major Illness' },
     { value: '5', label: '5 - Fatality' },
 ];
 
@@ -144,6 +137,7 @@ const HazardInputCard = ({ index, remove, control }: { index: number; remove: (i
 };
 
 export default function RiskAssessmentPage() {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<GenerateRiskAssessmentOutput | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
@@ -183,7 +177,7 @@ export default function RiskAssessmentPage() {
       toast({ title: 'Success', description: 'Risk Assessment generated successfully.' });
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
     } catch (error) {
-      console.error("HIRA Generation Error:", error);
+      console.error("Risk Assessment Generation Error:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate Risk Assessment.' });
     }
     setIsLoading(false);
@@ -198,30 +192,29 @@ export default function RiskAssessmentPage() {
     });
   }
 
-  const handleSaveReport = () => {
-    if (!result || !result.riskAssessmentDocument) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No document to save.' });
+  const handleSaveReport = async () => {
+    if (!result || !result.riskAssessmentDocument || !user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No document or user session to save.' });
       return;
     }
     
     const { companyName, taskTitle, reviewDate } = form.getValues();
 
-    const newReport: SavedRiskAssessment = {
-      id: new Date().toISOString(),
+    const newReport = {
+      docType: 'RiskAssessment',
+      userId: user.uid,
       companyName,
       title: taskTitle,
       reviewDate: format(reviewDate, 'PPP'),
-      createdAt: format(new Date(), 'PPP p'),
+      createdAt: serverTimestamp(),
       riskAssessmentDocument: result.riskAssessmentDocument,
     };
 
     try {
-      const savedReports: SavedRiskAssessment[] = JSON.parse(localStorage.getItem('savedRiskAssessments') || '[]');
-      savedReports.unshift(newReport);
-      localStorage.setItem('savedRiskAssessments', JSON.stringify(savedReports));
+      await addDoc(collection(db, 'generated_documents'), newReport);
       toast({ title: 'Success', description: `Report "${taskTitle}" has been saved.` });
     } catch (error) {
-      console.error('Failed to save to localStorage', error);
+      console.error('Failed to save report to Firestore', error);
       toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the report.' });
     }
   };
@@ -323,7 +316,7 @@ export default function RiskAssessmentPage() {
                         <CardDescription>Review the document below. You can save the report or download it as a PDF.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <Button onClick={handleSaveReport} variant="outline">
+                        <Button onClick={handleSaveReport} variant="outline" disabled={!user}>
                             <FileArchive className="mr-2" /> Save Report
                         </Button>
                         <Button onClick={handleDownload} disabled={isDownloading}>

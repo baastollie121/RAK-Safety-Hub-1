@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -31,15 +32,21 @@ import { useDownloadPdf } from '@/hooks/use-download-pdf';
 import { Trash2, FileArchive, Loader2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/context/AuthContext';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 interface SavedStatement {
-  id: string;
+  id: string; // Firestore document ID
   title: string;
   projectTitle: string;
   companyName: string;
   reviewDate: string;
-  createdAt: string;
+  createdAt: string; // ISO string
   methodStatementDocument: string;
+  userId: string;
+  docType: 'MethodStatement';
 }
 
 const ReportContent = ({ report, onDelete }: { report: SavedStatement, onDelete: (id: string, title: string) => void }) => {
@@ -47,6 +54,10 @@ const ReportContent = ({ report, onDelete }: { report: SavedStatement, onDelete:
     const { isDownloading, handleDownload } = useDownloadPdf({
       reportRef,
       fileName: `Method-Statement-${report.title.replace(/\s+/g, '_')}`,
+      options: {
+        companyName: report.companyName,
+        documentTitle: `Method Statement: ${report.title}`
+      }
     });
 
     return (
@@ -99,47 +110,54 @@ const ReportContent = ({ report, onDelete }: { report: SavedStatement, onDelete:
 }
 
 export default function SavedMethodStatementsPage() {
+  const { user } = useAuth();
   const [savedStatements, setSavedStatements] = useState<SavedStatement[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    try {
-      const reportsFromStorage = JSON.parse(
-        localStorage.getItem('savedMethodStatements') || '[]'
-      );
-      setSavedStatements(reportsFromStorage);
-    } catch (error) {
-      console.error(
-        'Failed to load Method Statements from localStorage',
-        error
-      );
-      toast({
-        variant: 'destructive',
-        title: 'Load Failed',
-        description: 'Could not load saved documents.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+    if (!user) return;
 
-  const handleDelete = (reportId: string, reportTitle: string) => {
+    const fetchReports = async () => {
+        try {
+            const q = query(
+                collection(db, 'generated_documents'), 
+                where('userId', '==', user.uid),
+                where('docType', '==', 'MethodStatement'),
+                orderBy('createdAt', 'desc')
+            );
+            const querySnapshot = await getDocs(q);
+            const reportsFromDb = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: format(doc.data().createdAt.toDate(), 'PPP p')
+            } as SavedStatement));
+            setSavedStatements(reportsFromDb);
+        } catch (error) {
+            console.error("Error fetching statements from Firestore: ", error);
+            toast({
+                variant: 'destructive',
+                title: 'Load Failed',
+                description: 'Could not load saved documents.',
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    fetchReports();
+  }, [user, toast]);
+
+  const handleDelete = async (reportId: string, reportTitle: string) => {
     try {
-      const updatedReports = savedStatements.filter(
-        (report) => report.id !== reportId
-      );
-      setSavedStatements(updatedReports);
-      localStorage.setItem('savedMethodStatements', JSON.stringify(updatedReports));
+      await deleteDoc(doc(db, 'generated_documents', reportId));
+      setSavedStatements(savedStatements.filter(report => report.id !== reportId));
       toast({
         title: 'Success',
         description: `Document "${reportTitle}" has been deleted.`,
       });
     } catch (error) {
-      console.error(
-        'Failed to delete from localStorage',
-        error
-      );
+      console.error('Failed to delete from Firestore', error);
       toast({
         variant: 'destructive',
         title: 'Delete Failed',

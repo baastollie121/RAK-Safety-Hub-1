@@ -1,11 +1,10 @@
+
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { useForm, FormProvider } from 'react-hook-form';
+import { useState, useRef } from 'react';
+import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 import { format } from 'date-fns';
 import {
   Card,
@@ -39,10 +38,12 @@ import { generateShePlan } from '@/ai/flows/she-plan-generator';
 import ReactMarkdown from 'react-markdown';
 import { cn } from '@/lib/utils';
 import { useAuth } from '@/context/AuthContext';
+import { useDownloadPdf } from '@/hooks/use-download-pdf';
+import { db } from '@/lib/firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 const formSchema = z.object({
   companyName: z.string().min(1, 'Company Name is required.'),
-  clientName: z.string().optional(),
   projectTitle: z.string().min(1, 'Project Title is required.'),
   projectLocation: z.string().min(1, 'Project Location is required.'),
   preparedBy: z.string().min(1, 'Prepared By is required.'),
@@ -64,24 +65,9 @@ const shePlanOutputSchema = z.object({
 });
 type GenerateShePlanOutput = z.infer<typeof shePlanOutputSchema>;
 
-
-interface SavedShePlan {
-    id: string;
-    version: number;
-    title: string;
-    companyName: string;
-    clientName?: string;
-    reviewDate: string;
-    createdAt: string;
-    status: 'Draft' | 'Final' | 'Archived';
-    tags: string[];
-    shePlanDocument: string;
-}
-
 export default function SHESitePlanGeneratorPage() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
-  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [result, setResult] = useState<GenerateShePlanOutput | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -90,7 +76,6 @@ export default function SHESitePlanGeneratorPage() {
     resolver: zodResolver(formSchema),
     defaultValues: {
       companyName: '',
-      clientName: '',
       projectTitle: '',
       projectLocation: '',
       preparedBy: user?.email || '',
@@ -106,40 +91,17 @@ export default function SHESitePlanGeneratorPage() {
     },
   });
 
-  const watchAllFields = form.watch();
+  const { isDownloading, handleDownload } = useDownloadPdf({
+      reportRef,
+      fileName: `SHE-Plan-${form.watch('projectTitle').replace(/\s+/g, '_')}`,
+      options: {
+        companyName: form.watch('companyName'),
+        documentTitle: `SHE Plan: ${form.watch('projectTitle')}`
+      }
+  });
+
   const includeEnvControls = form.watch('includeEnvControls');
   const includeSiteHazards = form.watch('includeSiteHazards');
-
-  useEffect(() => {
-    const draft = localStorage.getItem('shePlanDraft');
-    if (draft) {
-        const draftData = JSON.parse(draft);
-        form.reset({
-            ...draftData,
-            reviewDate: new Date(draftData.reviewDate),
-        });
-    }
-  }, [form]);
-
-  useEffect(() => {
-    const subscription = form.watch(() => {
-        const data = form.getValues();
-        localStorage.setItem('shePlanDraft', JSON.stringify(data));
-    });
-    return () => subscription.unsubscribe();
-  }, [form]);
-
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      if (form.formState.isDirty && !result) {
-        e.preventDefault();
-        e.returnValue = '';
-      }
-    };
-    window.addEventListener('beforeunload', handleBeforeUnload);
-    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [form.formState.isDirty, result]);
-
 
   const onSubmit = async (data: ShePlanFormValues) => {
     setIsLoading(true);
@@ -153,7 +115,6 @@ export default function SHESitePlanGeneratorPage() {
       setResult(response);
       toast({ title: 'Success', description: 'SHE Site Plan generated successfully.' });
       window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-      localStorage.removeItem('shePlanDraft');
     } catch (error) {
       console.error("SHE Plan Generation Error:", error);
       toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate SHE Site Plan.' });
@@ -161,91 +122,35 @@ export default function SHESitePlanGeneratorPage() {
     setIsLoading(false);
   };
   
-  const handleSavePlan = () => {
-    if (!result || !result.shePlanDocument) {
-      toast({ variant: 'destructive', title: 'Error', description: 'No SHE plan to save.' });
+  const handleSavePlan = async () => {
+    if (!result || !result.shePlanDocument || !user) {
+      toast({ variant: 'destructive', title: 'Error', description: 'No SHE plan or user session to save.' });
       return;
     }
 
-    const { companyName, clientName, projectTitle, reviewDate } = form.getValues();
+    const { companyName, projectTitle, reviewDate } = form.getValues();
 
-    const newPlan: SavedShePlan = {
-      id: new Date().toISOString(),
-      version: 1,
+    const newPlan = {
+      docType: 'ShePlan',
+      userId: user.uid,
       companyName,
-      clientName,
       title: projectTitle,
       reviewDate: format(reviewDate, 'PPP'),
-      createdAt: format(new Date(), 'PPP p'),
-      status: 'Draft',
-      tags: [],
+      createdAt: serverTimestamp(),
       shePlanDocument: result.shePlanDocument,
     };
 
     try {
-      const savedPlans: SavedShePlan[] = JSON.parse(localStorage.getItem('savedShePlans') || '[]');
-      savedPlans.unshift(newPlan);
-      localStorage.setItem('savedShePlans', JSON.stringify(savedPlans));
+      await addDoc(collection(db, 'generated_documents'), newPlan);
       toast({ title: 'Success', description: `SHE Plan "${projectTitle}" has been saved.` });
     } catch (error) {
-      console.error('Failed to save SHE Plan to localStorage', error);
+      console.error('Failed to save SHE Plan to Firestore', error);
       toast({ variant: 'destructive', title: 'Save Failed', description: 'Could not save the plan.' });
     }
   };
 
 
-  const handleDownloadPdf = async () => {
-    const reportElement = reportRef.current;
-    const projectTitle = form.getValues('projectTitle');
-    if (!reportElement || !projectTitle) {
-      toast({ variant: 'destructive', title: 'Error', description: 'Cannot download PDF. Please generate a plan first.' });
-      return;
-    }
-    
-    setIsDownloadingPdf(true);
-    
-    try {
-        const canvas = await html2canvas(reportElement, {
-            scale: 2,
-            useCORS: true,
-            backgroundColor: null,
-        });
-        
-        const imgData = canvas.toDataURL('image/png');
-        const pdf = new jsPDF({
-            orientation: 'p',
-            unit: 'mm',
-            format: 'a4',
-        });
-        
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const PADDING = 10;
-        const contentWidth = pdfWidth - (PADDING * 2);
-        const imgHeight = (canvas.height * contentWidth) / canvas.width;
-        let heightLeft = imgHeight;
-        let position = PADDING;
-
-        pdf.addImage(imgData, 'PNG', PADDING, position, contentWidth, imgHeight);
-        heightLeft -= (pdf.internal.pageSize.getHeight() - (PADDING * 2));
-
-        while (heightLeft > 0) {
-            position = heightLeft - imgHeight + PADDING;
-            pdf.addPage();
-            pdf.addImage(imgData, 'PNG', PADDING, position, contentWidth, imgHeight);
-            heightLeft -= (pdf.internal.pageSize.getHeight() - (PADDING * 2));
-        }
-        
-        pdf.save(`SHE-Plan-${projectTitle.replace(/\s+/g, '_')}.pdf`);
-        toast({ title: 'Success', description: 'PDF downloaded successfully.' });
-    } catch(err) {
-        console.error("PDF generation error:", err);
-        toast({ variant: 'destructive', title: 'Error', description: 'Failed to generate PDF.' });
-    } finally {
-        setIsDownloadingPdf(false);
-    }
-  };
-
-  const formSection = (name: keyof ShePlanFormValues, label: string, placeholder: string, isTextarea = true, rows = 5) => (
+  const formSection = (name: keyof ShePlanFormValues, label: string, placeholder: string, isTextarea = true) => (
       <FormField
           control={form.control}
           name={name}
@@ -284,7 +189,6 @@ export default function SHESitePlanGeneratorPage() {
               </CardHeader>
               <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {formSection('companyName', 'Company Name', 'e.g., RAK Safety', false)}
-                  {formSection('clientName', 'Client Name (Optional)', 'e.g., ABC Construction', false)}
                   {formSection('projectTitle', 'Project Title', 'e.g., New Warehouse Construction', false)}
                   {formSection('projectLocation', 'Project Location', 'e.g., 123 Industrial Rd, Johannesburg', false)}
                   {formSection('preparedBy', 'Prepared By', 'e.g., John Doe, Safety Officer', false)}
@@ -385,11 +289,11 @@ export default function SHESitePlanGeneratorPage() {
                         <CardDescription>Review the document below. You can save it or download as a PDF.</CardDescription>
                     </div>
                     <div className="flex items-center gap-2 flex-shrink-0">
-                        <Button onClick={handleSavePlan} variant="outline">
+                        <Button onClick={handleSavePlan} variant="outline" disabled={!user}>
                             <FileArchive className="mr-2" /> Save Plan
                         </Button>
-                        <Button onClick={handleDownloadPdf} disabled={isDownloadingPdf}>
-                            {isDownloadingPdf ? <><Loader2 className="animate-spin mr-2" /> Downloading...</> : <><Download className="mr-2" /> Download as PDF</>}
+                        <Button onClick={handleDownload} disabled={isDownloading}>
+                            {isDownloading ? <><Loader2 className="animate-spin mr-2" /> Downloading...</> : <><Download className="mr-2" /> Download as PDF</>}
                         </Button>
                     </div>
                 </div>

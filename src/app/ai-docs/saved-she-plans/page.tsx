@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
@@ -5,7 +6,6 @@ import ReactMarkdown from 'react-markdown';
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
@@ -32,14 +32,20 @@ import { useDownloadPdf } from '@/hooks/use-download-pdf';
 import { Trash2, FileArchive, Loader2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/context/AuthContext';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 interface SavedShePlan {
   id: string;
   title: string;
   companyName: string;
   reviewDate: string;
-  createdAt: string;
+  createdAt: string; // ISO string
   shePlanDocument: string;
+  userId: string;
+  docType: 'ShePlan';
 }
 
 const ReportContent = ({ report, onDelete }: { report: SavedShePlan, onDelete: (id: string, title: string) => void }) => {
@@ -47,6 +53,10 @@ const ReportContent = ({ report, onDelete }: { report: SavedShePlan, onDelete: (
     const { isDownloading, handleDownload } = useDownloadPdf({
       reportRef,
       fileName: `SHE-Plan-${report.title.replace(/\s+/g, '_')}`,
+      options: {
+        companyName: report.companyName,
+        documentTitle: `SHE Plan: ${report.title}`
+      }
     });
     
     return (
@@ -100,47 +110,54 @@ const ReportContent = ({ report, onDelete }: { report: SavedShePlan, onDelete: (
 
 
 export default function SavedShePlansPage() {
+  const { user } = useAuth();
   const [savedPlans, setSavedPlans] = useState<SavedShePlan[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
-  useEffect(() => {
-    try {
-      const plansFromStorage = JSON.parse(
-        localStorage.getItem('savedShePlans') || '[]'
-      );
-      setSavedPlans(plansFromStorage);
-    } catch (error) {
-      console.error(
-        'Failed to load SHE plans from localStorage',
-        error
-      );
-      toast({
-        variant: 'destructive',
-        title: 'Load Failed',
-        description: 'Could not load saved plans.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+   useEffect(() => {
+    if (!user) return;
 
-  const handleDelete = (planId: string, planTitle: string) => {
+    const fetchPlans = async () => {
+        try {
+            const q = query(
+                collection(db, 'generated_documents'), 
+                where('userId', '==', user.uid),
+                where('docType', '==', 'ShePlan'),
+                orderBy('createdAt', 'desc')
+            );
+            const querySnapshot = await getDocs(q);
+            const plansFromDb = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: format(doc.data().createdAt.toDate(), 'PPP p')
+            } as SavedShePlan));
+            setSavedPlans(plansFromDb);
+        } catch (error) {
+            console.error("Error fetching plans from Firestore: ", error);
+            toast({
+                variant: 'destructive',
+                title: 'Load Failed',
+                description: 'Could not load saved plans.',
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    fetchPlans();
+  }, [user, toast]);
+
+  const handleDelete = async (planId: string, planTitle: string) => {
     try {
-      const updatedPlans = savedPlans.filter(
-        (plan) => plan.id !== planId
-      );
-      setSavedPlans(updatedPlans);
-      localStorage.setItem('savedShePlans', JSON.stringify(updatedPlans));
+      await deleteDoc(doc(db, 'generated_documents', planId));
+      setSavedPlans(savedPlans.filter(plan => plan.id !== planId));
       toast({
         title: 'Success',
         description: `Plan "${planTitle}" has been deleted.`,
       });
     } catch (error) {
-      console.error(
-        'Failed to delete SHE plan from localStorage',
-        error
-      );
+      console.error('Failed to delete SHE plan from Firestore', error);
       toast({
         variant: 'destructive',
         title: 'Delete Failed',

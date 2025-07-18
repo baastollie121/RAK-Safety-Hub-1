@@ -32,14 +32,20 @@ import { useDownloadPdf } from '@/hooks/use-download-pdf';
 import { Trash2, FileArchive, Loader2, Download } from 'lucide-react';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useAuth } from '@/context/AuthContext';
+import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs, deleteDoc, doc, orderBy } from 'firebase/firestore';
+import { format } from 'date-fns';
 
 interface SavedRiskAssessment {
-  id: string;
+  id: string; // Firestore document ID
   title: string;
   companyName: string;
   reviewDate: string;
-  createdAt: string;
+  createdAt: string; // ISO string
   riskAssessmentDocument: string;
+  userId: string;
+  docType: 'RiskAssessment';
 }
 
 const ReportContent = ({ report, onDelete }: { report: SavedRiskAssessment, onDelete: (id: string, title: string) => void }) => {
@@ -47,6 +53,10 @@ const ReportContent = ({ report, onDelete }: { report: SavedRiskAssessment, onDe
     const { isDownloading, handleDownload } = useDownloadPdf({
       reportRef,
       fileName: `Risk-Assessment-${report.title.replace(/\s+/g, '_')}`,
+      options: {
+        companyName: report.companyName,
+        documentTitle: `Risk Assessment: ${report.title}`
+      }
     });
 
     return (
@@ -99,47 +109,54 @@ const ReportContent = ({ report, onDelete }: { report: SavedRiskAssessment, onDe
 }
 
 export default function SavedRiskAssessmentsPage() {
+  const { user } = useAuth();
   const [savedReports, setSavedReports] = useState<SavedRiskAssessment[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
-    try {
-      const reportsFromStorage = JSON.parse(
-        localStorage.getItem('savedRiskAssessments') || '[]'
-      );
-      setSavedReports(reportsFromStorage);
-    } catch (error) {
-      console.error(
-        'Failed to load reports from localStorage',
-        error
-      );
-      toast({
-        variant: 'destructive',
-        title: 'Load Failed',
-        description: 'Could not load saved reports.',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+    if (!user) return;
 
-  const handleDelete = (reportId: string, reportTitle: string) => {
+    const fetchReports = async () => {
+        try {
+            const q = query(
+                collection(db, 'generated_documents'), 
+                where('userId', '==', user.uid),
+                where('docType', '==', 'RiskAssessment'),
+                orderBy('createdAt', 'desc')
+            );
+            const querySnapshot = await getDocs(q);
+            const reportsFromDb = querySnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data(),
+                createdAt: format(doc.data().createdAt.toDate(), 'PPP p')
+            } as SavedRiskAssessment));
+            setSavedReports(reportsFromDb);
+        } catch (error) {
+            console.error("Error fetching reports from Firestore: ", error);
+            toast({
+                variant: 'destructive',
+                title: 'Load Failed',
+                description: 'Could not load saved reports.',
+            });
+        } finally {
+            setIsLoading(false);
+        }
+    };
+    
+    fetchReports();
+  }, [user, toast]);
+
+  const handleDelete = async (reportId: string, reportTitle: string) => {
     try {
-      const updatedReports = savedReports.filter(
-        (report) => report.id !== reportId
-      );
-      setSavedReports(updatedReports);
-      localStorage.setItem('savedRiskAssessments', JSON.stringify(updatedReports));
+      await deleteDoc(doc(db, 'generated_documents', reportId));
+      setSavedReports(savedReports.filter(report => report.id !== reportId));
       toast({
         title: 'Success',
         description: `Report "${reportTitle}" has been deleted.`,
       });
     } catch (error) {
-      console.error(
-        'Failed to delete from localStorage',
-        error
-      );
+      console.error('Failed to delete report from Firestore', error);
       toast({
         variant: 'destructive',
         title: 'Delete Failed',
@@ -220,4 +237,3 @@ export default function SavedRiskAssessmentsPage() {
     </div>
   );
 }
-
