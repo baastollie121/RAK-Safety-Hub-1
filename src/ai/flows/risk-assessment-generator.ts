@@ -15,11 +15,11 @@ import {z} from 'genkit';
 const HazardInputSchema = z.object({
     hazard: z.string().describe('Specific hazard description'),
     personsAffected: z.string().describe('Who could be affected and potential injuries'),
-    initialLikelihood: z.number().describe('Initial likelihood rating (0-5)'),
-    initialConsequence: z.number().describe('Initial consequence rating (0-5)'),
+    initialLikelihood: z.number().min(0).max(5).describe('Initial likelihood rating (0-5)'),
+    initialConsequence: z.number().min(0).max(5).describe('Initial consequence rating (0-5)'),
     controlMeasures: z.string().describe('Specific safety measures for this hazard'),
-    residualLikelihood: z.number().describe('Residual likelihood rating (0-5)'),
-    residualConsequence: z.number().describe('Residual consequence rating (0-5)'),
+    residualLikelihood: z.number().min(0).max(5).describe('Residual likelihood rating (0-5)'),
+    residualConsequence: z.number().min(0).max(5).describe('Residual consequence rating (0-5)'),
 });
 
 const HazardPromptSchema = HazardInputSchema.extend({

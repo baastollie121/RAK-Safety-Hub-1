@@ -42,6 +42,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { PlusCircle, Trash2, Loader2, Wand2, Download, CalendarIcon, FileArchive } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { generateRiskAssessment, type GenerateRiskAssessmentOutput } from '@/ai/flows/risk-assessment-generator';
+import { suggestHiraHazards } from '@/ai/flows/hira-suggester';
 import { cn } from '@/lib/utils';
 import { useDownloadPdf } from '@/hooks/use-download-pdf';
 import { useAuth } from '@/context/AuthContext';
@@ -82,7 +83,7 @@ const consequenceOptions = [
     { value: '1', label: '1 - Minor First Aid Injury' },
     { value: '2', label: '2 - Break Bone/Minor Illness (Temp)' },
     { value: '3', label: '3 - Break Bone/Serious Illness (Perm)' },
-    { value: '4 - Loss of Limb/Eye/Major Illness' },
+    { value: '4', label: '4 - Loss of Limb/Eye/Major Illness' },
     { value: '5', label: '5 - Fatality' },
 ];
 
@@ -136,9 +137,29 @@ const HazardInputCard = ({ index, remove, control }: { index: number; remove: (i
     );
 };
 
+const SuggestHazardsButton = ({ isSuggesting, onClick, form }: { isSuggesting: boolean, onClick: () => void, form: any }) => {
+    const taskTitle = useWatch({ control: form.control, name: 'taskTitle' });
+
+    return (
+        <Button
+            type="button"
+            variant="outline"
+            onClick={onClick}
+            disabled={isSuggesting || !taskTitle}
+        >
+            {isSuggesting ? (
+                <><Loader2 className="animate-spin mr-2" /> Thinking...</>
+            ) : (
+                <><Wand2 className="mr-2" /> Suggest Hazards (AI)</>
+            )}
+        </Button>
+    );
+};
+
 export default function RiskAssessmentPage() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
+  const [isSuggesting, setIsSuggesting] = useState(false);
   const [result, setResult] = useState<GenerateRiskAssessmentOutput | null>(null);
   const reportRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
@@ -191,6 +212,55 @@ export default function RiskAssessmentPage() {
         residualLikelihood: 0, residualConsequence: 0,
     });
   }
+
+  const handleSuggestHazards = async () => {
+    const taskTitle = form.getValues('taskTitle');
+    if (!taskTitle) {
+      toast({
+        variant: 'destructive',
+        title: 'Task Title Required',
+        description: 'Please enter a task title before getting AI suggestions.',
+      });
+      return;
+    }
+
+    setIsSuggesting(true);
+    try {
+      const result = await suggestHiraHazards({ taskTitle });
+      if (result.suggestedHazards && result.suggestedHazards.length > 0) {
+        result.suggestedHazards.forEach(h => {
+          append({
+            hazard: h.hazard,
+            personsAffected: h.personsAffected,
+            controlMeasures: h.controlMeasures,
+            initialLikelihood: 3,
+            initialConsequence: 3,
+            residualLikelihood: 1,
+            residualConsequence: 1,
+          });
+        });
+        toast({
+          title: 'Hazards Suggested',
+          description: `${result.suggestedHazards.length} new hazards have been added to the list.`,
+        });
+      } else {
+        toast({
+          title: 'No Suggestions',
+          description: 'The AI could not find any specific suggestions for this task.',
+        });
+      }
+    } catch (error) {
+      console.error('Error suggesting hazards:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Suggestion Failed',
+        description: 'An error occurred while fetching AI suggestions.',
+      });
+    } finally {
+      setIsSuggesting(false);
+    }
+  };
+
 
   const handleSaveReport = async () => {
     if (!result || !result.riskAssessmentDocument || !user) {
@@ -281,7 +351,7 @@ export default function RiskAssessmentPage() {
                       ) : (
                           <div className="flex flex-col items-center justify-center text-center text-muted-foreground py-12 px-6 border-2 border-dashed rounded-lg bg-background/50">
                               <p className="font-semibold">No hazards added yet</p>
-                              <p className="text-sm">Click the button below to begin.</p>
+                              <p className="text-sm">Click the buttons below to begin.</p>
                           </div>
                       )}
                   </div>
@@ -291,6 +361,11 @@ export default function RiskAssessmentPage() {
                   <Button type="button" variant="outline" onClick={addHazard}>
                       <PlusCircle className="mr-2" /> Add Hazard Manually
                   </Button>
+                  <SuggestHazardsButton
+                      isSuggesting={isSuggesting}
+                      onClick={handleSuggestHazards}
+                      form={form}
+                  />
               </CardFooter>
           </Card>
 
